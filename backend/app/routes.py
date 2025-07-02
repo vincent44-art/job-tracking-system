@@ -1,5 +1,4 @@
-# app/routes.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app import db
 from app.models import User, Purchase, SellerAssignment, Sale, CarExpense, OtherExpense
 from app.auth import token_required, role_required
@@ -18,8 +17,7 @@ def register():
         return jsonify({'message': 'Missing required fields'}), 400
 
     email = data['email'].lower()
-    
-    # Role validation based on email
+
     if 'ceo' in email: role = 'ceo'
     elif 'purchaser' in email: role = 'purchaser'
     elif 'seller' in email: role = 'seller'
@@ -29,7 +27,7 @@ def register():
 
     if User.query.filter_by(email=email).first():
         return jsonify({'message': 'User already exists'}), 409
-        
+
     user = User(email=email, name=data['name'], role=role)
     user.set_password(data['password'])
     db.session.add(user)
@@ -45,7 +43,7 @@ def login():
     user = User.query.filter_by(email=auth.username.lower()).first()
     if not user:
         return jsonify({'message': 'User not found'}), 401
-    
+
     if not user.is_active:
         return jsonify({'message': 'User account is blocked'}), 403
 
@@ -53,8 +51,8 @@ def login():
         token = jwt.encode({
             'public_id': user.public_id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-        }, bp.app.config['SECRET_KEY'], algorithm='HS256')
-        
+        }, current_app.config['SECRET_KEY'], algorithm='HS256')
+
         return jsonify({
             'token': token,
             'user': {
@@ -69,16 +67,13 @@ def login():
 @role_required('ceo')
 def get_all_users(current_user):
     users = User.query.all()
-    output = []
-    for user in users:
-        user_data = {
-            'public_id': user.public_id,
-            'name': user.name,
-            'email': user.email,
-            'role': user.role,
-            'is_active': user.is_active
-        }
-        output.append(user_data)
+    output = [{
+        'public_id': user.public_id,
+        'name': user.name,
+        'email': user.email,
+        'role': user.role,
+        'is_active': user.is_active
+    } for user in users]
     return jsonify({'users': output})
 
 @bp.route('/users/<public_id>', methods=['DELETE'])
@@ -87,7 +82,7 @@ def delete_user(current_user, public_id):
     user = User.query.filter_by(public_id=public_id).first()
     if not user:
         return jsonify({'message': 'User not found'}), 404
-    user.is_active = False # Block the user
+    user.is_active = False
     db.session.commit()
     return jsonify({'message': 'User has been blocked'})
 
@@ -116,7 +111,7 @@ def get_purchases(current_user):
     query = Purchase.query
     if current_user.role == 'purchaser':
         query = query.filter_by(purchaser_id=current_user.id)
-    
+
     purchases = query.order_by(Purchase.date.desc()).all()
     output = [{
         'id': p.id,
@@ -130,8 +125,7 @@ def get_purchases(current_user):
     } for p in purchases]
     return jsonify(output)
 
-
-# --- SELLER ASSIGNMENT & SALES ---
+# --- SELLER ASSIGNMENTS & SALES ---
 
 @bp.route('/assignments', methods=['POST'])
 @role_required('ceo')
@@ -140,7 +134,7 @@ def create_assignment(current_user):
     seller = User.query.filter_by(public_id=data['seller_public_id'], role='seller').first()
     if not seller:
         return jsonify({'message': 'Seller not found'}), 404
-        
+
     new_assignment = SellerAssignment(
         fruit_type=data['fruit_type'],
         quantity_assigned=data['quantity_assigned'],
@@ -164,7 +158,7 @@ def get_assignments(current_user):
     for a in assignments:
         total_sold = db.session.query(func.sum(Sale.quantity_sold)).filter_by(assignment_id=a.id).scalar() or 0
         total_revenue = db.session.query(func.sum(Sale.revenue_collected)).filter_by(assignment_id=a.id).scalar() or 0
-        
+
         assignment_data = {
             'id': a.id,
             'fruit_type': a.fruit_type,
@@ -193,7 +187,6 @@ def record_sale(current_user):
     if not assignment:
         return jsonify({'message': 'Assignment not found or you are not authorized'}), 404
 
-    # Check stock
     total_sold = db.session.query(func.sum(Sale.quantity_sold)).filter_by(assignment_id=assignment.id).scalar() or 0
     if total_sold + data['quantity_sold'] > assignment.quantity_assigned:
         return jsonify({'message': 'Cannot sell more than assigned quantity'}), 400
@@ -218,7 +211,7 @@ def log_car_expense(current_user):
         description=data.get('description', ''),
         amount=data['amount'],
         date=datetime.datetime.strptime(data['date'], '%Y-%m-%d'),
-        driver_id=current_user.id if current_user.role == 'driver' else data['driver_id'] # CEO can assign expense to a driver
+        driver_id=current_user.id if current_user.role == 'driver' else data['driver_id']
     )
     db.session.add(new_expense)
     db.session.commit()
@@ -230,7 +223,7 @@ def get_car_expenses(current_user):
     query = CarExpense.query
     if current_user.role == 'driver':
         query = query.filter_by(driver_id=current_user.id)
-    
+
     expenses = query.order_by(CarExpense.date.desc()).all()
     output = [{
         'id': e.id,
@@ -255,8 +248,7 @@ def manage_other_expenses(current_user):
         db.session.add(new_expense)
         db.session.commit()
         return jsonify({'message': 'Other expense logged successfully'}), 201
-    
-    # GET request
+
     expenses = OtherExpense.query.order_by(OtherExpense.date.desc()).all()
     output = [{
         'id': e.id,
