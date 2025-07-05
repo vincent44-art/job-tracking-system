@@ -1,4 +1,3 @@
-# app/__init__.py
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -14,13 +13,14 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Enable CORS for your React app
-    CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}}) # Adjust origin for your frontend URL
+    # Enable CORS for frontend (e.g. React on localhost:3000)
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
 
+    # Import and register routes
     from app.routes import bp as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api')
 
