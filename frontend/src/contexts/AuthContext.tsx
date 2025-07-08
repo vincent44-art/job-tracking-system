@@ -6,7 +6,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ceo' | 'purchaser' | 'seller' | 'driver';
+  role: 'ceo' | 'purchaser' | 'seller' | 'driver' | 'storekeeper';
   status: 'active' | 'blocked';
   createdAt: string;
 }

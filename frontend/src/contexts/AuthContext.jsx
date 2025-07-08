@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
@@ -78,10 +77,16 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
-    // Validate email contains role
+    // Validate email contains role (except for CEO and storekeeper)
     const emailLower = userData.email.toLowerCase();
-    if (userData.role !== 'ceo' && !emailLower.includes(userData.role)) {
+    if (!['ceo', 'storekeeper'].includes(userData.role) && !emailLower.includes(userData.role)) {
       toast.error(`Email must contain "${userData.role}" for this role`);
+      return false;
+    }
+
+    // For storekeeper, check if email contains "store" or "keeper"
+    if (userData.role === 'storekeeper' && !emailLower.includes('store') && !emailLower.includes('keeper')) {
+      toast.error('Email must contain "store" or "keeper" for storekeeper role');
       return false;
     }
 

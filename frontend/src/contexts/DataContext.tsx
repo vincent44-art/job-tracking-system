@@ -54,16 +54,64 @@ export interface OtherExpense {
   createdAt: string;
 }
 
+export interface InventoryItem {
+  id: string;
+  fruitType: string;
+  quantity: number;
+  unit: string;
+  location: string;
+  expiryDate: string;
+  supplierName: string;
+  storeKeeperEmail: string;
+  storeKeeperName: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface StockMovement {
+  id: string;
+  fruitType: string;
+  movementType: 'in' | 'out';
+  quantity: number;
+  unit: string;
+  reason: string;
+  location: string;
+  date: string;
+  storeKeeperEmail: string;
+  storeKeeperName: string;
+  createdAt: string;
+}
+
+export interface Gradient {
+  id: string;
+  gradientName: string;
+  fruitType: string;
+  quantity: number;
+  unit: string;
+  purpose: string;
+  applicationDate: string;
+  notes: string;
+  storeKeeperEmail: string;
+  storeKeeperName: string;
+  createdAt: string;
+}
+
 interface DataContextType {
   purchases: Purchase[];
   assignments: Assignment[];
   carExpenses: CarExpense[];
   otherExpenses: OtherExpense[];
+  inventory: InventoryItem[];
+  stockMovements: StockMovement[];
+  gradients: Gradient[];
   addPurchase: (purchase: Omit<Purchase, 'id' | 'createdAt'>) => void;
   addAssignment: (assignment: Omit<Assignment, 'id' | 'createdAt' | 'sales'>) => void;
   addSale: (assignmentId: string, sale: Omit<Sale, 'id' | 'assignmentId' | 'createdAt'>) => void;
   addCarExpense: (expense: Omit<CarExpense, 'id' | 'createdAt'>) => void;
   addOtherExpense: (expense: Omit<OtherExpense, 'id' | 'createdAt'>) => void;
+  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'createdAt'>) => void;
+  addStockMovement: (movement: Omit<StockMovement, 'id' | 'createdAt'>) => void;
+  addGradient: (gradient: Omit<Gradient, 'id' | 'createdAt'>) => void;
   updateAssignmentStatus: (id: string, status: Assignment['status']) => void;
   clearAllData: () => void;
   getStats: () => {
@@ -91,6 +139,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [carExpenses, setCarExpenses] = useState<CarExpense[]>([]);
   const [otherExpenses, setOtherExpenses] = useState<OtherExpense[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [gradients, setGradients] = useState<Gradient[]>([]);
 
   useEffect(() => {
     // Load data from localStorage
@@ -98,6 +149,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAssignments(JSON.parse(localStorage.getItem('fruittrack_assignments') || '[]'));
     setCarExpenses(JSON.parse(localStorage.getItem('fruittrack_car_expenses') || '[]'));
     setOtherExpenses(JSON.parse(localStorage.getItem('fruittrack_other_expenses') || '[]'));
+    setInventory(JSON.parse(localStorage.getItem('fruittrack_inventory') || '[]'));
+    setStockMovements(JSON.parse(localStorage.getItem('fruittrack_stock_movements') || '[]'));
+    setGradients(JSON.parse(localStorage.getItem('fruittrack_gradients') || '[]'));
   }, []);
 
   const addPurchase = (purchaseData: Omit<Purchase, 'id' | 'createdAt'>) => {
@@ -178,6 +232,45 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toast.success('Expense recorded successfully');
   };
 
+  const addInventoryItem = (itemData: Omit<InventoryItem, 'id' | 'createdAt'>) => {
+    const newItem: InventoryItem = {
+      ...itemData,
+      id: `inventory-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedInventory = [...inventory, newItem];
+    setInventory(updatedInventory);
+    localStorage.setItem('fruittrack_inventory', JSON.stringify(updatedInventory));
+    toast.success('Inventory item added successfully');
+  };
+
+  const addStockMovement = (movementData: Omit<StockMovement, 'id' | 'createdAt'>) => {
+    const newMovement: StockMovement = {
+      ...movementData,
+      id: `movement-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedMovements = [...stockMovements, newMovement];
+    setStockMovements(updatedMovements);
+    localStorage.setItem('fruittrack_stock_movements', JSON.stringify(updatedMovements));
+    toast.success('Stock movement recorded successfully');
+  };
+
+  const addGradient = (gradientData: Omit<Gradient, 'id' | 'createdAt'>) => {
+    const newGradient: Gradient = {
+      ...gradientData,
+      id: `gradient-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedGradients = [...gradients, newGradient];
+    setGradients(updatedGradients);
+    localStorage.setItem('fruittrack_gradients', JSON.stringify(updatedGradients));
+    toast.success('Gradient applied successfully');
+  };
+
   const updateAssignmentStatus = (id: string, status: Assignment['status']) => {
     const updatedAssignments = assignments.map(assignment => 
       assignment.id === id ? { ...assignment, status } : assignment
@@ -191,10 +284,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAssignments([]);
     setCarExpenses([]);
     setOtherExpenses([]);
+    setInventory([]);
+    setStockMovements([]);
+    setGradients([]);
     localStorage.removeItem('fruittrack_purchases');
     localStorage.removeItem('fruittrack_assignments');
     localStorage.removeItem('fruittrack_car_expenses');
     localStorage.removeItem('fruittrack_other_expenses');
+    localStorage.removeItem('fruittrack_inventory');
+    localStorage.removeItem('fruittrack_stock_movements');
+    localStorage.removeItem('fruittrack_gradients');
     toast.success('All data cleared successfully');
   };
 
@@ -224,11 +323,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       assignments,
       carExpenses,
       otherExpenses,
+      inventory,
+      stockMovements,
+      gradients,
       addPurchase,
       addAssignment,
       addSale,
       addCarExpense,
       addOtherExpense,
+      addInventoryItem,
+      addStockMovement,
+      addGradient,
       updateAssignmentStatus,
       clearAllData,
       getStats

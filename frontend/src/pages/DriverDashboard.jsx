@@ -2,91 +2,115 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
 
 const DriverDashboard = () => {
   const { addCarExpense, carExpenses } = useData();
   const { user } = useAuth();
+  
   const [formData, setFormData] = useState({
-    type: '',
+    type: 'fuel',
     description: '',
     amount: '',
     date: new Date().toISOString().split('T')[0]
   });
 
+  const userExpenses = carExpenses.filter(expense => 
+    expense.driverEmail === user?.email
+  );
+
   const handleSubmit = (e) => {
     e.preventDefault();
     addCarExpense({
+      ...formData,
       driverEmail: user.email,
-      type: formData.type,
-      description: formData.description,
-      amount: parseFloat(formData.amount),
-      date: formData.date
+      amount: parseFloat(formData.amount)
     });
+    
     setFormData({
-      type: '',
+      type: 'fuel',
       description: '',
       amount: '',
       date: new Date().toISOString().split('T')[0]
     });
   };
 
-  const userExpenses = carExpenses.filter(e => e.driverEmail === user.email);
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container py-4">
       <div className="row">
         <div className="col-md-6">
-          <div className="card card-custom">
+          <div className="card shadow-sm">
+            <div className="card-header bg-warning text-dark">
+              <h4 className="mb-0">
+                <i className="bi bi-car-front me-2"></i>
+                Driver Dashboard
+              </h4>
+            </div>
             <div className="card-body">
-              <h5 className="card-title text-gradient">Record Car Expense</h5>
+              <CeoMessagesDisplay />
+              
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label className="form-label">Expense Type</label>
                   <select
-                    className="form-control"
+                    className="form-select"
+                    name="type"
                     value={formData.type}
-                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                    onChange={handleChange}
                     required
                   >
-                    <option value="">Select Type</option>
                     <option value="fuel">Fuel</option>
                     <option value="repair">Repair</option>
                     <option value="maintenance">Maintenance</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
+                
                 <div className="mb-3">
                   <label className="form-label">Description</label>
                   <textarea
                     className="form-control"
-                    rows="3"
+                    name="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={handleChange}
+                    rows="3"
                     required
                   />
                 </div>
+                
                 <div className="mb-3">
                   <label className="form-label">Amount ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     className="form-control"
+                    name="amount"
                     value={formData.amount}
-                    onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                    onChange={handleChange}
                     required
                   />
                 </div>
+                
                 <div className="mb-3">
                   <label className="form-label">Date</label>
                   <input
                     type="date"
                     className="form-control"
+                    name="date"
                     value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    onChange={handleChange}
                     required
                   />
                 </div>
-                <button type="submit" className="btn btn-gradient">
+                
+                <button type="submit" className="btn btn-warning">
                   <i className="bi bi-plus-circle me-2"></i>
                   Record Expense
                 </button>
@@ -96,38 +120,35 @@ const DriverDashboard = () => {
         </div>
         
         <div className="col-md-6">
-          <div className="card card-custom">
+          <div className="card shadow-sm">
+            <div className="card-header bg-info text-white">
+              <h5 className="mb-0">My Car Expenses</h5>
+            </div>
             <div className="card-body">
-              <h5 className="card-title text-gradient">Expense History</h5>
               <div className="table-responsive">
-                <table className="table table-hover">
+                <table className="table table-sm">
                   <thead>
                     <tr>
+                      <th>Date</th>
                       <th>Type</th>
                       <th>Description</th>
                       <th>Amount</th>
-                      <th>Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {userExpenses.map(expense => (
                       <tr key={expense.id}>
-                        <td>
-                          <span className={`badge ${
-                            expense.type === 'fuel' ? 'bg-info' :
-                            expense.type === 'repair' ? 'bg-danger' :
-                            expense.type === 'maintenance' ? 'bg-warning' : 'bg-secondary'
-                          }`}>
-                            {expense.type}
-                          </span>
-                        </td>
+                        <td>{new Date(expense.date).toLocaleDateString()}</td>
+                        <td className="text-capitalize">{expense.type}</td>
                         <td>{expense.description}</td>
                         <td>${expense.amount.toFixed(2)}</td>
-                        <td>{new Date(expense.date).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {userExpenses.length === 0 && (
+                  <p className="text-muted text-center">No expenses recorded yet</p>
+                )}
               </div>
             </div>
           </div>

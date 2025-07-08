@@ -3,172 +3,179 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const UserManagementTab = () => {
-  const { addUser, updateUser, deleteUser, getAllUsers } = useAuth();
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({
+  const { getAllUsers, addUser, updateUser, deleteUser } = useAuth();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newUser, setNewUser] = useState({
     name: '',
     email: '',
-    role: '',
+    role: 'purchaser',
     status: 'active'
   });
 
   const users = getAllUsers();
 
-  const handleSubmit = (e) => {
+  const handleAddUser = (e) => {
     e.preventDefault();
-    if (addUser(formData)) {
-      setFormData({
-        name: '',
-        email: '',
-        role: '',
-        status: 'active'
-      });
-      setShowAddForm(false);
+    if (addUser(newUser)) {
+      setNewUser({ name: '', email: '', role: 'purchaser', status: 'active' });
+      setShowAddModal(false);
     }
   };
 
-  const handleStatusToggle = (userId, currentStatus) => {
+  const toggleUserStatus = (userId, currentStatus) => {
     const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
     updateUser(userId, { status: newStatus });
   };
 
-  const handleDelete = (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      deleteUser(userId);
+  const getRoleColor = (role) => {
+    switch (role) {
+      case 'ceo': return 'bg-danger';
+      case 'purchaser': return 'bg-primary';
+      case 'seller': return 'bg-success';
+      case 'driver': return 'bg-warning';
+      case 'storekeeper': return 'bg-info';
+      default: return 'bg-secondary';
     }
   };
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>User Management</h2>
-        <button
-          className="btn btn-gradient"
-          onClick={() => setShowAddForm(!showAddForm)}
+    <div className="tab-content">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h5>User Management</h5>
+        <button 
+          className="btn btn-primary"
+          onClick={() => setShowAddModal(true)}
         >
-          <i className="bi bi-plus-circle me-2"></i>
-          Add User
+          <i className="bi bi-person-plus me-2"></i>Add User
         </button>
       </div>
 
-      {showAddForm && (
-        <div className="card card-custom mb-4">
-          <div className="card-body">
-            <h5 className="card-title text-gradient">Add New User</h5>
-            <form onSubmit={handleSubmit}>
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                  />
+      <div className="table-responsive">
+        <table className="table table-striped">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id}>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>
+                  <span className={`badge ${getRoleColor(user.role)} text-white`}>
+                    {user.role.toUpperCase()}
+                  </span>
+                </td>
+                <td>
+                  <span className={`badge ${user.status === 'active' ? 'bg-success' : 'bg-danger'}`}>
+                    {user.status.toUpperCase()}
+                  </span>
+                </td>
+                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td>
+                  {user.role !== 'ceo' && (
+                    <>
+                      <button
+                        className={`btn btn-sm ${user.status === 'active' ? 'btn-warning' : 'btn-success'} me-2`}
+                        onClick={() => toggleUserStatus(user.id, user.status)}
+                      >
+                        {user.status === 'active' ? 'Block' : 'Activate'}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => deleteUser(user.id)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <form onSubmit={handleAddUser}>
+                <div className="modal-header">
+                  <h5 className="modal-title">Add New User</h5>
+                  <button 
+                    type="button" 
+                    className="btn-close" 
+                    onClick={() => setShowAddModal(false)}
+                  ></button>
                 </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    required
-                  />
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label className="form-label">Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Email</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      required
+                    />
+                    <small className="form-text text-muted">
+                      Email should contain the role name (except for CEO and Store Keeper)
+                    </small>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Role</label>
+                    <select
+                      className="form-select"
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                    >
+                      <option value="purchaser">Purchaser</option>
+                      <option value="seller">Seller</option>
+                      <option value="driver">Driver</option>
+                      <option value="storekeeper">Store Keeper</option>
+                    </select>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Status</label>
+                    <select
+                      className="form-select"
+                      value={newUser.status}
+                      onChange={(e) => setNewUser({...newUser, status: e.target.value})}
+                    >
+                      <option value="active">Active</option>
+                      <option value="blocked">Blocked</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Role</label>
-                <select
-                  className="form-control"
-                  value={formData.role}
-                  onChange={(e) => setFormData({...formData, role: e.target.value})}
-                  required
-                >
-                  <option value="">Select Role</option>
-                  <option value="purchaser">Purchaser</option>
-                  <option value="seller">Seller</option>
-                  <option value="driver">Driver</option>
-                </select>
-              </div>
-              <div className="d-flex gap-2">
-                <button type="submit" className="btn btn-gradient">
-                  Add User
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">Add User</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
-
-      <div className="card card-custom">
-        <div className="card-body">
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(user => (
-                  <tr key={user.id}>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>
-                      <span className={`badge ${
-                        user.role === 'ceo' ? 'bg-danger' :
-                        user.role === 'purchaser' ? 'bg-primary' :
-                        user.role === 'seller' ? 'bg-success' :
-                        user.role === 'driver' ? 'bg-warning' : 'bg-secondary'
-                      }`}>
-                        {user.role.toUpperCase()}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${user.status === 'active' ? 'bg-success' : 'bg-danger'}`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                    <td>
-                      {user.role !== 'ceo' && (
-                        <div className="btn-group">
-                          <button
-                            className={`btn btn-sm ${user.status === 'active' ? 'btn-warning' : 'btn-success'}`}
-                            onClick={() => handleStatusToggle(user.id, user.status)}
-                          >
-                            <i className={`bi ${user.status === 'active' ? 'bi-lock' : 'bi-unlock'}`}></i>
-                          </button>
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleDelete(user.id)}
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
