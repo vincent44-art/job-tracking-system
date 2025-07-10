@@ -24,6 +24,39 @@ const Dashboard = () => {
     return <div className="container mt-4"><div className="alert alert-danger">Access denied. CEO role required.</div></div>;
   }
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <div>
+            <StatsCards />
+            <PerformanceOverview />
+          </div>
+        );
+      case 'purchases':
+        return <PurchasesTab />;
+      case 'sales':
+        return <SalesTab />;
+      case 'inventory':
+        return <InventoryTab />;
+      case 'salaries':
+        return <SalaryManagementTab />;
+      case 'car-expenses':
+        return <CarExpensesTab />;
+      case 'other-expenses':
+        return <OtherExpensesTab />;
+      case 'users':
+        return <UserManagementTab />;
+      default:
+        return (
+          <div>
+            <StatsCards />
+            <PerformanceOverview />
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="container-fluid mt-4">
       <div className="row">
@@ -53,6 +86,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'overview' ? 'active' : ''}`}
                     onClick={() => setActiveTab('overview')}
+                    type="button"
                   >
                     <i className="bi bi-graph-up me-2"></i>Overview
                   </button>
@@ -61,6 +95,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'purchases' ? 'active' : ''}`}
                     onClick={() => setActiveTab('purchases')}
+                    type="button"
                   >
                     <i className="bi bi-cart-plus me-2"></i>Purchases
                   </button>
@@ -69,6 +104,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'sales' ? 'active' : ''}`}
                     onClick={() => setActiveTab('sales')}
+                    type="button"
                   >
                     <i className="bi bi-currency-dollar me-2"></i>Sales
                   </button>
@@ -77,6 +113,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`}
                     onClick={() => setActiveTab('inventory')}
+                    type="button"
                   >
                     <i className="bi bi-boxes me-2"></i>Inventory
                   </button>
@@ -85,6 +122,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'salaries' ? 'active' : ''}`}
                     onClick={() => setActiveTab('salaries')}
+                    type="button"
                   >
                     <i className="bi bi-cash me-2"></i>Salaries
                   </button>
@@ -93,6 +131,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'car-expenses' ? 'active' : ''}`}
                     onClick={() => setActiveTab('car-expenses')}
+                    type="button"
                   >
                     <i className="bi bi-car-front me-2"></i>Car Expenses
                   </button>
@@ -101,6 +140,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'other-expenses' ? 'active' : ''}`}
                     onClick={() => setActiveTab('other-expenses')}
+                    type="button"
                   >
                     <i className="bi bi-receipt me-2"></i>Other Expenses
                   </button>
@@ -109,6 +149,7 @@ const Dashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'users' ? 'active' : ''}`}
                     onClick={() => setActiveTab('users')}
+                    type="button"
                   >
                     <i className="bi bi-people me-2"></i>Users
                   </button>
@@ -117,19 +158,7 @@ const Dashboard = () => {
             </div>
             
             <div className="card-body">
-              {activeTab === 'overview' && (
-                <div>
-                  <StatsCards />
-                  <PerformanceOverview />
-                </div>
-              )}
-              {activeTab === 'purchases' && <PurchasesTab />}
-              {activeTab === 'sales' && <SalesTab />}
-              {activeTab === 'inventory' && <InventoryTab />}
-              {activeTab === 'salaries' && <SalaryManagementTab />}
-              {activeTab === 'car-expenses' && <CarExpensesTab />}
-              {activeTab === 'other-expenses' && <OtherExpensesTab />}
-              {activeTab === 'users' && <UserManagementTab />}
+              {renderTabContent()}
             </div>
           </div>
         </div>

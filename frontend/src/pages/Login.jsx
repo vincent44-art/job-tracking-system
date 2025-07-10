@@ -6,16 +6,28 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
     try {
-      await login(email, password);
+      console.log('Form submitted with:', { email, password: '***' });
+      const result = await login(email, password);
+      
+      if (!result.success) {
+        setError(result.error || 'Login failed');
+        console.error('Login failed:', result.error);
+      } else {
+        console.log('Login successful, redirecting...');
+        // Success is handled by the auth context and App.jsx routing
+      }
     } catch (error) {
       console.error('Login error:', error);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -30,6 +42,12 @@ const Login = () => {
             <p className="text-muted">Fruit Business Management System</p>
           </div>
           
+          {error && (
+            <div className="alert alert-danger" role="alert">
+              {error}
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
               <label htmlFor="email" className="form-label">Email</label>
@@ -41,6 +59,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Enter your email"
+                disabled={loading}
               />
             </div>
             
@@ -54,6 +73,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Enter your password"
+                disabled={loading}
               />
             </div>
             
@@ -78,6 +98,10 @@ const Login = () => {
               <strong>Demo Credentials:</strong><br />
               CEO: ceo@fruittrack.com<br />
               Password: password123<br />
+              <br />
+              <strong>Alternative:</strong><br />
+              CEO: ceo@company.com<br />
+              Password: password<br />
               <em>Note: New users must be added by CEO</em>
             </small>
           </div>

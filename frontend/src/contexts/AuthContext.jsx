@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
@@ -5,7 +6,7 @@ const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -13,135 +14,208 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    // Check for existing session
-    const savedUser = localStorage.getItem('fruittrack_user');
+    // Check for existing user session
+    const savedUser = localStorage.getItem('user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('user');
+      }
     }
 
-    // Initialize CEO if no users exist
-    const users = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
-    if (users.length === 0) {
-      const ceoUser = {
-        id: 'ceo-001',
-        name: 'CEO Admin',
-        email: 'ceo@fruittrack.com',
-        role: 'ceo',
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
-      localStorage.setItem('fruittrack_users', JSON.stringify([ceoUser]));
+    // Load users from localStorage
+    const savedUsers = localStorage.getItem('fruittrack_users');
+    if (savedUsers) {
+      try {
+        setUsers(JSON.parse(savedUsers));
+      } catch (error) {
+        console.error('Error parsing saved users:', error);
+        // Initialize with default users if parsing fails
+        initializeDefaultUsers();
+      }
+    } else {
+      initializeDefaultUsers();
     }
+
+    setLoading(false);
   }, []);
 
+  const initializeDefaultUsers = () => {
+    const defaultUsers = [
+      { 
+        id: 'ceo-1', 
+        email: 'ceo@company.com', 
+        name: 'John Doe', 
+        role: 'ceo', 
+        status: 'active',
+        createdAt: new Date().toISOString()
+      },
+      { 
+        id: 'ceo-2', 
+        email: 'ceo@fruittrack.com', 
+        name: 'John Doe', 
+        role: 'ceo', 
+        status: 'active',
+        createdAt: new Date().toISOString()
+      },
+      { 
+        id: 'purchaser-1', 
+        email: 'purchaser@company.com', 
+        name: 'Jane Smith', 
+        role: 'purchaser', 
+        status: 'active',
+        createdAt: new Date().toISOString()
+      },
+      { 
+        id: 'seller-1', 
+        email: 'seller@company.com', 
+        name: 'Bob Johnson', 
+        role: 'seller', 
+        status: 'active',
+        createdAt: new Date().toISOString()
+      },
+      { 
+        id: 'driver-1', 
+        email: 'driver@company.com', 
+        name: 'Mike Wilson', 
+        role: 'driver', 
+        status: 'active',
+        createdAt: new Date().toISOString()
+      },
+      { 
+        id: 'storekeeper-1', 
+        email: 'storekeeper@company.com', 
+        name: 'Sarah Davis', 
+        role: 'storekeeper', 
+        status: 'active',
+        createdAt: new Date().toISOString()
+      }
+    ];
+    setUsers(defaultUsers);
+    localStorage.setItem('fruittrack_users', JSON.stringify(defaultUsers));
+  };
+
   const login = async (email, password) => {
-    const users = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
-    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    if (!foundUser) {
-      toast.error('User not found. Please contact CEO to add your account.');
-      return false;
+    try {
+      console.log('Attempting login with:', email);
+      
+      // Find user in the users array
+      const foundUser = users.find(u => u.email === email);
+      
+      if (foundUser && password === 'password') {
+        const userData = { ...foundUser };
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        console.log('Login successful:', userData);
+        return { success: true };
+      } else if (foundUser && password === 'password123') {
+        const userData = { ...foundUser };
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        console.log('Login successful:', userData);
+        return { success: true };
+      } else {
+        console.log('Invalid credentials for:', email);
+        return { success: false, error: 'Invalid email or password' };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: 'An error occurred during login' };
     }
-
-    if (foundUser.status === 'blocked') {
-      toast.error('Your account has been blocked. Please contact CEO.');
-      return false;
-    }
-
-    // Simple password check (in real app, this would be hashed)
-    if (password !== 'password123') {
-      toast.error('Invalid password.');
-      return false;
-    }
-
-    setUser(foundUser);
-    localStorage.setItem('fruittrack_user', JSON.stringify(foundUser));
-    toast.success(`Welcome back, ${foundUser.name}!`);
-    return true;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('fruittrack_user');
-    toast.success('Logged out successfully');
-  };
-
-  const addUser = (userData) => {
-    const users = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
-    
-    // Check if user already exists
-    if (users.find(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-      toast.error('User with this email already exists');
-      return false;
-    }
-
-    // Validate email contains role (except for CEO and storekeeper)
-    const emailLower = userData.email.toLowerCase();
-    if (!['ceo', 'storekeeper'].includes(userData.role) && !emailLower.includes(userData.role)) {
-      toast.error(`Email must contain "${userData.role}" for this role`);
-      return false;
-    }
-
-    // For storekeeper, check if email contains "store" or "keeper"
-    if (userData.role === 'storekeeper' && !emailLower.includes('store') && !emailLower.includes('keeper')) {
-      toast.error('Email must contain "store" or "keeper" for storekeeper role');
-      return false;
-    }
-
-    const newUser = {
-      ...userData,
-      id: `${userData.role}-${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
-
-    users.push(newUser);
-    localStorage.setItem('fruittrack_users', JSON.stringify(users));
-    toast.success(`User ${newUser.name} added successfully`);
-    return true;
-  };
-
-  const updateUser = (id, updates) => {
-    const users = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
-    const userIndex = users.findIndex(u => u.id === id);
-    
-    if (userIndex === -1) return false;
-
-    users[userIndex] = { ...users[userIndex], ...updates };
-    localStorage.setItem('fruittrack_users', JSON.stringify(users));
-    
-    // Update current user if it's the same user
-    if (user && user.id === id) {
-      setUser(users[userIndex]);
-      localStorage.setItem('fruittrack_user', JSON.stringify(users[userIndex]));
-    }
-    
-    return true;
-  };
-
-  const deleteUser = (id) => {
-    const users = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
-    const filteredUsers = users.filter(u => u.id !== id);
-    localStorage.setItem('fruittrack_users', JSON.stringify(filteredUsers));
-    toast.success('User deleted successfully');
-    return true;
+    localStorage.removeItem('user');
+    console.log('User logged out');
   };
 
   const getAllUsers = () => {
-    return JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
+    return users;
+  };
+
+  const addUser = (userData) => {
+    try {
+      const newUser = {
+        ...userData,
+        id: `user-${Date.now()}`,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Check if email already exists
+      if (users.find(u => u.email === newUser.email)) {
+        toast.error('User with this email already exists');
+        return false;
+      }
+
+      const updatedUsers = [...users, newUser];
+      setUsers(updatedUsers);
+      localStorage.setItem('fruittrack_users', JSON.stringify(updatedUsers));
+      toast.success('User added successfully');
+      return true;
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast.error('Failed to add user');
+      return false;
+    }
+  };
+
+  const updateUser = (userId, updates) => {
+    try {
+      const updatedUsers = users.map(user => 
+        user.id === userId ? { ...user, ...updates } : user
+      );
+      setUsers(updatedUsers);
+      localStorage.setItem('fruittrack_users', JSON.stringify(updatedUsers));
+      toast.success('User updated successfully');
+      return true;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Failed to update user');
+      return false;
+    }
+  };
+
+  const deleteUser = (userId) => {
+    try {
+      const userToDelete = users.find(u => u.id === userId);
+      if (userToDelete?.role === 'ceo') {
+        toast.error('Cannot delete CEO user');
+        return false;
+      }
+
+      const updatedUsers = users.filter(user => user.id !== userId);
+      setUsers(updatedUsers);
+      localStorage.setItem('fruittrack_users', JSON.stringify(updatedUsers));
+      toast.success('User deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+      return false;
+    }
+  };
+
+  const value = {
+    user,
+    users,
+    login,
+    logout,
+    loading,
+    getAllUsers,
+    addUser,
+    updateUser,
+    deleteUser
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      login,
-      logout,
-      addUser,
-      updateUser,
-      deleteUser,
-      getAllUsers
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

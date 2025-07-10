@@ -1,15 +1,16 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import Navbar from './components/Navbar';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import PurchaserDashboard from './pages/PurchaserDashboard';
-import SellerDashboard from './pages/SellerDashboard';
-import DriverDashboard from './pages/DriverDashboard';
-import StoreKeeperDashboard from './pages/StoreKeeperDashboard';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { DataProvider } from './contexts/DataContext';
+import Navbar from './components/Navbar.jsx';
+import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import PurchaserDashboard from './pages/PurchaserDashboard.jsx';
+import SellerDashboard from './pages/SellerDashboard.jsx';
+import DriverDashboard from './pages/DriverDashboard.jsx';
+import StoreKeeperDashboard from './pages/StoreKeeperDashboard.jsx';
+import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
+import { DataProvider } from './contexts/DataContext.jsx';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -19,27 +20,7 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
-  return children;
-};
-
-const RoleBasedRoute = () => {
-  const { user } = useAuth();
-
-  switch (user?.role) {
-    case 'ceo':
-      return <Dashboard />;
-    case 'purchaser':
-      return <PurchaserDashboard />;
-    case 'seller':
-      return <SellerDashboard />;
-    case 'driver':
-      return <DriverDashboard />;
-    case 'storekeeper':
-    case 'store keeper':
-      return <StoreKeeperDashboard />;
-    default:
-      return <Navigate to="/login" replace />;
-  }
+  return <>{children}</>;
 };
 
 const AppContent = () => {
@@ -49,18 +30,16 @@ const AppContent = () => {
     <div className="min-vh-100 fruit-tracking-bg">
       {user && <Navbar />}
       <Routes>
-        <Route 
-          path="/login" 
-          element={!user ? <Login /> : <Navigate to="/" replace />} 
-        />
-        <Route 
-          path="/" 
-          element={
-            <ProtectedRoute>
-              <RoleBasedRoute />
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            {user?.role === 'ceo' && <Dashboard />}
+            {user?.role === 'purchaser' && <PurchaserDashboard />}
+            {user?.role === 'seller' && <SellerDashboard />}
+            {user?.role === 'driver' && <DriverDashboard />}
+            {(user?.role === 'storekeeper' || user?.role === 'store keeper') && <StoreKeeperDashboard />}
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
@@ -81,20 +60,6 @@ const App = () => {
                 borderRadius: '12px',
                 padding: '16px',
                 fontSize: '14px',
-                background: '#333',
-                color: '#fff',
-              },
-              success: {
-                iconTheme: {
-                  primary: '#4BB543',
-                  secondary: '#fff',
-                },
-              },
-              error: {
-                iconTheme: {
-                  primary: '#ff3333',
-                  secondary: '#fff',
-                },
               },
             }}
           />

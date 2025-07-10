@@ -16,6 +16,20 @@ const InventoryTab = () => {
   const totalStockMovements = stockMovements.length;
   const totalGradients = gradients.length;
 
+  const clearStockMovements = () => {
+    if (window.confirm('Are you sure you want to clear all stock movements?')) {
+      localStorage.removeItem('stockMovements');
+      window.location.reload();
+    }
+  };
+
+  const clearGradients = () => {
+    if (window.confirm('Are you sure you want to clear all gradients?')) {
+      localStorage.removeItem('gradients');
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="tab-content">
       <div className="row mb-4">
@@ -94,8 +108,14 @@ const InventoryTab = () => {
 
         <div className="col-md-6">
           <div className="card shadow-lg border-0 fruit-card">
-            <div className="card-header bg-gradient text-white">
+            <div className="card-header bg-gradient text-white d-flex justify-content-between align-items-center">
               <h5><i className="bi bi-arrow-left-right me-2"></i>Recent Stock Movements</h5>
+              <button 
+                className="btn btn-outline-light btn-sm"
+                onClick={clearStockMovements}
+              >
+                <i className="bi bi-trash me-1"></i>Clear All
+              </button>
             </div>
             <div className="card-body">
               <div className="table-responsive max-height-200">
@@ -140,8 +160,14 @@ const InventoryTab = () => {
       <div className="row mt-3">
         <div className="col-12">
           <div className="card shadow-lg border-0 fruit-card">
-            <div className="card-header bg-gradient text-white">
+            <div className="card-header bg-gradient text-white d-flex justify-content-between align-items-center">
               <h5><i className="bi bi-droplet me-2"></i>Recent Gradients Applied</h5>
+              <button 
+                className="btn btn-outline-light btn-sm"
+                onClick={clearGradients}
+              >
+                <i className="bi bi-trash me-1"></i>Clear All
+              </button>
             </div>
             <div className="card-body">
               <div className="table-responsive max-height-200">

@@ -18,6 +18,10 @@ const CeoMessagesDisplay = () => {
     return null;
   }
 
+  const handleMarkAsRead = (messageId) => {
+    markMessageAsRead(messageId);
+  };
+
   return (
     <div className="bg-info bg-opacity-10 border border-info rounded p-3 mb-4">
       <h5 className="text-info mb-3">
@@ -41,7 +45,7 @@ const CeoMessagesDisplay = () => {
               </div>
               {!message.isRead && (
                 <button
-                  onClick={() => markMessageAsRead(message.id)}
+                  onClick={() => handleMarkAsRead(message.id)}
                   className="btn btn-sm btn-outline-primary ms-2"
                 >
                   Mark Read

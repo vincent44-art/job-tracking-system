@@ -79,104 +79,133 @@ const Calculator = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-80">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Calculator</h3>
+    <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050}}>
+      <div className="bg-white rounded shadow-lg p-4" style={{width: '320px'}}>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="mb-0">Calculator</h5>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <i className="bi bi-x-lg"></i>
-          </button>
+            className="btn-close"
+            aria-label="Close"
+          ></button>
         </div>
         
-        <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4">
-          <div className="text-right text-2xl font-mono text-gray-900 dark:text-white overflow-hidden">
+        <div className="bg-light p-3 rounded mb-3 text-end" style={{minHeight: '60px'}}>
+          <div className="h4 mb-0 font-monospace text-truncate" style={{fontSize: '1.8rem'}}>
             {display}
           </div>
         </div>
         
-        <div className="grid grid-cols-4 gap-2">
-          <button
-            onClick={clear}
-            className="col-span-2 bg-red-500 hover:bg-red-600 text-white p-3 rounded font-semibold"
-          >
-            Clear
-          </button>
-          <button
-            onClick={() => performOperation('/')}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
-          >
-            ÷
-          </button>
-          <button
-            onClick={() => performOperation('*')}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
-          >
-            ×
-          </button>
+        <div className="row g-2">
+          <div className="col-6">
+            <button
+              onClick={clear}
+              className="btn btn-danger w-100 fw-bold"
+              style={{height: '50px'}}
+            >
+              Clear
+            </button>
+          </div>
+          <div className="col-3">
+            <button
+              onClick={() => performOperation('/')}
+              className="btn btn-primary w-100 fw-bold"
+              style={{height: '50px'}}
+            >
+              ÷
+            </button>
+          </div>
+          <div className="col-3">
+            <button
+              onClick={() => performOperation('*')}
+              className="btn btn-primary w-100 fw-bold"
+              style={{height: '50px'}}
+            >
+              ×
+            </button>
+          </div>
           
           {[7, 8, 9].map(num => (
-            <button
-              key={num}
-              onClick={() => inputNumber(num)}
-              className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white p-3 rounded font-semibold"
-            >
-              {num}
-            </button>
+            <div className="col-3" key={num}>
+              <button
+                onClick={() => inputNumber(num)}
+                className="btn btn-light w-100 fw-bold border"
+                style={{height: '50px'}}
+              >
+                {num}
+              </button>
+            </div>
           ))}
-          <button
-            onClick={() => performOperation('-')}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
-          >
-            -
-          </button>
+          <div className="col-3">
+            <button
+              onClick={() => performOperation('-')}
+              className="btn btn-primary w-100 fw-bold"
+              style={{height: '50px'}}
+            >
+              -
+            </button>
+          </div>
           
           {[4, 5, 6].map(num => (
-            <button
-              key={num}
-              onClick={() => inputNumber(num)}
-              className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white p-3 rounded font-semibold"
-            >
-              {num}
-            </button>
+            <div className="col-3" key={num}>
+              <button
+                onClick={() => inputNumber(num)}
+                className="btn btn-light w-100 fw-bold border"
+                style={{height: '50px'}}
+              >
+                {num}
+              </button>
+            </div>
           ))}
-          <button
-            onClick={() => performOperation('+')}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
-          >
-            +
-          </button>
+          <div className="col-3">
+            <button
+              onClick={() => performOperation('+')}
+              className="btn btn-primary w-100 fw-bold"
+              style={{height: '50px'}}
+            >
+              +
+            </button>
+          </div>
           
           {[1, 2, 3].map(num => (
-            <button
-              key={num}
-              onClick={() => inputNumber(num)}
-              className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white p-3 rounded font-semibold"
-            >
-              {num}
-            </button>
+            <div className="col-3" key={num}>
+              <button
+                onClick={() => inputNumber(num)}
+                className="btn btn-light w-100 fw-bold border"
+                style={{height: '50px'}}
+              >
+                {num}
+              </button>
+            </div>
           ))}
-          <button
-            onClick={handleEqual}
-            className="row-span-2 bg-green-500 hover:bg-green-600 text-white p-3 rounded font-semibold"
-          >
-            =
-          </button>
+          <div className="col-3 d-flex flex-column">
+            <button
+              onClick={handleEqual}
+              className="btn btn-success w-100 fw-bold flex-grow-1"
+              style={{height: '102px'}}
+            >
+              =
+            </button>
+          </div>
           
-          <button
-            onClick={() => inputNumber(0)}
-            className="col-span-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white p-3 rounded font-semibold"
-          >
-            0
-          </button>
-          <button
-            onClick={inputDecimal}
-            className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white p-3 rounded font-semibold"
-          >
-            .
-          </button>
+          <div className="col-6">
+            <button
+              onClick={() => inputNumber(0)}
+              className="btn btn-light w-100 fw-bold border"
+              style={{height: '50px'}}
+            >
+              0
+            </button>
+          </div>
+          <div className="col-3">
+            <button
+              onClick={inputDecimal}
+              className="btn btn-light w-100 fw-bold border"
+              style={{height: '50px'}}
+            >
+              .
+            </button>
+          </div>
         </div>
       </div>
     </div>
