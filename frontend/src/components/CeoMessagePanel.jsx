@@ -48,6 +48,8 @@ const CeoMessagePanel = () => {
               <option value="purchaser">Purchasers</option>
               <option value="seller">Sellers</option>
               <option value="driver">Drivers</option>
+              <option value="store keeper">store keeper</option>
+                    
             </select>
           </div>
           
