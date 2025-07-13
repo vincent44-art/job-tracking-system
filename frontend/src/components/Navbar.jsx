@@ -1,60 +1,115 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Calculator from './Calculator';
+import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const [showCalculator, setShowCalculator] = useState(false);
+  const navigate = useNavigate();
 
   const getRoleColor = (role) => {
-    switch (role) {
-      case 'ceo': return 'bg-danger';
-      case 'purchaser': return 'bg-primary';
-      case 'seller': return 'bg-success';
-      case 'driver': return 'bg-warning';
-      default: return 'bg-secondary';
-    }
+    const colors = {
+      ceo: 'bg-danger',
+      purchaser: 'bg-primary',
+      seller: 'bg-success',
+      driver: 'bg-warning',
+      storekeeper: 'bg-info',
+      default: 'bg-secondary'
+    };
+    return colors[role?.toLowerCase()] || colors.default;
+  };
+
+  const getRoleDisplayName = (role) => {
+    const names = {
+      ceo: 'CEO',
+      purchaser: 'Purchaser',
+      seller: 'Seller',
+      driver: 'Driver',
+      storekeeper: 'Store Keeper',
+      default: 'User'
+    };
+    return names[role?.toLowerCase()] || names.default;
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
     <>
-      <nav className="navbar navbar-expand-lg navbar-dark navbar-custom">
-        <div className="container">
-          <a className="navbar-brand" href="/">
-            🍊 FruitTrack
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div className="container-fluid">
+          <a 
+            className="navbar-brand d-flex align-items-center" 
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/');
+            }}
+          >
+            <span className="me-2">🍊</span>
+            <span className="fw-bold">FruitTrack Pro</span>
           </a>
           
-          <div className="navbar-nav ms-auto d-flex flex-row align-items-center">
+          <div className="d-flex align-items-center">
             <button
-              className="btn btn-outline-light btn-sm me-3"
+              className="btn btn-outline-light me-3"
               onClick={() => setShowCalculator(true)}
               title="Calculator"
+              aria-label="Open calculator"
             >
-              <i className="bi bi-calculator"></i>
+              <i className="bi bi-calculator fs-5"></i>
             </button>
             
-            <div className="nav-item dropdown">
-              <a 
-                className="nav-link dropdown-toggle d-flex align-items-center" 
-                href="#" 
-                role="button" 
+            <div className="dropdown">
+              <button 
+                className="btn btn-dark dropdown-toggle d-flex align-items-center"
+                type="button"
+                id="userDropdown"
                 data-bs-toggle="dropdown"
+                aria-expanded="false"
               >
-                <span className={`badge ${getRoleColor(user?.role || '')} me-2`}>
-                  {user?.role?.toUpperCase()}
+                <span className={`badge ${getRoleColor(user?.role)} rounded-pill me-2`}>
+                  {getRoleDisplayName(user?.role)}
                 </span>
-                {user?.name}
-              </a>
-              <ul className="dropdown-menu">
+                <span className="d-none d-sm-inline">{user?.name}</span>
+                <i className="bi bi-person-circle ms-1"></i>
+              </button>
+              
+              <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                 <li>
-                  <span className="dropdown-item-text">
-                    <small className="text-muted">{user?.email}</small>
-                  </span>
+                  <div className="dropdown-header">
+                    <div className="fw-bold">{user?.name}</div>
+                    <div className="small text-muted">{user?.email}</div>
+                  </div>
                 </li>
                 <li><hr className="dropdown-divider" /></li>
                 <li>
-                  <button className="dropdown-item" onClick={logout}>
+                  <button 
+                    className="dropdown-item" 
+                    onClick={() => navigate('/profile')}
+                  >
+                    <i className="bi bi-person me-2"></i>
+                    Profile
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    className="dropdown-item" 
+                    onClick={() => navigate('/settings')}
+                  >
+                    <i className="bi bi-gear me-2"></i>
+                    Settings
+                  </button>
+                </li>
+                <li><hr className="dropdown-divider" /></li>
+                <li>
+                  <button 
+                    className="dropdown-item text-danger" 
+                    onClick={handleLogout}
+                  >
                     <i className="bi bi-box-arrow-right me-2"></i>
                     Logout
                   </button>
@@ -65,9 +120,10 @@ const Navbar = () => {
         </div>
       </nav>
       
-      {showCalculator && (
-        <Calculator onClose={() => setShowCalculator(false)} />
-      )}
+      <Calculator 
+        show={showCalculator}
+        onClose={() => setShowCalculator(false)} 
+      />
     </>
   );
 };

@@ -1,22 +1,37 @@
-
 import React, { useState } from 'react';
-import { useData } from '../contexts/DataContext';
+import { sendCeoMessage } from '../api'; // Import your API function
 
 const CeoMessagePanel = () => {
-  const { addCeoMessage } = useData();
   const [message, setMessage] = useState('');
   const [recipient, setRecipient] = useState('all');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      addCeoMessage({
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
+    
+    setIsSending(true);
+    setError(null);
+    setSuccess(false);
+    
+    try {
+      await sendCeoMessage({
         message: message.trim(),
         recipient,
-        isRead: false
+        timestamp: new Date().toISOString()
       });
+      
       setMessage('');
       setIsExpanded(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      setError('Failed to send message. Please try again.');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -37,6 +52,17 @@ const CeoMessagePanel = () => {
       
       {isExpanded && (
         <div className="space-y-3">
+          {error && (
+            <div className="alert alert-danger">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="alert alert-success">
+              Message sent successfully!
+            </div>
+          )}
+          
           <div>
             <label className="form-label">Send Message To:</label>
             <select
@@ -48,8 +74,7 @@ const CeoMessagePanel = () => {
               <option value="purchaser">Purchasers</option>
               <option value="seller">Sellers</option>
               <option value="driver">Drivers</option>
-              <option value="store keeper">store keeper</option>
-                    
+              <option value="storekeeper">Store Keepers</option>
             </select>
           </div>
           
@@ -61,16 +86,26 @@ const CeoMessagePanel = () => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type your message here..."
+              disabled={isSending}
             />
           </div>
           
           <button
             onClick={handleSendMessage}
             className="btn btn-primary"
-            disabled={!message.trim()}
+            disabled={!message.trim() || isSending}
           >
-            <i className="bi bi-send me-2"></i>
-            Send Message
+            {isSending ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                Sending...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-send me-2"></i>
+                Send Message
+              </>
+            )}
           </button>
         </div>
       )}

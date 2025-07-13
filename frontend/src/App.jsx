@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar.jsx';
@@ -10,7 +9,6 @@ import SellerDashboard from './pages/SellerDashboard.jsx';
 import DriverDashboard from './pages/DriverDashboard.jsx';
 import StoreKeeperDashboard from './pages/StoreKeeperDashboard.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
-import { DataProvider } from './contexts/DataContext.jsx';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -49,22 +47,20 @@ const AppContent = () => {
 const App = () => {
   return (
     <AuthProvider>
-      <DataProvider>
-        <Router>
-          <AppContent />
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                borderRadius: '12px',
-                padding: '16px',
-                fontSize: '14px',
-              },
-            }}
-          />
-        </Router>
-      </DataProvider>
+      <Router>
+        <AppContent />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              borderRadius: '12px',
+              padding: '16px',
+              fontSize: '14px',
+            },
+          }}
+        />
+      </Router>
     </AuthProvider>
   );
 };

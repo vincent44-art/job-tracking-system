@@ -1,34 +1,114 @@
-
-import React from 'react';
-import { useData } from '../contexts/DataContext';
+import React, { useState, useEffect } from 'react';
+import { 
+  fetchInventory,
+  fetchStockMovements,
+  fetchGradients,
+  clearInventoryAPI,
+  clearStockMovementsAPI,
+  clearGradientsAPI
+} from '../api';
 
 const InventoryTab = () => {
-  const { 
-    inventory, 
-    stockMovements, 
-    gradients, 
-    getCurrentStock, 
-    clearInventoryData,
-    formatCurrency 
-  } = useData();
+  const [inventory, setInventory] = useState([]);
+  const [stockMovements, setStockMovements] = useState([]);
+  const [gradients, setGradients] = useState([]);
+  const [loading, setLoading] = useState({
+    inventory: true,
+    movements: true,
+    gradients: true
+  });
+  const [error, setError] = useState(null);
+
+  // Fetch all inventory data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [inventoryRes, movementsRes, gradientsRes] = await Promise.all([
+          fetchInventory(),
+          fetchStockMovements(),
+          fetchGradients()
+        ]);
+        
+        setInventory(inventoryRes.data);
+        setStockMovements(movementsRes.data);
+        setGradients(gradientsRes.data);
+      } catch (err) {
+        console.error('Failed to load inventory data:', err);
+        setError('Failed to load inventory data. Please try again.');
+      } finally {
+        setLoading({
+          inventory: false,
+          movements: false,
+          gradients: false
+        });
+      }
+    };
+    loadData();
+  }, []);
+
+  // Calculate current stock
+  const getCurrentStock = () => {
+    const stockMap = {};
+    stockMovements.forEach(movement => {
+      if (!stockMap[movement.fruitType]) {
+        stockMap[movement.fruitType] = 0;
+      }
+      stockMap[movement.fruitType] += 
+        movement.movementType === 'in' ? movement.quantity : -movement.quantity;
+    });
+    return Object.entries(stockMap)
+      .map(([fruitType, quantity]) => ({ fruitType, quantity }))
+      .filter(item => item.quantity > 0);
+  };
 
   const currentStock = getCurrentStock();
   const totalStockMovements = stockMovements.length;
   const totalGradients = gradients.length;
 
-  const clearStockMovements = () => {
-    if (window.confirm('Are you sure you want to clear all stock movements?')) {
-      localStorage.removeItem('stockMovements');
-      window.location.reload();
+  const handleClearData = async (type) => {
+    if (!window.confirm(`Are you sure you want to clear all ${type}?`)) return;
+
+    try {
+      switch (type) {
+        case 'inventory':
+          await clearInventoryAPI();
+          setInventory([]);
+          break;
+        case 'movements':
+          await clearStockMovementsAPI();
+          setStockMovements([]);
+          break;
+        case 'gradients':
+          await clearGradientsAPI();
+          setGradients([]);
+          break;
+      }
+    } catch (err) {
+      console.error(`Failed to clear ${type}:`, err);
+      setError(`Failed to clear ${type}. Please try again.`);
     }
   };
 
-  const clearGradients = () => {
-    if (window.confirm('Are you sure you want to clear all gradients?')) {
-      localStorage.removeItem('gradients');
-      window.location.reload();
-    }
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
   };
+
+  if (error) {
+    return (
+      <div className="alert alert-danger">
+        {error}
+        <button 
+          className="btn btn-sm btn-outline-danger ms-3"
+          onClick={() => setError(null)}
+        >
+          Dismiss
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="tab-content">
@@ -37,7 +117,13 @@ const InventoryTab = () => {
           <div className="card bg-success text-white shadow-lg">
             <div className="card-body">
               <h5><i className="bi bi-boxes me-2"></i>Current Stock Items</h5>
-              <h3>{currentStock.length}</h3>
+              <h3>
+                {loading.inventory ? (
+                  <span className="spinner-border spinner-border-sm" role="status"></span>
+                ) : (
+                  currentStock.length
+                )}
+              </h3>
             </div>
           </div>
         </div>
@@ -45,7 +131,13 @@ const InventoryTab = () => {
           <div className="card bg-warning text-white shadow-lg">
             <div className="card-body">
               <h5><i className="bi bi-arrow-left-right me-2"></i>Stock Movements</h5>
-              <h3>{totalStockMovements}</h3>
+              <h3>
+                {loading.movements ? (
+                  <span className="spinner-border spinner-border-sm" role="status"></span>
+                ) : (
+                  totalStockMovements
+                )}
+              </h3>
             </div>
           </div>
         </div>
@@ -53,7 +145,13 @@ const InventoryTab = () => {
           <div className="card bg-info text-white shadow-lg">
             <div className="card-body">
               <h5><i className="bi bi-droplet me-2"></i>Gradients Applied</h5>
-              <h3>{totalGradients}</h3>
+              <h3>
+                {loading.gradients ? (
+                  <span className="spinner-border spinner-border-sm" role="status"></span>
+                ) : (
+                  totalGradients
+                )}
+              </h3>
             </div>
           </div>
         </div>
@@ -66,7 +164,8 @@ const InventoryTab = () => {
               <h5><i className="bi bi-boxes me-2"></i>Current Inventory</h5>
               <button 
                 className="btn btn-outline-light btn-sm"
-                onClick={clearInventoryData}
+                onClick={() => handleClearData('inventory')}
+                disabled={loading.inventory || inventory.length === 0}
               >
                 <i className="bi bi-trash me-1"></i>Clear All
               </button>
@@ -81,26 +180,36 @@ const InventoryTab = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentStock.map((item, index) => (
-                      <tr key={index}>
-                        <td>
-                          <span className="fw-bold text-success">
-                            <i className="bi bi-apple me-1"></i>
-                            {item.fruitType}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="badge bg-primary">
-                            {item.quantity}
-                          </span>
+                    {loading.inventory ? (
+                      <tr>
+                        <td colSpan="2" className="text-center py-4">
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Loading inventory...
                         </td>
                       </tr>
-                    ))}
+                    ) : currentStock.length > 0 ? (
+                      currentStock.map((item, index) => (
+                        <tr key={index}>
+                          <td>
+                            <span className="fw-bold text-success">
+                              <i className="bi bi-apple me-1"></i>
+                              {item.fruitType}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="badge bg-primary">
+                              {item.quantity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="2" className="text-center text-muted">No stock available</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
-                {currentStock.length === 0 && (
-                  <p className="text-center text-muted">No stock available</p>
-                )}
               </div>
             </div>
           </div>
@@ -112,7 +221,8 @@ const InventoryTab = () => {
               <h5><i className="bi bi-arrow-left-right me-2"></i>Recent Stock Movements</h5>
               <button 
                 className="btn btn-outline-light btn-sm"
-                onClick={clearStockMovements}
+                onClick={() => handleClearData('movements')}
+                disabled={loading.movements || stockMovements.length === 0}
               >
                 <i className="bi bi-trash me-1"></i>Clear All
               </button>
@@ -130,27 +240,40 @@ const InventoryTab = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {stockMovements.slice(-10).reverse().map((movement) => (
-                      <tr key={movement.id}>
-                        <td>
-                          <i className="bi bi-apple me-1 text-success"></i>
-                          {movement.fruitType}
+                    {loading.movements ? (
+                      <tr>
+                        <td colSpan="5" className="text-center py-4">
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Loading movements...
                         </td>
-                        <td>
-                          <span className={`badge ${movement.movementType === 'in' ? 'bg-success' : 'bg-danger'}`}>
-                            {movement.movementType.toUpperCase()}
-                          </span>
-                        </td>
-                        <td>{movement.quantity}</td>
-                        <td>{movement.unit}</td>
-                        <td>{new Date(movement.date).toLocaleDateString()}</td>
                       </tr>
-                    ))}
+                    ) : stockMovements.length > 0 ? (
+                      [...stockMovements]
+                        .slice(-10)
+                        .reverse()
+                        .map((movement) => (
+                          <tr key={movement.id}>
+                            <td>
+                              <i className="bi bi-apple me-1 text-success"></i>
+                              {movement.fruitType}
+                            </td>
+                            <td>
+                              <span className={`badge ${movement.movementType === 'in' ? 'bg-success' : 'bg-danger'}`}>
+                                {movement.movementType.toUpperCase()}
+                              </span>
+                            </td>
+                            <td>{movement.quantity}</td>
+                            <td>{movement.unit}</td>
+                            <td>{new Date(movement.date).toLocaleDateString()}</td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="text-center text-muted">No stock movements recorded</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
-                {stockMovements.length === 0 && (
-                  <p className="text-center text-muted">No stock movements recorded</p>
-                )}
               </div>
             </div>
           </div>
@@ -164,7 +287,8 @@ const InventoryTab = () => {
               <h5><i className="bi bi-droplet me-2"></i>Recent Gradients Applied</h5>
               <button 
                 className="btn btn-outline-light btn-sm"
-                onClick={clearGradients}
+                onClick={() => handleClearData('gradients')}
+                disabled={loading.gradients || gradients.length === 0}
               >
                 <i className="bi bi-trash me-1"></i>Clear All
               </button>
@@ -183,28 +307,41 @@ const InventoryTab = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {gradients.slice(-10).reverse().map((gradient) => (
-                      <tr key={gradient.id}>
-                        <td>{new Date(gradient.applicationDate).toLocaleDateString()}</td>
-                        <td>
-                          <span className="badge bg-info">
-                            {gradient.gradientName}
-                          </span>
+                    {loading.gradients ? (
+                      <tr>
+                        <td colSpan="6" className="text-center py-4">
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Loading gradients...
                         </td>
-                        <td>
-                          <i className="bi bi-apple me-1 text-success"></i>
-                          {gradient.fruitType}
-                        </td>
-                        <td>{gradient.quantity} {gradient.unit}</td>
-                        <td>{gradient.purpose}</td>
-                        <td>{gradient.storeKeeperName}</td>
                       </tr>
-                    ))}
+                    ) : gradients.length > 0 ? (
+                      [...gradients]
+                        .slice(-10)
+                        .reverse()
+                        .map((gradient) => (
+                          <tr key={gradient.id}>
+                            <td>{new Date(gradient.applicationDate).toLocaleDateString()}</td>
+                            <td>
+                              <span className="badge bg-info">
+                                {gradient.gradientName}
+                              </span>
+                            </td>
+                            <td>
+                              <i className="bi bi-apple me-1 text-success"></i>
+                              {gradient.fruitType}
+                            </td>
+                            <td>{gradient.quantity} {gradient.unit}</td>
+                            <td>{gradient.purpose}</td>
+                            <td>{gradient.storeKeeperName}</td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="text-center text-muted">No gradients applied</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
-                {gradients.length === 0 && (
-                  <p className="text-center text-muted">No gradients applied</p>
-                )}
               </div>
             </div>
           </div>

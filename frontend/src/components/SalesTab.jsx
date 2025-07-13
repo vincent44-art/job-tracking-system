@@ -1,10 +1,10 @@
-
-import React, { useState } from 'react';
-import { useData } from '../contexts/DataContext';
+import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus } from 'lucide-react';
+import { fetchSales, createSale, deleteSale } from 'http://127.0.0.1:5000'; // Import your API functions
 
 const SalesTab = () => {
-  const { assignments, deleteSale, addSale } = useData();
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -15,6 +15,21 @@ const SalesTab = () => {
     date: new Date().toISOString().split('T')[0]
   });
 
+  // Fetch sales data from backend
+  useEffect(() => {
+    const loadSales = async () => {
+      try {
+        const response = await fetchSales();
+        setSales(response.data);
+      } catch (error) {
+        console.error('Failed to fetch sales:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSales();
+  }, []);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -22,60 +37,64 @@ const SalesTab = () => {
     }).format(amount);
   };
 
-  const handleDelete = (assignmentId, saleId) => {
+  const handleDelete = async (saleId) => {
     if (window.confirm('Are you sure you want to delete this sale?')) {
-      deleteSale(assignmentId, saleId);
+      try {
+        await deleteSale(saleId);
+        setSales(sales.filter(sale => sale.id !== saleId));
+      } catch (error) {
+        console.error('Failed to delete sale:', error);
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Create a new assignment for this sale
-    const newAssignmentId = `assignment-${Date.now()}`;
-    addSale(newAssignmentId, {
-      sellerName: formData.sellerName,
-      fruitType: formData.fruitType,
-      quantitySold: parseFloat(formData.quantitySold),
-      revenue: parseFloat(formData.revenue),
-      date: formData.date
-    });
+    try {
+      const newSale = {
+        sellerName: formData.sellerName,
+        fruitType: formData.fruitType,
+        quantitySold: parseFloat(formData.quantitySold),
+        revenue: parseFloat(formData.revenue),
+        date: formData.date
+      };
 
-    // Reset form
-    setFormData({
-      sellerName: '',
-      fruitType: '',
-      quantitySold: '',
-      revenue: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setShowForm(false);
-  };
+      const response = await createSale(newSale);
+      setSales([...sales, response.data]);
 
-  const clearAllSales = () => {
-    if (window.confirm('Are you sure you want to clear all sales data? This action cannot be undone.')) {
-      // Clear all sales from all assignments
-      assignments.forEach(assignment => {
-        assignment.sales.forEach(sale => {
-          deleteSale(assignment.id, sale.id);
-        });
+      // Reset form
+      setFormData({
+        sellerName: '',
+        fruitType: '',
+        quantitySold: '',
+        revenue: '',
+        date: new Date().toISOString().split('T')[0]
       });
+      setShowForm(false);
+    } catch (error) {
+      console.error('Failed to create sale:', error);
     }
   };
 
-  const allSales = assignments.flatMap(assignment => 
-    assignment.sales.map(sale => ({
-      ...sale,
-      fruitType: assignment.fruitType,
-      sellerEmail: assignment.sellerEmail,
-      assignmentId: assignment.id
-    }))
+  const clearAllSales = async () => {
+    if (window.confirm('Are you sure you want to clear all sales data? This action cannot be undone.')) {
+      try {
+        // Implement a bulk delete endpoint in your backend
+        await Promise.all(sales.map(sale => deleteSale(sale.id)));
+        setSales([]);
+      } catch (error) {
+        console.error('Failed to clear sales:', error);
+      }
+    }
+  };
+
+  const filteredSales = sales.filter(sale =>
+    sale.sellerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sale.fruitType?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredSales = allSales.filter(sale =>
-    sale.sellerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sale.fruitType.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (loading) return <div className="text-center py-5">Loading sales data...</div>;
 
   return (
     <div>
@@ -92,6 +111,7 @@ const SalesTab = () => {
           <button
             className="btn btn-outline-danger"
             onClick={clearAllSales}
+            disabled={sales.length === 0}
           >
             <Trash2 size={16} className="me-1" />
             Clear All
@@ -132,6 +152,8 @@ const SalesTab = () => {
                     className="form-control"
                     value={formData.quantitySold}
                     onChange={(e) => setFormData({...formData, quantitySold: e.target.value})}
+                    min="0"
+                    step="0.01"
                     required
                   />
                 </div>
@@ -143,6 +165,7 @@ const SalesTab = () => {
                     className="form-control"
                     value={formData.revenue}
                     onChange={(e) => setFormData({...formData, revenue: e.target.value})}
+                    min="0"
                     required
                   />
                 </div>
@@ -206,24 +229,32 @@ const SalesTab = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredSales.map(sale => (
-                  <tr key={sale.id}>
-                    <td>{new Date(sale.date).toLocaleDateString()}</td>
-                    <td>{sale.sellerEmail}</td>
-                    <td>{sale.fruitType}</td>
-                    <td>{sale.quantitySold}</td>
-                    <td>{formatCurrency(sale.revenue)}</td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDelete(sale.assignmentId, sale.id)}
-                        title="Delete sale"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                {filteredSales.length > 0 ? (
+                  filteredSales.map(sale => (
+                    <tr key={sale.id}>
+                      <td>{new Date(sale.date).toLocaleDateString()}</td>
+                      <td>{sale.sellerName}</td>
+                      <td>{sale.fruitType}</td>
+                      <td>{sale.quantitySold}</td>
+                      <td>{formatCurrency(sale.revenue)}</td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDelete(sale.id)}
+                          title="Delete sale"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center py-4">
+                      {sales.length === 0 ? 'No sales records found' : 'No matching sales found'}
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

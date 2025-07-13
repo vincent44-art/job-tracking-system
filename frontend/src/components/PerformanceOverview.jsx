@@ -1,14 +1,37 @@
-
-import React from 'react';
-import { useData } from '../contexts/DataContext';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from '../api';
 
 const PerformanceOverview = () => {
-  const { getStats, getFruitPerformance, purchases, assignments, carExpenses, otherExpenses, salaryPayments } = useData();
-  
-  const stats = getStats();
-  const fruitPerformance = getFruitPerformance();
-  const bestPerformingFruit = fruitPerformance[0];
+  const [stats, setStats] = useState(null);
+  const [fruitPerformance, setFruitPerformance] = useState([]);
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch all performance data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [statsRes, fruitRes, monthlyRes] = await Promise.all([
+          fetchPerformanceStats(),
+          fetchFruitPerformance(),
+          fetchMonthlyData()
+        ]);
+        
+        setStats(statsRes.data);
+        setFruitPerformance(fruitRes.data);
+        setMonthlyData(monthlyRes.data);
+      } catch (err) {
+        console.error('Failed to load performance data:', err);
+        setError('Failed to load performance data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -17,6 +40,36 @@ const PerformanceOverview = () => {
     }).format(amount);
   };
 
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading performance data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger">
+        {error}
+        <button 
+          className="btn btn-sm btn-outline-danger ms-3"
+          onClick={() => setError(null)}
+        >
+          Dismiss
+        </button>
+      </div>
+    );
+  }
+
+  if (!stats) return null;
+
+  const bestPerformingFruit = fruitPerformance[0] || null;
+  const totalExpenses = stats.totalPurchases + stats.totalCarExpenses + stats.totalOtherExpenses + stats.totalSalaries;
+
   const expenseBreakdown = [
     { name: 'Purchases', value: stats.totalPurchases, color: '#8884d8' },
     { name: 'Car Expenses', value: stats.totalCarExpenses, color: '#82ca9d' },
@@ -24,82 +77,50 @@ const PerformanceOverview = () => {
     { name: 'Salaries', value: stats.totalSalaries, color: '#ff7300' }
   ];
 
-  const monthlyData = () => {
-    const months = {};
-    
-    // Process purchases
-    purchases.forEach(purchase => {
-      const month = purchase.date.substring(0, 7); // YYYY-MM
-      if (!months[month]) months[month] = { month, purchases: 0, sales: 0, expenses: 0, salaries: 0 };
-      months[month].purchases += purchase.amount;
-    });
-    
-    // Process sales
-    assignments.forEach(assignment => {
-      assignment.sales.forEach(sale => {
-        const month = sale.date.substring(0, 7);
-        if (!months[month]) months[month] = { month, purchases: 0, sales: 0, expenses: 0, salaries: 0 };
-        months[month].sales += sale.revenue;
-      });
-    });
-    
-    // Process expenses
-    [...carExpenses, ...otherExpenses].forEach(expense => {
-      const month = expense.date.substring(0, 7);
-      if (!months[month]) months[month] = { month, purchases: 0, sales: 0, expenses: 0, salaries: 0 };
-      months[month].expenses += expense.amount;
-    });
-    
-    // Process salaries
-    salaryPayments.forEach(payment => {
-      const month = payment.paymentDate.substring(0, 7);
-      if (!months[month]) months[month] = { month, purchases: 0, sales: 0, expenses: 0, salaries: 0 };
-      months[month].salaries += payment.monthlySalary;
-    });
-    
-    return Object.values(months).sort((a, b) => a.month.localeCompare(b.month));
-  };
-
   return (
-    <div className="performance-overview">
+    <div className="container-fluid py-4">
       <div className="row mb-4">
         <div className="col-12">
-          <h2 className="mb-4">Performance Overview</h2>
+          <h2>Business Performance Dashboard</h2>
+          <p className="text-muted">Key metrics and financial overview</p>
         </div>
       </div>
       
       {/* Summary Cards */}
-      <div className="row mb-4">
+      <div className="row mb-4 g-3">
         <div className="col-md-3">
-          <div className="card card-custom">
+          <div className="card shadow-sm border-success">
             <div className="card-body text-center">
-              <h5 className="text-gradient">Total Revenue</h5>
+              <h5 className="text-muted">Total Revenue</h5>
               <h3 className="text-success">{formatCurrency(stats.totalSales)}</h3>
+              <small className="text-muted">All-time sales</small>
             </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card card-custom">
+          <div className="card shadow-sm border-danger">
             <div className="card-body text-center">
-              <h5 className="text-gradient">Total Expenses</h5>
-              <h3 className="text-danger">{formatCurrency(stats.totalPurchases + stats.totalCarExpenses + stats.totalOtherExpenses + stats.totalSalaries)}</h3>
+              <h5 className="text-muted">Total Expenses</h5>
+              <h3 className="text-danger">{formatCurrency(totalExpenses)}</h3>
+              <small className="text-muted">All operational costs</small>
             </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card card-custom">
+          <div className="card shadow-sm border-primary">
             <div className="card-body text-center">
-              <h5 className="text-gradient">Net Profit</h5>
+              <h5 className="text-muted">Net Profit</h5>
               <h3 className={stats.netProfit >= 0 ? 'text-success' : 'text-danger'}>
                 {formatCurrency(stats.netProfit)}
               </h3>
+              <small className="text-muted">Revenue - Expenses</small>
             </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card card-custom">
+          <div className="card shadow-sm border-info">
             <div className="card-body text-center">
-              <h5 className="text-gradient">Best Fruit</h5>
+              <h5 className="text-muted">Best Product</h5>
               <h4 className="text-primary">{bestPerformingFruit?.fruitType || 'N/A'}</h4>
               <small className="text-muted">
                 {bestPerformingFruit ? formatCurrency(bestPerformingFruit.profit) : 'No data'}
@@ -109,21 +130,77 @@ const PerformanceOverview = () => {
         </div>
       </div>
 
-      {/* Fruit Performance Table */}
+      {/* Charts Row 1 */}
+      <div className="row mb-4 g-3">
+        <div className="col-lg-8">
+          <div className="card shadow-sm h-100">
+            <div className="card-body">
+              <h5 className="card-title">Monthly Financial Performance</h5>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => formatCurrency(value)}
+                      labelFormatter={(month) => `Month: ${month}`}
+                    />
+                    <Bar dataKey="sales" fill="#28a745" name="Sales" />
+                    <Bar dataKey="purchases" fill="#dc3545" name="Purchases" />
+                    <Bar dataKey="expenses" fill="#ffc107" name="Expenses" />
+                    <Bar dataKey="salaries" fill="#17a2b8" name="Salaries" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-4">
+          <div className="card shadow-sm h-100">
+            <div className="card-body">
+              <h5 className="card-title">Expense Distribution</h5>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={expenseBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      innerRadius={40}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {expenseBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fruit Performance */}
       <div className="row mb-4">
         <div className="col-12">
-          <div className="card card-custom">
+          <div className="card shadow-sm">
             <div className="card-body">
-              <h5 className="card-title text-gradient">Fruit Performance Analysis</h5>
+              <h5 className="card-title">Product Performance Analysis</h5>
               <div className="table-responsive">
                 <table className="table table-hover">
-                  <thead>
+                  <thead className="table-light">
                     <tr>
-                      <th>Fruit Type</th>
+                      <th>Product</th>
                       <th>Purchases</th>
                       <th>Sales</th>
                       <th>Profit/Loss</th>
-                      <th>Profit Margin</th>
+                      <th>Margin</th>
                       <th>Performance</th>
                     </tr>
                   </thead>
@@ -132,7 +209,7 @@ const PerformanceOverview = () => {
                       <tr key={fruit.fruitType}>
                         <td>
                           <strong>{fruit.fruitType}</strong>
-                          {index === 0 && <span className="badge bg-success ms-2">Best</span>}
+                          {index === 0 && <span className="badge bg-success ms-2">Top Performer</span>}
                         </td>
                         <td>{formatCurrency(fruit.purchases)}</td>
                         <td>{formatCurrency(fruit.sales)}</td>
@@ -140,13 +217,17 @@ const PerformanceOverview = () => {
                           {formatCurrency(fruit.profit)}
                         </td>
                         <td className={fruit.profitMargin >= 0 ? 'text-success' : 'text-danger'}>
-                          {fruit.profitMargin.toFixed(2)}%
+                          {fruit.profitMargin.toFixed(1)}%
                         </td>
                         <td>
                           <div className="progress" style={{height: '20px'}}>
                             <div 
                               className={`progress-bar ${fruit.profit >= 0 ? 'bg-success' : 'bg-danger'}`}
                               style={{width: `${Math.min(Math.abs(fruit.profitMargin), 100)}%`}}
+                              role="progressbar"
+                              aria-valuenow={Math.abs(fruit.profitMargin)}
+                              aria-valuemin="0"
+                              aria-valuemax="100"
                             >
                               {fruit.profitMargin.toFixed(1)}%
                             </div>
@@ -162,71 +243,29 @@ const PerformanceOverview = () => {
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="row mb-4">
-        <div className="col-md-8">
-          <div className="card card-custom">
-            <div className="card-body">
-              <h5 className="card-title text-gradient">Monthly Financial Overview</h5>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
-                  <Bar dataKey="sales" fill="#28a745" name="Sales" />
-                  <Bar dataKey="purchases" fill="#dc3545" name="Purchases" />
-                  <Bar dataKey="expenses" fill="#ffc107" name="Expenses" />
-                  <Bar dataKey="salaries" fill="#17a2b8" name="Salaries" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card card-custom">
-            <div className="card-body">
-              <h5 className="card-title text-gradient">Expense Breakdown</h5>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={expenseBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {expenseBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Fruit Performance Chart */}
+      {/* Fruit Profitability Chart */}
       <div className="row">
         <div className="col-12">
-          <div className="card card-custom">
+          <div className="card shadow-sm">
             <div className="card-body">
-              <h5 className="card-title text-gradient">Fruit Profitability Comparison</h5>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={fruitPerformance}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="fruitType" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
-                  <Bar dataKey="purchases" fill="#ff7300" name="Purchases" />
-                  <Bar dataKey="sales" fill="#00ff00" name="Sales" />
-                  <Bar dataKey="profit" fill="#0088ff" name="Profit" />
-                </BarChart>
-              </ResponsiveContainer>
+              <h5 className="card-title">Product Profitability Comparison</h5>
+              <div style={{ height: '400px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={fruitPerformance}
+                    layout="vertical"
+                    margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="fruitType" type="category" width={100} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Bar dataKey="purchases" fill="#ff7300" name="Purchases" />
+                    <Bar dataKey="sales" fill="#28a745" name="Sales" />
+                    <Bar dataKey="profit" fill="#0088ff" name="Profit" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>

@@ -1,26 +1,74 @@
-
-import React from 'react';
-import { useData } from '../contexts/DataContext';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchCeoMessages, updateMessageAsRead } from '../api';
 
 const CeoMessagesDisplay = () => {
-  const { ceoMessages, markMessageAsRead } = useData();
   const { user } = useAuth();
-  
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch messages from backend
+  useEffect(() => {
+    const loadMessages = async () => {
+      try {
+        const response = await fetchCeoMessages();
+        setMessages(response.data);
+      } catch (err) {
+        console.error('Failed to fetch messages:', err);
+        setError('Failed to load messages');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadMessages();
+
+    // Optional: Set up polling or real-time updates
+    const interval = setInterval(loadMessages, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   // Filter messages for current user
-  const userMessages = ceoMessages.filter(msg => 
+  const userMessages = messages.filter(msg => 
     msg.recipient === 'all' || msg.recipient === user?.role
   );
 
   const unreadMessages = userMessages.filter(msg => !msg.isRead);
 
+  const handleMarkAsRead = async (messageId) => {
+    try {
+      await updateMessageAsRead(messageId);
+      setMessages(messages.map(msg => 
+        msg.id === messageId ? { ...msg, isRead: true } : msg
+      ));
+    } catch (err) {
+      console.error('Failed to mark message as read:', err);
+      setError('Failed to update message status');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-info bg-opacity-10 border border-info rounded p-3 mb-4">
+        <div className="text-center py-2">
+          <div className="spinner-border spinner-border-sm text-info me-2" role="status"></div>
+          Loading messages...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-danger bg-opacity-10 border border-danger rounded p-3 mb-4">
+        <div className="text-danger">{error}</div>
+      </div>
+    );
+  }
+
   if (userMessages.length === 0) {
     return null;
   }
-
-  const handleMarkAsRead = (messageId) => {
-    markMessageAsRead(messageId);
-  };
 
   return (
     <div className="bg-info bg-opacity-10 border border-info rounded p-3 mb-4">
@@ -41,7 +89,7 @@ const CeoMessagesDisplay = () => {
                   {new Date(message.createdAt).toLocaleDateString()} - 
                   To: {message.recipient === 'all' ? 'Everyone' : message.recipient}
                 </small>
-                <p className="mb-0 mt-1">{message.message}</p>
+                <p className="mb-0 mt-1">{message.content}</p>
               </div>
               {!message.isRead && (
                 <button

@@ -1,10 +1,10 @@
-
-import React, { useState } from 'react';
-import { useData } from '../contexts/DataContext';
+import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus } from 'lucide-react';
+import { fetchCarExpenses, createCarExpense, deleteCarExpense } from '../api';
 
 const CarExpensesTab = () => {
-  const { carExpenses, deleteCarExpense, addCarExpense } = useData();
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,6 +16,21 @@ const CarExpensesTab = () => {
     date: new Date().toISOString().split('T')[0]
   });
 
+  // Fetch car expenses from backend
+  useEffect(() => {
+    const loadExpenses = async () => {
+      try {
+        const response = await fetchCarExpenses();
+        setExpenses(response.data);
+      } catch (error) {
+        console.error('Failed to fetch car expenses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadExpenses();
+  }, []);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -23,49 +38,67 @@ const CarExpensesTab = () => {
     }).format(amount);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this car expense?')) {
-      deleteCarExpense(id);
+      try {
+        await deleteCarExpense(id);
+        setExpenses(expenses.filter(expense => expense.id !== id));
+      } catch (error) {
+        console.error('Failed to delete car expense:', error);
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    addCarExpense({
-      driverEmail: formData.driverEmail,
-      carType: formData.carType,
-      type: formData.type,
-      description: formData.description,
-      amount: parseFloat(formData.amount),
-      date: formData.date
-    });
+    try {
+      const newExpense = {
+        driverEmail: formData.driverEmail,
+        carType: formData.carType,
+        type: formData.type,
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        date: formData.date
+      };
 
-    // Reset form
-    setFormData({
-      driverEmail: '',
-      carType: '',
-      type: '',
-      description: '',
-      amount: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setShowForm(false);
-  };
+      const response = await createCarExpense(newExpense);
+      setExpenses([...expenses, response.data]);
 
-  const clearAllExpenses = () => {
-    if (window.confirm('Are you sure you want to clear all car expenses? This action cannot be undone.')) {
-      carExpenses.forEach(expense => {
-        deleteCarExpense(expense.id);
+      // Reset form
+      setFormData({
+        driverEmail: '',
+        carType: '',
+        type: '',
+        description: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0]
       });
+      setShowForm(false);
+    } catch (error) {
+      console.error('Failed to create car expense:', error);
     }
   };
 
-  const filteredExpenses = carExpenses.filter(expense =>
-    expense.driverEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const clearAllExpenses = async () => {
+    if (window.confirm('Are you sure you want to clear all car expenses? This action cannot be undone.')) {
+      try {
+        // Implement a bulk delete endpoint in your backend
+        await Promise.all(expenses.map(expense => deleteCarExpense(expense.id)));
+        setExpenses([]);
+      } catch (error) {
+        console.error('Failed to clear car expenses:', error);
+      }
+    }
+  };
+
+  const filteredExpenses = expenses.filter(expense =>
+    expense.driverEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    expense.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    expense.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (expense.carType && expense.carType.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  if (loading) return <div className="text-center py-5">Loading car expenses...</div>;
 
   return (
     <div>
@@ -82,6 +115,7 @@ const CarExpensesTab = () => {
           <button
             className="btn btn-outline-danger"
             onClick={clearAllExpenses}
+            disabled={expenses.length === 0}
           >
             <Trash2 size={16} className="me-1" />
             Clear All
@@ -136,6 +170,7 @@ const CarExpensesTab = () => {
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     className="form-control"
                     value={formData.amount}
                     onChange={(e) => setFormData({...formData, amount: e.target.value})}
@@ -213,33 +248,41 @@ const CarExpensesTab = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredExpenses.map(expense => (
-                  <tr key={expense.id}>
-                    <td>{new Date(expense.date).toLocaleDateString()}</td>
-                    <td>{expense.driverEmail}</td>
-                    <td>{expense.carType || 'N/A'}</td>
-                    <td>
-                      <span className={`badge ${
-                        expense.type === 'fuel' ? 'bg-info' :
-                        expense.type === 'repair' ? 'bg-danger' :
-                        expense.type === 'maintenance' ? 'bg-warning' : 'bg-secondary'
-                      }`}>
-                        {expense.type}
-                      </span>
-                    </td>
-                    <td>{expense.description}</td>
-                    <td>{formatCurrency(expense.amount)}</td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDelete(expense.id)}
-                        title="Delete expense"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                {filteredExpenses.length > 0 ? (
+                  filteredExpenses.map(expense => (
+                    <tr key={expense.id}>
+                      <td>{new Date(expense.date).toLocaleDateString()}</td>
+                      <td>{expense.driverEmail}</td>
+                      <td>{expense.carType || 'N/A'}</td>
+                      <td>
+                        <span className={`badge ${
+                          expense.type === 'fuel' ? 'bg-info' :
+                          expense.type === 'repair' ? 'bg-danger' :
+                          expense.type === 'maintenance' ? 'bg-warning' : 'bg-secondary'
+                        }`}>
+                          {expense.type}
+                        </span>
+                      </td>
+                      <td>{expense.description}</td>
+                      <td>{formatCurrency(expense.amount)}</td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDelete(expense.id)}
+                          title="Delete expense"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center py-4">
+                      {expenses.length === 0 ? 'No car expenses found' : 'No matching expenses found'}
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
