@@ -1,6 +1,4 @@
-
-import React, { useState } from 'react';
-import { useData } from '../contexts/DataContext';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
 import InventoryForm from '../components/storekeeper/InventoryForm';
@@ -8,19 +6,23 @@ import StockMovementForm from '../components/storekeeper/StockMovementForm';
 import GradientForm from '../components/storekeeper/GradientForm';
 import CurrentStockTable from '../components/storekeeper/CurrentStockTable';
 import AddedItemsTable from '../components/storekeeper/AddedItemsTable';
+import {
+  fetchInventory,
+  addInventoryItem,
+  addStockMovement,
+  addGradient,
+  getCurrentStock,
+  clearInventoryData
+} from 'http://127.0.0.1:5000/api/';
 
 const StoreKeeperDashboard = () => {
-  const { 
-    addInventoryItem, 
-    addStockMovement, 
-    addGradient,
-    getCurrentStock,
-    inventory,
-    clearInventoryData
-  } = useData();
   const { user } = useAuth();
-  
   const [activeTab, setActiveTab] = useState('inventory');
+  const [inventory, setInventory] = useState([]);
+  const [currentStock, setCurrentStock] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const [inventoryForm, setInventoryForm] = useState({
     fruitType: '',
     quantity: '',
@@ -51,83 +53,157 @@ const StoreKeeperDashboard = () => {
     notes: ''
   });
 
-  const handleInventorySubmit = (e) => {
+  // Load inventory data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [inventoryRes, stockRes] = await Promise.all([
+          fetchInventory(),
+          getCurrentStock()
+        ]);
+        setInventory(inventoryRes.data);
+        setCurrentStock(stockRes.data);
+      } catch (err) {
+        setError('Failed to load inventory data. Please try again later.');
+        console.error('Error loading inventory:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const handleInventorySubmit = async (e) => {
     e.preventDefault();
-    addInventoryItem({
-      ...inventoryForm,
-      storeKeeperEmail: user.email,
-      storeKeeperName: user.name,
-      quantity: inventoryForm.quantity
-    });
-    
-    setInventoryForm({
-      fruitType: '',
-      quantity: '',
-      unit: 'kg',
-      location: '',
-      expiryDate: '',
-      supplierName: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-  };
-
-  const handleStockSubmit = (e) => {
-    e.preventDefault();
-    addStockMovement({
-      ...stockForm,
-      storeKeeperEmail: user.email,
-      storeKeeperName: user.name,
-      quantity: stockForm.quantity
-    });
-    
-    setStockForm({
-      fruitType: '',
-      movementType: 'in',
-      quantity: '',
-      unit: 'kg',
-      reason: '',
-      location: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-  };
-
-  const handleGradientSubmit = (e) => {
-    e.preventDefault();
-    addGradient({
-      ...gradientForm,
-      storeKeeperEmail: user.email,
-      storeKeeperName: user.name,
-      quantity: gradientForm.quantity
-    });
-    
-    setGradientForm({
-      gradientName: '',
-      fruitType: '',
-      quantity: '',
-      unit: 'kg',
-      purpose: '',
-      applicationDate: new Date().toISOString().split('T')[0],
-      notes: ''
-    });
-  };
-
-  const currentStock = getCurrentStock();
-
-  const clearAllInventory = () => {
-    if (window.confirm('Are you sure you want to clear all inventory data?')) {
-      clearInventoryData();
+    try {
+      setLoading(true);
+      const response = await addInventoryItem({
+        ...inventoryForm,
+        storeKeeperEmail: user.email,
+        storeKeeperName: user.name,
+        quantity: inventoryForm.quantity
+      });
+      
+      setInventory(prev => [...prev, response.data]);
+      setInventoryForm({
+        fruitType: '',
+        quantity: '',
+        unit: 'kg',
+        location: '',
+        expiryDate: '',
+        supplierName: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+    } catch (err) {
+      setError('Failed to add inventory item. Please try again.');
+      console.error('Error adding inventory:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const clearAllAddedItems = () => {
+  const handleStockSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const response = await addStockMovement({
+        ...stockForm,
+        storeKeeperEmail: user.email,
+        storeKeeperName: user.name,
+        quantity: stockForm.quantity
+      });
+      
+      // Update current stock after movement
+      const stockRes = await getCurrentStock();
+      setCurrentStock(stockRes.data);
+      
+      setStockForm({
+        fruitType: '',
+        movementType: 'in',
+        quantity: '',
+        unit: 'kg',
+        reason: '',
+        location: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+    } catch (err) {
+      setError('Failed to record stock movement. Please try again.');
+      console.error('Error adding stock movement:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGradientSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const response = await addGradient({
+        ...gradientForm,
+        storeKeeperEmail: user.email,
+        storeKeeperName: user.name,
+        quantity: gradientForm.quantity
+      });
+      
+      setGradientForm({
+        gradientName: '',
+        fruitType: '',
+        quantity: '',
+        unit: 'kg',
+        purpose: '',
+        applicationDate: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+    } catch (err) {
+      setError('Failed to add gradient. Please try again.');
+      console.error('Error adding gradient:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearInventory = async () => {
+    if (window.confirm('Are you sure you want to clear all inventory data?')) {
+      try {
+        setLoading(true);
+        await clearInventoryData();
+        setInventory([]);
+        setCurrentStock([]);
+      } catch (err) {
+        setError('Failed to clear inventory. Please try again.');
+        console.error('Error clearing inventory:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleClearAddedItems = async () => {
     if (window.confirm('Are you sure you want to clear all added items?')) {
-      localStorage.removeItem('inventory');
-      window.location.reload();
+      try {
+        setLoading(true);
+        await clearInventoryData();
+        setInventory([]);
+      } catch (err) {
+        setError('Failed to clear added items. Please try again.');
+        console.error('Error clearing added items:', err);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   return (
     <div className="container py-4">
+      {error && (
+        <div className="alert alert-danger mb-3">
+          <i className="bi bi-exclamation-triangle me-2"></i>
+          {error}
+        </div>
+      )}
+      
       <div className="row">
         <div className="col-12">
           <div className="card shadow-sm">
@@ -138,9 +214,15 @@ const StoreKeeperDashboard = () => {
               </h4>
               <button 
                 className="btn btn-outline-light btn-sm"
-                onClick={clearInventoryData}
+                onClick={handleClearInventory}
+                disabled={loading}
               >
-                <i className="bi bi-trash me-1"></i>Clear All Data
+                {loading ? (
+                  <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                ) : (
+                  <i className="bi bi-trash me-1"></i>
+                )}
+                Clear All Data
               </button>
             </div>
             <div className="card-body">
@@ -152,6 +234,7 @@ const StoreKeeperDashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`}
                     onClick={() => setActiveTab('inventory')}
+                    disabled={loading}
                   >
                     <i className="bi bi-plus-circle me-2"></i>Add Inventory
                   </button>
@@ -160,6 +243,7 @@ const StoreKeeperDashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'stock' ? 'active' : ''}`}
                     onClick={() => setActiveTab('stock')}
+                    disabled={loading}
                   >
                     <i className="bi bi-arrow-left-right me-2"></i>Stock Movement
                   </button>
@@ -168,6 +252,7 @@ const StoreKeeperDashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'gradient' ? 'active' : ''}`}
                     onClick={() => setActiveTab('gradient')}
+                    disabled={loading}
                   >
                     <i className="bi bi-droplet me-2"></i>Add Gradient
                   </button>
@@ -176,6 +261,7 @@ const StoreKeeperDashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'current' ? 'active' : ''}`}
                     onClick={() => setActiveTab('current')}
+                    disabled={loading}
                   >
                     <i className="bi bi-boxes me-2"></i>Current Stock
                   </button>
@@ -184,6 +270,7 @@ const StoreKeeperDashboard = () => {
                   <button 
                     className={`nav-link ${activeTab === 'added' ? 'active' : ''}`}
                     onClick={() => setActiveTab('added')}
+                    disabled={loading}
                   >
                     <i className="bi bi-list me-2"></i>All Added Items
                   </button>
@@ -191,41 +278,52 @@ const StoreKeeperDashboard = () => {
               </ul>
 
               {/* Tab Content */}
-              {activeTab === 'inventory' && (
+              {loading && (
+                <div className="text-center py-4">
+                  <div className="spinner-border text-success" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                </div>
+              )}
+
+              {!loading && activeTab === 'inventory' && (
                 <InventoryForm 
                   form={inventoryForm}
                   onChange={setInventoryForm}
                   onSubmit={handleInventorySubmit}
+                  loading={loading}
                 />
               )}
 
-              {activeTab === 'stock' && (
+              {!loading && activeTab === 'stock' && (
                 <StockMovementForm 
                   form={stockForm}
                   onChange={setStockForm}
                   onSubmit={handleStockSubmit}
+                  loading={loading}
                 />
               )}
 
-              {activeTab === 'gradient' && (
+              {!loading && activeTab === 'gradient' && (
                 <GradientForm 
                   form={gradientForm}
                   onChange={setGradientForm}
                   onSubmit={handleGradientSubmit}
+                  loading={loading}
                 />
               )}
 
-              {activeTab === 'current' && (
+              {!loading && activeTab === 'current' && (
                 <CurrentStockTable 
                   currentStock={currentStock}
-                  onClearAll={clearAllInventory}
+                  onClearAll={handleClearInventory}
                 />
               )}
 
-              {activeTab === 'added' && (
+              {!loading && activeTab === 'added' && (
                 <AddedItemsTable 
                   inventory={inventory}
-                  onClearAll={clearAllAddedItems}
+                  onClearAll={handleClearAddedItems}
                 />
               )}
             </div>

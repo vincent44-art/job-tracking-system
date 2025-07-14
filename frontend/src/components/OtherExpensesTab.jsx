@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, PlusCircle } from 'lucide-react';
-import { fetchOtherExpenses, createOtherExpense, deleteOtherExpense } from '../api';
+import { fetchOtherExpenses, createOtherExpense, deleteOtherExpense } from 'http://127.0.0.1:5000/api';
 
 const OtherExpensesTab = () => {
   const [expenses, setExpenses] = useState([]);

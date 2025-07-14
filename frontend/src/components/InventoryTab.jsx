@@ -6,7 +6,7 @@ import {
   clearInventoryAPI,
   clearStockMovementsAPI,
   clearGradientsAPI
-} from '../api';
+} from 'http://127.0.0.1:5000/api';
 
 const InventoryTab = () => {
   const [inventory, setInventory] = useState([]);

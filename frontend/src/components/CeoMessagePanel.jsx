@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { sendCeoMessage } from '../api'; // Import your API function
+import { sendCeoMessage } from 'http://127.0.0.1:5000/api'; // Import your API function
 
 const CeoMessagePanel = () => {
   const [message, setMessage] = useState('');

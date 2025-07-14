@@ -7,7 +7,7 @@ import {
   clearOtherExpensesDataAPI,
   clearSalariesDataAPI,
   clearInventoryDataAPI
-} from '../api';
+} from 'http://127.0.0.1:5000/api';
 
 const ClearDataModal = ({ show, onClose }) => {
   const [isClearing, setIsClearing] = useState(false);

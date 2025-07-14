@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from '../api';
+import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from 'http://127.0.0.1:5000/api';
 
 const PerformanceOverview = () => {
   const [stats, setStats] = useState(null);
