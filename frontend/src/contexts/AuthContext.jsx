@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import api from '../services/api'; // Assuming you've created the api service
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -21,15 +21,16 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const verifyAuth = async () => {
       try {
-        const { data } = await api.get('/auth/verify');
-        setUser(data.user);
+        const { data } = await api.get('/auth/me');
+        setUser(data.data); // ✅ backend returns user under "data"
       } catch (error) {
         setUser(null);
+        localStorage.removeItem('access_token');
       } finally {
         setLoading(false);
       }
     };
-    
+
     verifyAuth();
     loadUsers();
   }, []);
@@ -37,7 +38,7 @@ export const AuthProvider = ({ children }) => {
   const loadUsers = async () => {
     try {
       const { data } = await api.get('/users');
-      setUsers(data.users);
+      setUsers(data.data); // ✅ match backend structure
     } catch (error) {
       console.error('Failed to load users:', error);
       toast.error('Failed to load users');
@@ -48,9 +49,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      
-      setUser(data.user);
-      localStorage.setItem('access_token', data.access_token);
+
+      setUser(data.data.user);
+      localStorage.setItem('access_token', data.data.access_token);
       toast.success('Login successful');
       return { success: true };
     } catch (error) {
@@ -61,22 +62,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      await api.post('/auth/logout');
-      setUser(null);
-      localStorage.removeItem('access_token');
-      toast.success('Logged out successfully');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Logout failed');
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('access_token');
+    toast.success('Logged out successfully');
   };
 
   const getAllUsers = async () => {
     try {
       const { data } = await api.get('/users');
-      return data.users;
+      return data.data;
     } catch (error) {
       console.error('Failed to get users:', error);
       toast.error('Failed to load users');
@@ -87,7 +82,7 @@ export const AuthProvider = ({ children }) => {
   const addUser = async (userData) => {
     try {
       const { data } = await api.post('/users', userData);
-      setUsers(prev => [...prev, data.user]);
+      setUsers(prev => [...prev, data.data]);
       toast.success('User added successfully');
       return true;
     } catch (error) {
@@ -101,13 +96,12 @@ export const AuthProvider = ({ children }) => {
   const updateUser = async (userId, updates) => {
     try {
       const { data } = await api.put(`/users/${userId}`, updates);
-      setUsers(prev => prev.map(u => u.id === userId ? data.user : u));
-      
-      // Update current user if they updated themselves
+      setUsers(prev => prev.map(u => u.id === userId ? data.data : u));
+
       if (user?.id === userId) {
-        setUser(data.user);
+        setUser(data.data);
       }
-      
+
       toast.success('User updated successfully');
       return true;
     } catch (error) {
@@ -123,7 +117,7 @@ export const AuthProvider = ({ children }) => {
       if (user?.id === userId) {
         throw new Error("You can't delete yourself");
       }
-      
+
       await api.delete(`/users/${userId}`);
       setUsers(prev => prev.filter(u => u.id !== userId));
       toast.success('User deleted successfully');
@@ -150,7 +144,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

@@ -22,7 +22,7 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    # Enhanced CORS configuration
+    # CORS Configuration
     app.config['CORS_HEADERS'] = 'Content-Type'
     app.config['CORS_SUPPORTS_CREDENTIALS'] = True
     app.config['CORS_ORIGINS'] = [
@@ -34,10 +34,9 @@ def create_app(config_class=Config):
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
     app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
-    # Initialize Flask extensions
+    # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
-    # More specific CORS configuration
     cors.init_app(app, resources={
         r"/api/*": {
             "origins": app.config['CORS_ORIGINS'],
@@ -47,7 +46,7 @@ def create_app(config_class=Config):
     })
     migrate.init_app(app, db)
 
-    # JWT callbacks
+    # JWT Callbacks
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
         return jsonify({
@@ -72,11 +71,26 @@ def create_app(config_class=Config):
             'error': 'authorization_required'
         }), 401
 
-    # Import and Register Blueprints
+    # Register Blueprints
     from resources import api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    # Health check endpoint
+    # New Root Route
+    @app.route('/')
+    def index():
+        return jsonify({
+            'message': 'Flask backend root - use /api for API routes'
+        })
+
+    # New /api Root Route
+    @app.route('/api')
+    def api_root():
+        return jsonify({
+            'message': '✅ API root - backend is running',
+            'status': 'ok'
+        })
+
+    # Health check route
     @app.route('/api/health')
     def health_check():
         return jsonify({
@@ -85,7 +99,7 @@ def create_app(config_class=Config):
             'message': 'Service is running'
         })
 
-    # Custom Error Handlers
+    # Error Handlers
     @app.errorhandler(404)
     def not_found_error(error):
         return make_response_data(success=False, status_code=404, message="Resource not found.", errors=[str(error)])
@@ -95,7 +109,7 @@ def create_app(config_class=Config):
         db.session.rollback()
         return make_response_data(success=False, status_code=500, message="An internal server error occurred.", errors=[str(error)])
 
-    # Shell context processor
+    # Shell context
     @app.shell_context_processor
     def make_shell_context():
         return {
@@ -104,7 +118,7 @@ def create_app(config_class=Config):
             'UserRole': UserRole
         }
 
-    # Custom Flask CLI Commands
+    # Seed DB CLI Command
     @app.cli.command("seed-db")
     def seed_db():
         """Seeds the database with initial data."""
@@ -134,6 +148,7 @@ def create_app(config_class=Config):
 
     return app
 
+# Main entry point
 if __name__ == '__main__':
     app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=True)
