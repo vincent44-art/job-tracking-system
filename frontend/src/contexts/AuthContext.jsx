@@ -1,6 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import api from '../services/api'; // Assuming you've created the api service
 
 const AuthContext = createContext();
 
@@ -17,187 +17,121 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
 
+  // Verify authentication on initial load
   useEffect(() => {
-    // Check for existing user session
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    const verifyAuth = async () => {
       try {
-        setUser(JSON.parse(savedUser));
+        const { data } = await api.get('/auth/verify');
+        setUser(data.user);
       } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('user');
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    }
-
-    // Load users from localStorage
-    const savedUsers = localStorage.getItem('fruittrack_users');
-    if (savedUsers) {
-      try {
-        setUsers(JSON.parse(savedUsers));
-      } catch (error) {
-        console.error('Error parsing saved users:', error);
-        // Initialize with default users if parsing fails
-        initializeDefaultUsers();
-      }
-    } else {
-      initializeDefaultUsers();
-    }
-
-    setLoading(false);
+    };
+    
+    verifyAuth();
+    loadUsers();
   }, []);
 
-  const initializeDefaultUsers = () => {
-    const defaultUsers = [
-      { 
-        id: 'ceo-1', 
-        email: 'ceo@company.com', 
-        name: 'John Doe', 
-        role: 'ceo', 
-        status: 'active',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'ceo-2', 
-        email: 'ceo@fruittrack.com', 
-        name: 'John Doe', 
-        role: 'ceo', 
-        status: 'active',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'purchaser-1', 
-        email: 'purchaser@company.com', 
-        name: 'Jane Smith', 
-        role: 'purchaser', 
-        status: 'active',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'seller-1', 
-        email: 'seller@company.com', 
-        name: 'Bob Johnson', 
-        role: 'seller', 
-        status: 'active',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'driver-1', 
-        email: 'driver@company.com', 
-        name: 'Mike Wilson', 
-        role: 'driver', 
-        status: 'active',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'storekeeper-1', 
-        email: 'storekeeper@company.com', 
-        name: 'Sarah Davis', 
-        role: 'storekeeper', 
-        status: 'active',
-        createdAt: new Date().toISOString()
-      }
-    ];
-    setUsers(defaultUsers);
-    localStorage.setItem('fruittrack_users', JSON.stringify(defaultUsers));
+  const loadUsers = async () => {
+    try {
+      const { data } = await api.get('/users');
+      setUsers(data.users);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      toast.error('Failed to load users');
+      setUsers([]);
+    }
   };
 
   const login = async (email, password) => {
     try {
-      console.log('Attempting login with:', email);
+      const { data } = await api.post('/auth/login', { email, password });
       
-      // Find user in the users array
-      const foundUser = users.find(u => u.email === email);
-      
-      if (foundUser && password === 'password') {
-        const userData = { ...foundUser };
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        console.log('Login successful:', userData);
-        return { success: true };
-      } else if (foundUser && password === 'password123') {
-        const userData = { ...foundUser };
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        console.log('Login successful:', userData);
-        return { success: true };
-      } else {
-        console.log('Invalid credentials for:', email);
-        return { success: false, error: 'Invalid email or password' };
-      }
+      setUser(data.user);
+      localStorage.setItem('access_token', data.access_token);
+      toast.success('Login successful');
+      return { success: true };
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: 'An error occurred during login' };
+      const errorMsg = error.response?.data?.message || 'Login failed';
+      toast.error(errorMsg);
+      return { success: false, error: errorMsg };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    console.log('User logged out');
-  };
-
-  const getAllUsers = () => {
-    return users;
-  };
-
-  const addUser = (userData) => {
+  const logout = async () => {
     try {
-      const newUser = {
-        ...userData,
-        id: `user-${Date.now()}`,
-        createdAt: new Date().toISOString()
-      };
-      
-      // Check if email already exists
-      if (users.find(u => u.email === newUser.email)) {
-        toast.error('User with this email already exists');
-        return false;
-      }
+      await api.post('/auth/logout');
+      setUser(null);
+      localStorage.removeItem('access_token');
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Logout failed');
+    }
+  };
 
-      const updatedUsers = [...users, newUser];
-      setUsers(updatedUsers);
-      localStorage.setItem('fruittrack_users', JSON.stringify(updatedUsers));
+  const getAllUsers = async () => {
+    try {
+      const { data } = await api.get('/users');
+      return data.users;
+    } catch (error) {
+      console.error('Failed to get users:', error);
+      toast.error('Failed to load users');
+      return [];
+    }
+  };
+
+  const addUser = async (userData) => {
+    try {
+      const { data } = await api.post('/users', userData);
+      setUsers(prev => [...prev, data.user]);
       toast.success('User added successfully');
       return true;
     } catch (error) {
       console.error('Error adding user:', error);
-      toast.error('Failed to add user');
+      const errorMsg = error.response?.data?.message || 'Failed to add user';
+      toast.error(errorMsg);
       return false;
     }
   };
 
-  const updateUser = (userId, updates) => {
+  const updateUser = async (userId, updates) => {
     try {
-      const updatedUsers = users.map(user => 
-        user.id === userId ? { ...user, ...updates } : user
-      );
-      setUsers(updatedUsers);
-      localStorage.setItem('fruittrack_users', JSON.stringify(updatedUsers));
+      const { data } = await api.put(`/users/${userId}`, updates);
+      setUsers(prev => prev.map(u => u.id === userId ? data.user : u));
+      
+      // Update current user if they updated themselves
+      if (user?.id === userId) {
+        setUser(data.user);
+      }
+      
       toast.success('User updated successfully');
       return true;
     } catch (error) {
       console.error('Error updating user:', error);
-      toast.error('Failed to update user');
+      const errorMsg = error.response?.data?.message || 'Failed to update user';
+      toast.error(errorMsg);
       return false;
     }
   };
 
-  const deleteUser = (userId) => {
+  const deleteUser = async (userId) => {
     try {
-      const userToDelete = users.find(u => u.id === userId);
-      if (userToDelete?.role === 'ceo') {
-        toast.error('Cannot delete CEO user');
-        return false;
+      if (user?.id === userId) {
+        throw new Error("You can't delete yourself");
       }
-
-      const updatedUsers = users.filter(user => user.id !== userId);
-      setUsers(updatedUsers);
-      localStorage.setItem('fruittrack_users', JSON.stringify(updatedUsers));
+      
+      await api.delete(`/users/${userId}`);
+      setUsers(prev => prev.filter(u => u.id !== userId));
       toast.success('User deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      const errorMsg = error.response?.data?.message || 'Failed to delete user';
+      toast.error(errorMsg);
       return false;
     }
   };

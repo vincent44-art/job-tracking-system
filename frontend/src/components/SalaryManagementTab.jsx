@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchSalaries, fetchSalaryPayments, createSalary, recordPayment, togglePaymentStatus } from 'http://127.0.0.1:5000/api';
-// import SalaryFormModal from './SalaryFormModal';
-// import PaymentFormModal from './PaymentFormModal';
+import SalaryFormModal from './SalaryFormModal';
+import PaymentFormModal from './PaymentFormModal';
 
 const SalaryManagementTab = () => {
   const { getAllUsers } = useAuth();

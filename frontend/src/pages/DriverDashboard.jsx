@@ -4,7 +4,7 @@ import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
 import { 
   fetchDriverExpenses,
   addDriverExpense 
-} from 'http://127.0.0.1:5000/';
+} from 'http://127.0.0.1:5000/api/';
 
 const DriverDashboard = () => {
   const { user } = useAuth();
