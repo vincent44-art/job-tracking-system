@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';  // Make sure this import path is correct
+import 'antd/dist/reset.css';  // Correct import for Ant Design v5
+import App from './App';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

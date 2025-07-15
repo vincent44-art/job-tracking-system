@@ -1,21 +1,35 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import Navbar from './components/Navbar.jsx';
-import Login from './pages/Login.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import PurchaserDashboard from './pages/PurchaserDashboard.jsx';
-import SellerDashboard from './pages/SellerDashboard.jsx';
-import DriverDashboard from './pages/DriverDashboard.jsx';
-import StoreKeeperDashboard from './pages/StoreKeeperDashboard.jsx';
-import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
+import { Modal } from 'antd';
+import Navbar from './components/Navbar';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import PurchaserDashboard from './pages/PurchaserDashboard';
+import SellerDashboard from './pages/SellerDashboard';
+import DriverDashboard from './pages/DriverDashboard';
+import StoreKeeperDashboard from './pages/StoreKeeperDashboard';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './index.css';
 
-const ProtectedRoute = ({ children }) => {
+// Import modal components
+import PurchaseFormModal from './components/modals/PurchaseFormModal';
+import SalaryFormModal from './components/modals/SalaryFormModal';
+import PaymentFormModal from './components/modals/PaymentFormModal';
+
+const ProtectedRoute = ({ children, requiredRoles = [] }) => {
   const { user } = useAuth();
   
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
+    Modal.error({
+      title: 'Unauthorized Access',
+      content: 'You do not have permission to access this page.',
+    });
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
@@ -29,6 +43,8 @@ const AppContent = () => {
       {user && <Navbar />}
       <Routes>
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+        
+        {/* CEO Routes */}
         <Route path="/" element={
           <ProtectedRoute>
             {user?.role === 'ceo' && <Dashboard />}
@@ -38,8 +54,28 @@ const AppContent = () => {
             {(user?.role === 'storekeeper' || user?.role === 'store keeper') && <StoreKeeperDashboard />}
           </ProtectedRoute>
         } />
+
+        {/* Purchaser-specific routes */}
+        <Route path="/purchases" element={
+          <ProtectedRoute requiredRoles={['purchaser', 'ceo']}>
+            <PurchaserDashboard showPurchasesTab />
+          </ProtectedRoute>
+        } />
+
+        {/* Salary management routes */}
+        <Route path="/salaries" element={
+          <ProtectedRoute requiredRoles={['ceo']}>
+            <Dashboard showSalaryTab />
+          </ProtectedRoute>
+        } />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* Global Modals that can be triggered from anywhere */}
+      <PurchaseFormModal />
+      <SalaryFormModal />
+      <PaymentFormModal />
     </div>
   );
 };
@@ -57,6 +93,18 @@ const App = () => {
               borderRadius: '12px',
               padding: '16px',
               fontSize: '14px',
+            },
+            success: {
+              iconTheme: {
+                primary: '#4BB543',
+                secondary: 'white',
+              },
+            },
+            error: {
+              style: {
+                background: '#FFEBEE',
+                color: '#C62828',
+              },
             },
           }}
         />
