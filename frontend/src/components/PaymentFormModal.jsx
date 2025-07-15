@@ -1,55 +1,44 @@
-// PaymentFormModal.jsx
-import React from "react";
-import { Modal, Form, Input, InputNumber, DatePicker } from "antd";
+import React from 'react';
+import { Modal, Form, FloatingLabel } from 'react-bootstrap';
 
-const PaymentFormModal = ({ visible, onCancel, onSubmit }) => {
-  const [form] = Form.useForm();
-
-  const handleOk = () => {
-    form
-      .validateFields()
-      .then(values => {
-        form.resetFields();
-        onSubmit(values);
-      })
-      .catch(info => {
-        console.log("Validate Failed:", info);
-      });
-  };
-
+const PaymentFormModal = ({ show, handleClose, handleSubmit }) => {
   return (
-    <Modal
-      title="Add Salary Payment"
-      open={visible}
-      onOk={handleOk}
-      onCancel={onCancel}
-      okText="Submit"
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item
-          name="employee"
-          label="Employee Name"
-          rules={[{ required: true, message: "Please enter employee name" }]}
-        >
-          <Input />
-        </Form.Item>
-
-        <Form.Item
-          name="amount"
-          label="Amount"
-          rules={[{ required: true, message: "Please enter the amount" }]}
-        >
-          <InputNumber style={{ width: "100%" }} min={0} />
-        </Form.Item>
-
-        <Form.Item
-          name="date"
-          label="Payment Date"
-          rules={[{ required: true, message: "Please select the date" }]}
-        >
-          <DatePicker style={{ width: "100%" }} />
-        </Form.Item>
-      </Form>
+    <Modal show={show} onHide={handleClose} centered>
+      <Modal.Header closeButton className="bg-purple text-white">
+        <Modal.Title>Record Payment</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Form onSubmit={handleSubmit}>
+          <FloatingLabel controlId="employee" label="Employee" className="mb-3">
+            <Form.Select aria-label="Select employee" required>
+              <option value="">Select employee</option>
+              <option value="1">John Doe (CEO)</option>
+              <option value="2">Jane Smith (Store Keeper)</option>
+            </Form.Select>
+          </FloatingLabel>
+          
+          <FloatingLabel controlId="amount" label="Amount (KES)" className="mb-3">
+            <Form.Control type="number" step="0.01" placeholder="Amount in KES" required />
+          </FloatingLabel>
+          
+          <FloatingLabel controlId="paymentDate" label="Payment Date" className="mb-3">
+            <Form.Control type="date" required />
+          </FloatingLabel>
+          
+          <FloatingLabel controlId="notes" label="Notes" className="mb-3">
+            <Form.Control as="textarea" placeholder="Payment notes" style={{ height: '100px' }} />
+          </FloatingLabel>
+          
+          <div className="d-flex justify-content-end">
+            <button type="button" className="btn btn-outline-secondary me-2" onClick={handleClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-purple">
+              Record Payment
+            </button>
+          </div>
+        </Form>
+      </Modal.Body>
     </Modal>
   );
 };
