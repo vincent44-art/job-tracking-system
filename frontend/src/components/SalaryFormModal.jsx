@@ -1,59 +1,50 @@
 import React from 'react';
-import { Modal, Form, InputNumber, Select, Button } from 'antd';
+import { Modal, Form, FloatingLabel } from 'react-bootstrap';
 
-const SalaryFormModal = ({ visible, onCancel, onSubmit, loading }) => {
-  const [form] = Form.useForm();
-  const { Option } = Select;
-
+const SalaryFormModal = ({ show, handleClose, handleSubmit, user }) => {
   return (
-    <Modal
-      title="Salary Adjustment"
-      visible={visible}
-      onCancel={onCancel}
-      footer={[
-        <Button key="cancel" onClick={onCancel}>
-          Cancel
-        </Button>,
-        <Button 
-          key="submit" 
-          type="primary" 
-          loading={loading}
-          onClick={() => {
-            form.validateFields()
-              .then(values => {
-                onSubmit(values);
-                form.resetFields();
-              })
-          }}
-        >
-          Submit
-        </Button>,
-      ]}
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item
-          name="employee"
-          label="Employee"
-          rules={[{ required: true, message: 'Please select employee!' }]}
-        >
-          <Select placeholder="Select employee">
-            <Option value="john">John Doe</Option>
-            <Option value="jane">Jane Smith</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item
-          name="amount"
-          label="Amount"
-          rules={[{ required: true, message: 'Please input amount!' }]}
-        >
-          <InputNumber
-            style={{ width: '100%' }}
-            min={0}
-            formatter={value => `$ ${value}`}
-            parser={value => value.replace(/\$\s?|(,*)/g, '')}
+    <Modal show={show} onHide={handleClose} centered>
+      <Modal.Header closeButton className="bg-purple text-white">
+        <Modal.Title>{user ? 'Edit Salary' : 'Add Salary'}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Form onSubmit={handleSubmit}>
+          <FloatingLabel controlId="employeeName" label="Employee Name" className="mb-3">
+            <Form.Control 
+              type="text" 
+              placeholder="Employee Name" 
+              defaultValue={user?.name || ''}
+              required 
+            />
+          </FloatingLabel>
+          
+          <FloatingLabel controlId="salaryAmount" label="Salary Amount (KES)" className="mb-3">
+            <Form.Control 
+              type="number" 
+              placeholder="Salary in KES" 
+              defaultValue={user?.salary || ''}
+              required 
+            />
+          </FloatingLabel>
+          
+          <Form.Check 
+            type="checkbox"
+            id="isPaid"
+            label="Mark as paid"
+            defaultChecked={user?.isPaid || false}
+            className="mb-3"
           />
-        </Form.Item>
-      </Form>
+          
+          <div className="d-flex justify-content-end">
+            <button type="button" className="btn btn-outline-secondary me-2" onClick={handleClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-purple">
+              {user ? 'Update' : 'Add'} Salary
+            </button>
+          </div>
+        </Form>
+      </Modal.Body>
     </Modal>
   );
 };

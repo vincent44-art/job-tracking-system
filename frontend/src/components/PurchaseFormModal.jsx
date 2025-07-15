@@ -1,56 +1,45 @@
 import React from 'react';
-import { Modal, Form, Input, InputNumber, Button } from 'antd';
+import { Modal, Form, FloatingLabel } from 'react-bootstrap';
 
-const PurchaseFormModal = ({ visible, onCancel, onSubmit, loading }) => {
-  const [form] = Form.useForm();
-
+const PurchaseFormModal = ({ show, handleClose, handleSubmit }) => {
   return (
-    <Modal
-      title="Add Purchase"
-      visible={visible}
-      onCancel={onCancel}
-      footer={[
-        <Button key="cancel" onClick={onCancel}>
-          Cancel
-        </Button>,
-        <Button 
-          key="submit" 
-          type="primary" 
-          loading={loading}
-          onClick={() => {
-            form.validateFields()
-              .then(values => {
-                onSubmit(values);
-                form.resetFields();
-              })
-          }}
-        >
-          Submit
-        </Button>,
-      ]}
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item
-          name="item"
-          label="Item Name"
-          rules={[{ required: true, message: 'Please input item name!' }]}
-        >
-          <Input placeholder="Enter item name" />
-        </Form.Item>
-        <Form.Item
-          name="amount"
-          label="Amount"
-          rules={[{ required: true, message: 'Please input amount!' }]}
-        >
-          <InputNumber
-            style={{ width: '100%' }}
-            min={0}
-            step={0.01}
-            formatter={value => `$ ${value}`}
-            parser={value => value.replace(/\$\s?|(,*)/g, '')}
-          />
-        </Form.Item>
-      </Form>
+    <Modal show={show} onHide={handleClose} centered>
+      <Modal.Header closeButton className="bg-purple text-white">
+        <Modal.Title>Record Purchase</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Form onSubmit={handleSubmit}>
+          <FloatingLabel controlId="supplier" label="Supplier Name" className="mb-3">
+            <Form.Control type="text" placeholder="Supplier Name" required />
+          </FloatingLabel>
+          
+          <FloatingLabel controlId="fruitType" label="Fruit Type" className="mb-3">
+            <Form.Select aria-label="Fruit type" required>
+              <option value="">Select fruit type</option>
+              <option value="apples">Apples</option>
+              <option value="bananas">Bananas</option>
+              <option value="oranges">Oranges</option>
+            </Form.Select>
+          </FloatingLabel>
+          
+          <FloatingLabel controlId="quantity" label="Quantity (e.g. 10kg, 5 boxes)" className="mb-3">
+            <Form.Control type="text" placeholder="Quantity" required />
+          </FloatingLabel>
+          
+          <FloatingLabel controlId="cost" label="Cost (KES)" className="mb-3">
+            <Form.Control type="number" step="0.01" placeholder="Cost in KES" required />
+          </FloatingLabel>
+          
+          <div className="d-flex justify-content-end">
+            <button type="button" className="btn btn-outline-secondary me-2" onClick={handleClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-purple">
+              Save Purchase
+            </button>
+          </div>
+        </Form>
+      </Modal.Body>
     </Modal>
   );
 };
