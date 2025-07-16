@@ -1,11 +1,13 @@
+// src/pages/PurchaserDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
-import { 
+import {
   fetchPurchases,
   addPurchase,
-  clearPurchases 
-} from 'http://127.0.0.1:5000/';
+  clearPurchases
+} from '../api/purchase'; // ✅ Fixed import
+
 
 const PurchaserDashboard = () => {
   const { user } = useAuth();

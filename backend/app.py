@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -19,15 +19,17 @@ cors = CORS()
 migrate = Migrate()
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder=None)  # Disable default static folder
     app.config.from_object(config_class)
     
-    # CORS Configuration
+    # Enhanced CORS Configuration
     app.config['CORS_HEADERS'] = 'Content-Type'
     app.config['CORS_SUPPORTS_CREDENTIALS'] = True
     app.config['CORS_ORIGINS'] = [
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        "http://localhost:5000",
+        "http://127.0.0.1:5000"
     ]
     
     # JWT Configuration
@@ -37,16 +39,20 @@ def create_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
+    
+    # More specific CORS configuration
     cors.init_app(app, resources={
-        r"/api/*": {
+        r"/*": {
             "origins": app.config['CORS_ORIGINS'],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
         }
     })
+    
     migrate.init_app(app, db)
 
-    # JWT Callbacks
+    # JWT callbacks
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
         return jsonify({
@@ -71,33 +77,45 @@ def create_app(config_class=Config):
             'error': 'authorization_required'
         }), 401
 
-    # Register Blueprints
+    # Import and Register Blueprints
     from resources import api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    # New Root Route
-    @app.route('/')
-    def index():
-        return jsonify({
-            'message': 'Flask backend root - use /api for API routes'
-        })
-
-    # New /api Root Route
-    @app.route('/api')
-    def api_root():
-        return jsonify({
-            'message': '✅ API root - backend is running',
-            'status': 'ok'
-        })
-
-    # Health check route
+    # Health check endpoint
     @app.route('/api/health')
     def health_check():
         return jsonify({
             'success': True,
             'status': 'healthy',
-            'message': 'Service is running'
+            'message': 'Service is running',
+            'version': '1.0.0'
         })
+
+    # Explicit API root endpoint
+    @app.route('/api')
+    def api_root():
+        return jsonify({
+            'message': 'API Root',
+            'endpoints': {
+                'health': '/api/health',
+                'docs': 'Coming soon'
+            }
+        })
+
+    # Root endpoint
+    @app.route('/')
+    def root():
+        return jsonify({
+            'message': 'Fruit Tracking API',
+            'status': 'running',
+            'api_root': '/api'
+        })
+
+    # Serve static files for JS modules if needed
+    @app.route('/static/<path:filename>')
+    def serve_static(filename):
+        return send_from_directory(os.path.join(app.root_path, 'static'), filename, 
+                                 mimetype='application/javascript')
 
     # Error Handlers
     @app.errorhandler(404)
@@ -109,46 +127,9 @@ def create_app(config_class=Config):
         db.session.rollback()
         return make_response_data(success=False, status_code=500, message="An internal server error occurred.", errors=[str(error)])
 
-    # Shell context
-    @app.shell_context_processor
-    def make_shell_context():
-        return {
-            'db': db,
-            'User': User,
-            'UserRole': UserRole
-        }
-
-    # Seed DB CLI Command
-    @app.cli.command("seed-db")
-    def seed_db():
-        """Seeds the database with initial data."""
-        print("Seeding database...")
-        users_to_create = [
-            {'email': 'ceo@fruittrack.com', 'role': UserRole.CEO, 'name': 'CEO User', 'salary': 100000},
-            {'email': 'storekeeper@fruittrack.com', 'role': UserRole.STOREKEEPER, 'name': 'Store Keeper', 'salary': 50000},
-            {'email': 'seller@fruittrack.com', 'role': UserRole.SELLER, 'name': 'Sales Person', 'salary': 40000},
-            {'email': 'purchaser@fruittrack.com', 'role': UserRole.PURCHASER, 'name': 'Purchase Manager', 'salary': 45000},
-            {'email': 'driver@fruittrack.com', 'role': UserRole.DRIVER, 'name': 'Driver Person', 'salary': 35000},
-        ]
-        
-        for user_data in users_to_create:
-            user = User.query.filter_by(email=user_data['email']).first()
-            if not user:
-                user = User(
-                    email=user_data['email'],
-                    role=user_data['role'],
-                    name=user_data['name'],
-                    salary=user_data['salary']
-                )
-                user.set_password('password123')
-                db.session.add(user)
-        
-        db.session.commit()
-        print("Database seeded successfully!")
-
     return app
+        
 
-# Main entry point
 if __name__ == '__main__':
     app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=True)

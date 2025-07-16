@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchDashboardData } from '../api/dashboard'; // Correct import path
 import StatsCards from '../components/StatsCards';
 import PurchasesTab from '../components/PurchasesTab';
 import SalesTab from '../components/SalesTab';
@@ -11,7 +12,6 @@ import InventoryTab from '../components/InventoryTab';
 import PerformanceOverview from '../components/PerformanceOverview';
 import CeoMessagePanel from '../components/CeoMessagePanel';
 import ClearDataModal from '../components/ClearDataModal';
-import { fetchDashboardData } from 'http://127.0.0.1:5000/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -21,31 +21,35 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState(null);
 
-  // Fetch dashboard data on component mount
+  // Fetch dashboard data
   useEffect(() => {
+    if (user?.role !== 'ceo') return;
+
     const loadData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const response = await fetchDashboardData();
-        setDashboardData(response.data);
-        setNotifications(response.data.notifications || []);
-        setUnreadCount(response.data.unreadNotifications || 0);
+        const data = await fetchDashboardData();
+        setDashboardData(data);
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadNotifications || 0);
       } catch (err) {
         console.error('Failed to load dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (user?.role === 'ceo') {
-      loadData();
-    }
+    loadData();
   }, [user?.role]);
 
   const markAsRead = (id) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? {...n, read: true} : n
-    ));
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? {...n, read: true} : n)
+    );
     setUnreadCount(prev => prev - 1);
   };
 
@@ -65,33 +69,48 @@ const Dashboard = () => {
       );
     }
 
+    if (error) {
+      return (
+        <div className="alert alert-danger">
+          <i className="bi bi-exclamation-triangle me-2"></i>
+          {error}
+          <button 
+            className="btn btn-sm btn-outline-danger ms-3"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'overview':
         return (
           <>
             {dashboardData && <StatsCards stats={dashboardData.stats} />}
-            <PerformanceOverview />
+            <PerformanceOverview data={dashboardData?.performance} />
           </>
         );
       case 'purchases':
-        return <PurchasesTab />;
+        return <PurchasesTab data={dashboardData?.purchases} />;
       case 'sales':
-        return <SalesTab />;
+        return <SalesTab data={dashboardData?.sales} />;
       case 'inventory':
-        return <InventoryTab />;
+        return <InventoryTab data={dashboardData?.inventory} />;
       case 'salaries':
-        return <SalaryManagementTab />;
+        return <SalaryManagementTab data={dashboardData?.salaries} />;
       case 'car-expenses':
-        return <CarExpensesTab />;
+        return <CarExpensesTab data={dashboardData?.carExpenses} />;
       case 'other-expenses':
-        return <OtherExpensesTab />;
+        return <OtherExpensesTab data={dashboardData?.otherExpenses} />;
       case 'users':
-        return <UserManagementTab />;
+        return <UserManagementTab data={dashboardData?.users} />;
       default:
         return (
           <>
             {dashboardData && <StatsCards stats={dashboardData.stats} />}
-            <PerformanceOverview />
+            <PerformanceOverview data={dashboardData?.performance} />
           </>
         );
     }
@@ -133,9 +152,9 @@ const Dashboard = () => {
                 Welcome back, <strong>{user?.name}</strong>
               </small>
             </div>
-            <div>
+            <div className="d-flex gap-2">
               <button 
-                className="btn btn-outline-primary me-2 position-relative"
+                className="btn btn-outline-primary position-relative"
                 onClick={() => setActiveTab('notifications')}
               >
                 <i className="bi bi-bell"></i>
@@ -170,7 +189,6 @@ const Dashboard = () => {
                     <button
                       className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
                       onClick={() => setActiveTab(tab.id)}
-                      type="button"
                       disabled={loading}
                     >
                       <i className={`bi ${tab.icon} me-2`}></i>
@@ -192,22 +210,21 @@ const Dashboard = () => {
         show={showClearModal}
         onClose={() => setShowClearModal(false)}
         onSuccess={() => {
+          // Reset and reload data
           setDashboardData(null);
           setLoading(true);
-          // Reload data after clearing
-          setTimeout(() => {
-            const loadData = async () => {
-              try {
-                const response = await fetchDashboardData();
-                setDashboardData(response.data);
-              } catch (err) {
-                console.error('Failed to load dashboard data:', err);
-              } finally {
-                setLoading(false);
-              }
-            };
-            loadData();
-          }, 1000);
+          setError(null);
+          fetchDashboardData()
+            .then(data => {
+              setDashboardData(data);
+              setNotifications(data.notifications || []);
+              setUnreadCount(data.unreadNotifications || 0);
+            })
+            .catch(err => {
+              console.error('Reload error:', err);
+              setError('Failed to reload data after clearing');
+            })
+            .finally(() => setLoading(false));
         }}
       />
     </div>
