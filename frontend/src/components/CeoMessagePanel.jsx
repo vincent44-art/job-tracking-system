@@ -1,5 +1,21 @@
 import React, { useState } from 'react';
-import { sendCeoMessage } from 'http://127.0.0.1:5000/api'; // Import your API function
+
+// ✅ Inline definition of the API function
+const sendCeoMessage = async (messageData) => {
+  const res = await fetch('http://127.0.0.1:5000/api/ceo-messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(messageData),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to send CEO message');
+  }
+
+  return await res.json();
+};
 
 const CeoMessagePanel = () => {
   const [message, setMessage] = useState('');
@@ -11,18 +27,18 @@ const CeoMessagePanel = () => {
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-    
+
     setIsSending(true);
     setError(null);
     setSuccess(false);
-    
+
     try {
       await sendCeoMessage({
         message: message.trim(),
         recipient,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       setMessage('');
       setIsExpanded(false);
       setSuccess(true);
@@ -49,7 +65,7 @@ const CeoMessagePanel = () => {
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
       </div>
-      
+
       {isExpanded && (
         <div className="space-y-3">
           {error && (
@@ -62,7 +78,7 @@ const CeoMessagePanel = () => {
               Message sent successfully!
             </div>
           )}
-          
+
           <div>
             <label className="form-label">Send Message To:</label>
             <select
@@ -77,7 +93,7 @@ const CeoMessagePanel = () => {
               <option value="storekeeper">Store Keepers</option>
             </select>
           </div>
-          
+
           <div>
             <label className="form-label">Message:</label>
             <textarea
@@ -89,7 +105,7 @@ const CeoMessagePanel = () => {
               disabled={isSending}
             />
           </div>
-          
+
           <button
             onClick={handleSendMessage}
             className="btn btn-primary"

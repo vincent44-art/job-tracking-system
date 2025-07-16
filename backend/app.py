@@ -19,10 +19,10 @@ cors = CORS()
 migrate = Migrate()
 
 def create_app(config_class=Config):
-    app = Flask(__name__, static_folder=None)  # Disable default static folder
+    app = Flask(__name__, static_folder=None)
     app.config.from_object(config_class)
-    
-    # Enhanced CORS Configuration
+
+    # CORS Configuration
     app.config['CORS_HEADERS'] = 'Content-Type'
     app.config['CORS_SUPPORTS_CREDENTIALS'] = True
     app.config['CORS_ORIGINS'] = [
@@ -31,16 +31,14 @@ def create_app(config_class=Config):
         "http://localhost:5000",
         "http://127.0.0.1:5000"
     ]
-    
-    # JWT Configuration
+
+    # JWT Expiry
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
     app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
-    # Initialize extensions
+    # Initialize Extensions
     db.init_app(app)
     jwt.init_app(app)
-    
-    # More specific CORS configuration
     cors.init_app(app, resources={
         r"/*": {
             "origins": app.config['CORS_ORIGINS'],
@@ -49,10 +47,9 @@ def create_app(config_class=Config):
             "supports_credentials": True
         }
     })
-    
     migrate.init_app(app, db)
 
-    # JWT callbacks
+    # JWT Error Callbacks
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
         return jsonify({
@@ -77,11 +74,11 @@ def create_app(config_class=Config):
             'error': 'authorization_required'
         }), 401
 
-    # Import and Register Blueprints
+    # Blueprints
     from resources import api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    # Health check endpoint
+    # Health check
     @app.route('/api/health')
     def health_check():
         return jsonify({
@@ -91,7 +88,7 @@ def create_app(config_class=Config):
             'version': '1.0.0'
         })
 
-    # Explicit API root endpoint
+    # Root Endpoints
     @app.route('/api')
     def api_root():
         return jsonify({
@@ -102,7 +99,6 @@ def create_app(config_class=Config):
             }
         })
 
-    # Root endpoint
     @app.route('/')
     def root():
         return jsonify({
@@ -111,25 +107,26 @@ def create_app(config_class=Config):
             'api_root': '/api'
         })
 
-    # Serve static files for JS modules if needed
+    # Serve JS files if needed
     @app.route('/static/<path:filename>')
     def serve_static(filename):
-        return send_from_directory(os.path.join(app.root_path, 'static'), filename, 
-                                 mimetype='application/javascript')
+        return send_from_directory(os.path.join(app.root_path, 'static'), filename, mimetype='application/javascript')
 
-    # Error Handlers
+    # Error handlers
     @app.errorhandler(404)
     def not_found_error(error):
-        return make_response_data(success=False, status_code=404, message="Resource not found.", errors=[str(error)])
+        return make_response_data(False, 404, "Resource not found.", [str(error)])
 
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
-        return make_response_data(success=False, status_code=500, message="An internal server error occurred.", errors=[str(error)])
+        return make_response_data(False, 500, "An internal server error occurred.", [str(error)])
 
     return app
-        
 
+# ✅ Global app variable for Gunicorn
+app = create_app()
+
+# 👇 Optional: for running locally with `python app.py`
 if __name__ == '__main__':
-    app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=True)
