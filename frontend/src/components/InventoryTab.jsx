@@ -1,4 +1,15 @@
 import React, { useState, useEffect } from 'react';
+<<<<<<< HEAD
+=======
+// import { 
+//   fetchInventory,
+//   fetchStockMovements,
+//   fetchGradients,
+//   clearInventoryAPI,
+//   clearStockMovementsAPI,
+//   clearGradientsAPI
+// } from 'http://127.0.0.1:5000/api';
+>>>>>>> f019a39 (Fix API path and token setup)
 import { 
   fetchInventory,
   fetchStockMovements,
@@ -6,7 +17,11 @@ import {
   clearInventoryAPI,
   clearStockMovementsAPI,
   clearGradientsAPI
+<<<<<<< HEAD
 } from 'http://127.0.0.1:5000/api';
+=======
+} from './apiHelpers';  // adjust path as needed
+>>>>>>> f019a39 (Fix API path and token setup)
 
 const InventoryTab = () => {
   const [inventory, setInventory] = useState([]);

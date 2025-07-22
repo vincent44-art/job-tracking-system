@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchCeoMessages, updateMessageAsRead } from 'http://127.0.0.1:5000/api';
+
+//import { fetchCeoMessages, updateMessageAsRead } from 'http://127.0.0.1:5000/api';
+import { fetchCeoMessages, updateMessageAsRead } from './apiHelpers';
 
 const CeoMessagesDisplay = () => {
   const { user } = useAuth();

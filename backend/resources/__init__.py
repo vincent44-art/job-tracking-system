@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+from flask import jsonify, make_response
+
+>>>>>>> f019a39 (Fix API path and token setup)
 from flask import Blueprint
 from flask_restful import Api
 

@@ -18,26 +18,48 @@ const api = axios.create({
 let refreshTokenRequest = null;
 
 // Request interceptor
+// api.interceptors.request.use(
+//   (config) => {
+//     const token = localStorage.getItem('access_token');
+//     if (token) {
+//       config.headers.Authorization = `Bearer ${token}`;
+//     }
+    
+//     // Add cache-buster for GET requests
+//     if (config.method === 'get' && !config.params?.noCache) {
+//       config.params = {
+//         ...config.params,
+//         _t: Date.now()
+//       };
+//     }
+    
+//     return config;
+//   },
+//   (error) => {
+//     return Promise.reject(error);
+//   }
+// );
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
+    console.log("📡 Attaching token to request:", token);
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Add cache-buster for GET requests
     if (config.method === 'get' && !config.params?.noCache) {
       config.params = {
         ...config.params,
-        _t: Date.now()
+        _t: Date.now(),
       };
     }
-    
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor
@@ -58,8 +80,15 @@ api.interceptors.response.use(
       
       try {
         // Prevent multiple refresh token requests
+        // refreshTokenRequest = refreshTokenRequest || 
+        //   api.post('/auth/refresh', {}, { skipAuthRefresh: true });
+        
         refreshTokenRequest = refreshTokenRequest || 
-          api.post('/auth/refresh', {}, { skipAuthRefresh: true });
+  api.post('/auth/refresh', {}, {
+    withCredentials: true, // ✅ Ensure cookies are sent
+    skipAuthRefresh: true,
+  });
+
         
         const { data } = await refreshTokenRequest;
         localStorage.setItem('access_token', data.access_token);
@@ -129,4 +158,22 @@ api.interceptors.response.use(
   }
 );
 
+
+// Request interceptor to attach access token
+// api.interceptors.request.use(
+//   (config) => {
+//     const token = localStorage.getItem('access_token');
+//     if (token) {
+//       config.headers['Authorization'] = `Bearer ${token}`;
+//     }
+//     return config;
+//   },
+//   (error) => Promise.reject(error)
+// );
+
+// Temporary simplified response handling (for debugging)
+// api.interceptors.response.use(
+//   (response) => response.data,
+//   (error) => Promise.reject(error)
+// );
 export default api;

@@ -4,6 +4,7 @@ import api from '../services/api';
 
 const AuthContext = createContext();
 
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -18,22 +19,54 @@ export const AuthProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
 
   // Verify authentication on initial load
-  useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const { data } = await api.get('/auth/me');
-        setUser(data.data); // ✅ backend returns user under "data"
-      } catch (error) {
-        setUser(null);
-        localStorage.removeItem('access_token');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // useEffect(() => {
+  //   const verifyAuth = async () => {
+  //     try {
+  //       const { data } = await api.get('/auth/me');
+  //       setUser(data.data); // ✅ backend returns user under "data"
+  //     } catch (error) {
+  //       setUser(null);
+  //       localStorage.removeItem('access_token');
+  //     } finally {
+  //       setLoading(false);
+  //     }
+      
+  //   };
 
-    verifyAuth();
-    loadUsers();
-  }, []);
+  //   verifyAuth();
+  //   loadUsers();
+  // }, []);
+  useEffect(() => {
+  verifyAuth();
+}, []);
+
+  const verifyAuth = async () => {
+    const token = localStorage.getItem('access_token');
+
+    console.log("🔐 access_token before /auth/me:", token);
+
+    if (!token) {
+      console.warn("🚫 No token found. Skipping auth check.");
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.get('/auth/me');
+      console.log("✅ Auth verified. User:", response.data.data);
+      setUser(response.data.data);
+    } catch (error) {
+      console.error("❌ Auth check failed:", error.response?.data || error.message);
+      setUser(null);
+      localStorage.removeItem('access_token'); // Optionally clear invalid token
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
 
   const loadUsers = async () => {
     try {
@@ -61,6 +94,8 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: errorMsg };
     }
   };
+
+
 
   const logout = () => {
     setUser(null);
@@ -144,7 +179,17 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
+    
+    // <AuthContext.Provider value={value}>
+    //   {loading ? (
+    //     <div>Loading authentication...</div>
+    //   ) : (
+    //     children
+    //   )}
+    // </AuthContext.Provider>
   );
 };
+
+

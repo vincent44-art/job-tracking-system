@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus } from 'lucide-react';
+<<<<<<< HEAD
 import { fetchSales, createSale, deleteSale } from 'http://127.0.0.1:5000'; // Import your API functions
+=======
+//import { fetchSales, createSale, deleteSale } from 'http://127.0.0.1:5000'; // Import your API functions
+import { fetchSales, createSale, deleteSale } from './apiHelpers';
+>>>>>>> f019a39 (Fix API path and token setup)
 
 const SalesTab = () => {
   const [sales, setSales] = useState([]);

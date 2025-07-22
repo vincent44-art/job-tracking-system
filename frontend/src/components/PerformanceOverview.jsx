@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+<<<<<<< HEAD
 import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from 'http://127.0.0.1:5000/api';
+=======
+//import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from 'http://127.0.0.1:5000/api';
+import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from './apiHelpers'; // adjust path as needed
+
+>>>>>>> f019a39 (Fix API path and token setup)
 
 const PerformanceOverview = () => {
   const [stats, setStats] = useState(null);
