@@ -9,23 +9,25 @@ from datetime import timedelta
 from config import Config
 from models.user import db, User, UserRole
 from utils.helpers import make_response_data
+from resources import api_bp  # Your API blueprints
 
 # Load environment variables
 load_dotenv()
 
+# Path to your React build folder
+FRONTEND_BUILD_DIR = os.path.join(os.getcwd(), 'Frontend', 'build')
+
 # Initialize extensions
+db = db
 jwt = JWTManager()
 cors = CORS()
 migrate = Migrate()
-
-# Path to your React build folder
-FRONTEND_BUILD_DIR = os.path.join(os.getcwd(), 'Frontend', 'build')
 
 def create_app(config_class=Config):
     app = Flask(__name__, static_folder=FRONTEND_BUILD_DIR, static_url_path='/')
     app.config.from_object(config_class)
 
-    # CORS Configuration
+    # CORS setup
     app.config['CORS_HEADERS'] = 'Content-Type'
     app.config['CORS_SUPPORTS_CREDENTIALS'] = True
     app.config['CORS_ORIGINS'] = [
@@ -37,76 +39,56 @@ def create_app(config_class=Config):
 
     # JWT Expiry
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
-    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+    # app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
     # Initialize Extensions
     db.init_app(app)
     jwt.init_app(app)
-    cors.init_app(app, resources={
-        r"/*": {
-            "origins": app.config['CORS_ORIGINS'],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
-        }
-    })
+    # cors.init_app(app, resources={r"/*": {
+    #     "origins": app.config['CORS_ORIGINS'],
+    #     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    #     "allow_headers": ["Content-Type", "Authorization"],
+    #     "supports_credentials": True
+    # }})
+    cors.init_app(app, resources={r"/*": {
+    "origins": ["http://localhost:3000"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"],
+    "supports_credentials": True
+}})
+
+    
     migrate.init_app(app, db)
-    CORS(app, supports_credentials=True, origins=app.config['CORS_ORIGINS'])
 
-    # CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
-
-    # JWT Error Callbacks
+    # JWT error handlers
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
-        return jsonify({
-            'success': False,
-            'message': 'The token has expired',
-            'error': 'token_expired'
-        }), 401
+        return jsonify({'success': False, 'message': 'The token has expired', 'error': 'token_expired'}), 401
 
     @jwt.invalid_token_loader
     def invalid_token_callback(error):
-        return jsonify({
-            'success': False,
-            'message': 'Signature verification failed',
-            'error': 'invalid_token'
-        }), 401
+        return jsonify({'success': False, 'message': 'Invalid token', 'error': 'invalid_token'}), 401
 
     @jwt.unauthorized_loader
     def missing_token_callback(error):
-        return jsonify({
-            'success': False,
-            'message': 'Request does not contain an access token',
-            'error': 'authorization_required'
-        }), 401
+        return jsonify({'success': False, 'message': 'Missing access token', 'error': 'authorization_required'}), 401
 
-    # Blueprints
-    from resources import api_bp
+    # Register Blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
 
     # Health Check
     @app.route('/api/health')
     def health_check():
-        return jsonify({
-            'success': True,
-            'status': 'healthy',
-            'message': 'Service is running',
-            'version': '1.0.0'
-        })
+        return jsonify({'success': True, 'status': 'healthy', 'message': 'Service is running', 'version': '1.0.0'})
 
-    # React Frontend Routes
+    # Serve React frontend
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
-        """
-        Serves React frontend from the build directory.
-        Falls back to index.html for unknown routes (important for React Router).
-        """
         full_path = os.path.join(FRONTEND_BUILD_DIR, path)
         if path != "" and os.path.exists(full_path):
             return send_from_directory(FRONTEND_BUILD_DIR, path)
-        else:
-            return send_from_directory(FRONTEND_BUILD_DIR, 'index.html')
+        return send_from_directory(FRONTEND_BUILD_DIR, 'index.html')
 
     # Error Handlers
     @app.errorhandler(404)
@@ -123,6 +105,6 @@ def create_app(config_class=Config):
 # Global app for Gunicorn
 app = create_app()
 
-# Local Dev
+# Local Development
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -8,6 +8,8 @@ const Navbar = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const navigate = useNavigate();
 
+  
+
   const getRoleColor = (role) => {
     const colors = {
       ceo: 'bg-danger',
@@ -120,10 +122,9 @@ const Navbar = () => {
         </div>
       </nav>
       
-      <Calculator 
-        show={showCalculator}
-        onClose={() => setShowCalculator(false)} 
-      />
+      {showCalculator && (
+        <Calculator onClose={() => setShowCalculator(false)} />
+      )}
     </>
   );
 };

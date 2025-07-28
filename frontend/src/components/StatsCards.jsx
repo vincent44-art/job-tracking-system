@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
-<<<<<<< HEAD
-import { fetchStats } from 'http://127.0.0.1:5000/api';
-
-=======
 //import { fetchStats } from 'http://127.0.0.1:5000/api';
 import { fetchStats } from './apiHelpers';
->>>>>>> f019a39 (Fix API path and token setup)
+
 const StatsCards = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-<<<<<<< HEAD
-=======
 // import { 
 //   clearAllDataAPI,
 //   clearPurchasesDataAPI,
@@ -11,7 +9,7 @@ import React, { useState } from 'react';
 //   clearInventoryDataAPI
 // } from 'http://127.0.0.1:5000/api';
 
->>>>>>> f019a39 (Fix API path and token setup)
+
 import { 
   clearAllDataAPI,
   clearPurchasesDataAPI,
@@ -20,12 +18,8 @@ import {
   clearOtherExpensesDataAPI,
   clearSalariesDataAPI,
   clearInventoryDataAPI
-<<<<<<< HEAD
-} from 'http://127.0.0.1:5000/api';
-=======
 } from './apiHelpers';
 
->>>>>>> f019a39 (Fix API path and token setup)
 
 const ClearDataModal = ({ show, onClose }) => {
   const [isClearing, setIsClearing] = useState(false);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchDashboardData } from '../api/dashboard'; // Correct import path
+import { useDashboardData } from '../api/dashboard';
 import StatsCards from '../components/StatsCards';
 import PurchasesTab from '../components/PurchasesTab';
 import SalesTab from '../components/SalesTab';
@@ -15,36 +15,27 @@ import ClearDataModal from '../components/ClearDataModal';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { data, error, loading, refetch } = useDashboardData(); // Added refetch for refresh
   const [activeTab, setActiveTab] = useState('overview');
   const [showClearModal, setShowClearModal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [error, setError] = useState(null);
 
   // Fetch dashboard data
+  // useEffect(() => {
+  //   if (user?.role !== 'ceo') return;
+  //   if (data) {
+  //     setNotifications(data.notifications || []);
+  //     setUnreadCount(data.unreadNotifications || 0);
+  //   }
+  // }, [data, user?.role]);
   useEffect(() => {
-    if (user?.role !== 'ceo') return;
+    if (user?.role === 'ceo' && data) {
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unreadNotifications || 0);
+    }
+}, []); // <- run only once
 
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchDashboardData();
-        setDashboardData(data);
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadNotifications || 0);
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [user?.role]);
 
   const markAsRead = (id) => {
     setNotifications(prev => 
@@ -76,7 +67,7 @@ const Dashboard = () => {
           {error}
           <button 
             className="btn btn-sm btn-outline-danger ms-3"
-            onClick={() => window.location.reload()}
+            onClick={refetch} // Reload using hook's refetch
           >
             Retry
           </button>
@@ -88,29 +79,29 @@ const Dashboard = () => {
       case 'overview':
         return (
           <>
-            {dashboardData && <StatsCards stats={dashboardData.stats} />}
-            <PerformanceOverview data={dashboardData?.performance} />
+            {data && <StatsCards stats={data.stats} />}
+            <PerformanceOverview data={data?.performance} />
           </>
         );
       case 'purchases':
-        return <PurchasesTab data={dashboardData?.purchases} />;
+        return <PurchasesTab data={data?.purchases} />;
       case 'sales':
-        return <SalesTab data={dashboardData?.sales} />;
+        return <SalesTab data={data?.sales} />;
       case 'inventory':
-        return <InventoryTab data={dashboardData?.inventory} />;
+        return <InventoryTab data={data?.inventory} />;
       case 'salaries':
-        return <SalaryManagementTab data={dashboardData?.salaries} />;
+        return <SalaryManagementTab data={data?.salaries} />;
       case 'car-expenses':
-        return <CarExpensesTab data={dashboardData?.carExpenses} />;
+        return <CarExpensesTab data={data?.carExpenses} />;
       case 'other-expenses':
-        return <OtherExpensesTab data={dashboardData?.otherExpenses} />;
+        return <OtherExpensesTab data={data?.otherExpenses} />;
       case 'users':
-        return <UserManagementTab data={dashboardData?.users} />;
+        return <UserManagementTab data={data?.users} />;
       default:
         return (
           <>
-            {dashboardData && <StatsCards stats={dashboardData.stats} />}
-            <PerformanceOverview data={dashboardData?.performance} />
+            {data && <StatsCards stats={data.stats} />}
+            <PerformanceOverview data={data?.performance} />
           </>
         );
     }
@@ -209,23 +200,7 @@ const Dashboard = () => {
       <ClearDataModal 
         show={showClearModal}
         onClose={() => setShowClearModal(false)}
-        onSuccess={() => {
-          // Reset and reload data
-          setDashboardData(null);
-          setLoading(true);
-          setError(null);
-          fetchDashboardData()
-            .then(data => {
-              setDashboardData(data);
-              setNotifications(data.notifications || []);
-              setUnreadCount(data.unreadNotifications || 0);
-            })
-            .catch(err => {
-              console.error('Reload error:', err);
-              setError('Failed to reload data after clearing');
-            })
-            .finally(() => setLoading(false));
-        }}
+        onSuccess={() => refetch()} // Just refetch after clearing
       />
     </div>
   );

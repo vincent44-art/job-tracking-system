@@ -10,10 +10,8 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-string'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
-<<<<<<< HEAD
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
-=======
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    # JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    # JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
     CORS_ORIGINS = ["http://localhost:3000"]
->>>>>>> f019a39 (Fix API path and token setup)
+

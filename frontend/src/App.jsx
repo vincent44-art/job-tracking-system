@@ -17,9 +17,33 @@ import PurchaseFormModal from './components/modals/PurchaseFormModal';
 import SalaryFormModal from './components/modals/SalaryFormModal';
 import PaymentFormModal from './components/modals/PaymentFormModal';
 
-const ProtectedRoute = ({ children, requiredRoles = [] }) => {
-  const { user } = useAuth();
+// const ProtectedRoute = ({ children, requiredRoles = [] }) => {
+//   const { user } = useAuth();
   
+//   if (!user) {
+//     return <Navigate to="/login" replace />;
+//   }
+
+//   if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
+//     Modal.error({
+//       title: 'Unauthorized Access',
+//       content: 'You do not have permission to access this page.',
+//     });
+//     return <Navigate to="/" replace />;
+//   }
+  
+//   return <>{children}</>;
+// };
+
+// const AppContent = () => {
+//   const { user } = useAuth();
+const ProtectedRoute = ({ children, requiredRoles = [] }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="text-center mt-5">Loading...</div>; // Wait until verifyAuth finishes
+  }
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -31,12 +55,16 @@ const ProtectedRoute = ({ children, requiredRoles = [] }) => {
     });
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
 const AppContent = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="text-center mt-5">Loading...</div>; // Prevent rendering until user is verified
+  }
   
   return (
     <div className="min-vh-100 fruit-tracking-bg">

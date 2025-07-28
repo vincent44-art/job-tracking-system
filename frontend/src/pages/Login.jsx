@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -8,6 +9,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,12 +22,12 @@ const Login = () => {
       const result = await login(email, password);
       
       if (!result.success) {
-        setError(result.error || 'Login failed');
-        console.error('Login failed:', result.error);
-      } else {
-        console.log('Login successful, redirecting...');
-        // Success is handled by the auth context and App.jsx routing
-      }
+      setError(result.error || 'Login failed');
+      console.error('Login failed:', result.error);
+    } else {
+      console.log('Login successful, redirecting...');
+      navigate('/');  // 👈 Redirect user to dashboard (or main page)
+    }
     } catch (error) {
       console.error('Login error:', error);
       setError('An unexpected error occurred');

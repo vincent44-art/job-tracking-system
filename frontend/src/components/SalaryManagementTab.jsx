@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-<<<<<<< HEAD
-import { fetchSalaries, fetchSalaryPayments, createSalary, recordPayment, togglePaymentStatus } from 'http://127.0.0.1:5000/api';
-=======
 //import { fetchSalaries, fetchSalaryPayments, createSalary, recordPayment, togglePaymentStatus } from 'http://127.0.0.1:5000/api';
 import { fetchSalaries, fetchSalaryPayments, createSalary, recordPayment, togglePaymentStatus } from './apiHelpers';
->>>>>>> f019a39 (Fix API path and token setup)
 import SalaryFormModal from './SalaryFormModal';
 import PaymentFormModal from './PaymentFormModal';
 

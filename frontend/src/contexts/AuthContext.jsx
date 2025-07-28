@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import api from '../services/api';
+// import api from '../services/api';
+import api, { get, post, put, del } from '../services/api';
+
+
 
 const AuthContext = createContext();
 
@@ -18,83 +21,73 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
 
-  // Verify authentication on initial load
-  // useEffect(() => {
-  //   const verifyAuth = async () => {
-  //     try {
-  //       const { data } = await api.get('/auth/me');
-  //       setUser(data.data); // ✅ backend returns user under "data"
-  //     } catch (error) {
-  //       setUser(null);
-  //       localStorage.removeItem('access_token');
-  //     } finally {
-  //       setLoading(false);
-  //     }
-      
-  //   };
-
-  //   verifyAuth();
-  //   loadUsers();
-  // }, []);
-  useEffect(() => {
-  verifyAuth();
+  
+  
+//   useEffect(() => {
+//   const token = localStorage.getItem('access_token');
+//   if (token) {
+//     api.defaults.headers.Authorization = `Bearer ${token}`;
+//   }
+//   verifyAuth();
+// }, []);
+useEffect(() => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    api.defaults.headers.Authorization = `Bearer ${token}`;
+    verifyAuth();
+  } else {
+    setLoading(false);
+  }
 }, []);
 
-  const verifyAuth = async () => {
-    const token = localStorage.getItem('access_token');
 
-    console.log("🔐 access_token before /auth/me:", token);
+const verifyAuth = async () => {
+  try {
+    const response = await api.get('/auth/me');
+    setUser(response.data.data);
+  } catch (error) {
+    console.error("Auth check failed:", error.response?.data || error.message);
+    setUser(null);
+    localStorage.removeItem('access_token');
+  } finally {
+    setLoading(false);
+  }
+};
 
-    if (!token) {
-      console.warn("🚫 No token found. Skipping auth check.");
-      setUser(null);
-      setLoading(false);
-      return;
+
+const login = async (email, password) => {
+  try {
+    const response = await api.post('/auth/login', { email, password });
+    const resData = response?.data?.data || response?.data;
+
+    if (!resData || !resData.access_token || !resData.user) {
+      throw new Error("Invalid response format");
     }
 
-    try {
-      const response = await api.get('/auth/me');
-      console.log("✅ Auth verified. User:", response.data.data);
-      setUser(response.data.data);
-    } catch (error) {
-      console.error("❌ Auth check failed:", error.response?.data || error.message);
-      setUser(null);
-      localStorage.removeItem('access_token'); // Optionally clear invalid token
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Save token FIRST
+    localStorage.setItem('access_token', resData.access_token);
+    api.defaults.headers.Authorization = `Bearer ${resData.access_token}`; // <-- Add this
+    setUser(resData.user);
 
 
+    // Save user
+    setUser(resData.user);
 
+    toast.success('Login successful');
 
-  const loadUsers = async () => {
-    try {
-      const { data } = await api.get('/users');
-      setUsers(data.data); // ✅ match backend structure
-    } catch (error) {
-      console.error('Failed to load users:', error);
-      toast.error('Failed to load users');
-      setUsers([]);
-    }
-  };
+    // 🔥 OPTIONAL: Redirect after login
+    //window.location.href = '/dashboard';
+     
 
-  const login = async (email, password) => {
-    try {
-      const { data } = await api.post('/auth/login', { email, password });
-
-      setUser(data.data.user);
-      localStorage.setItem('access_token', data.data.access_token);
-      toast.success('Login successful');
-      return { success: true };
-    } catch (error) {
-      console.error('Login error:', error);
-      const errorMsg = error.response?.data?.message || 'Login failed';
-      toast.error(errorMsg);
-      return { success: false, error: errorMsg };
-    }
-  };
-
+    return { success: true };
+  } catch (error) {
+    console.error('Login error:', error);
+    const errorMsg = error.response?.data?.message || 'Login failed';
+    toast.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+};
+  
 
 
   const logout = () => {
@@ -102,6 +95,31 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('access_token');
     toast.success('Logged out successfully');
   };
+
+
+  // const loadUsers = async () => {
+  //   try {
+  //     const { data } = await api.get('/users');
+  //     setUsers(response.data); // ✅ match backend structure
+  //   } catch (error) {
+  //     console.error('Failed to load users:', error);
+  //     toast.error('Failed to load users');
+  //     setUsers([]);
+  //   }
+  // };
+  const loadUsers = async () => {
+    try {
+      const response = await get('/users');
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      toast.error('Failed to load users');
+      setUsers([]);
+    }
+  };
+
+  
+
 
   const getAllUsers = async () => {
     try {
@@ -182,13 +200,7 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
     
-    // <AuthContext.Provider value={value}>
-    //   {loading ? (
-    //     <div>Loading authentication...</div>
-    //   ) : (
-    //     children
-    //   )}
-    // </AuthContext.Provider>
+   
   );
 };
 
