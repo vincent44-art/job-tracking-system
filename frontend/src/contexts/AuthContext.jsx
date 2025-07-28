@@ -21,15 +21,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
 
-  
-  
-//   useEffect(() => {
-//   const token = localStorage.getItem('access_token');
-//   if (token) {
-//     api.defaults.headers.Authorization = `Bearer ${token}`;
-//   }
-//   verifyAuth();
-// }, []);
 useEffect(() => {
   const token = localStorage.getItem('access_token');
   if (token) {

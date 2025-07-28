@@ -1,15 +1,3 @@
-// import api from './api';
-
-// export const fetchDashboardData = async () => {
-//   try {
-//     const response = await api.get('/dashboard');
-//     return response.data;
-//   } catch (error) {
-//     console.error('Dashboard API Error:', error);
-//     throw error;
-//   }
-// };
-
 import React, { useState, useEffect } from 'react';
 import api from './api';
 import { useAuth } from '../contexts/AuthContext'; // Only valid in React components/hooks
