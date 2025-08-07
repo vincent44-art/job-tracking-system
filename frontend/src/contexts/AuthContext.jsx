@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 // import api from '../services/api';
-import api, { get, post, put, del } from '../services/api';
+import api, { get } from '../services/api';
 
 
 
@@ -98,16 +98,7 @@ const login = async (email, password) => {
   //     setUsers([]);
   //   }
   // };
-  const loadUsers = async () => {
-    try {
-      const response = await get('/users');
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Failed to load users:', error);
-      toast.error('Failed to load users');
-      setUsers([]);
-    }
-  };
+
 
   
 

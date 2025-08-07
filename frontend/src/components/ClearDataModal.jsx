@@ -58,6 +58,9 @@ const ClearDataModal = ({ show, onClose }) => {
         case 'salaries':
           await clearSalariesDataAPI();
           break;
+        default:
+          // do nothing
+          break;
       }
       onClose();
     } catch (err) {

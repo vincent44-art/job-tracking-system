@@ -1,30 +1,35 @@
 from datetime import datetime
-from .user import db # <-- CORRECTED LINE
-
+from extensions import db
+from extensions import db
 
 class Inventory(db.Model):
+    __tablename__ = 'inventory'
+    
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    quantity = db.Column(db.String(50), nullable=False)
-    fruit_type = db.Column(db.String(50), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    item_name = db.Column(db.String(100), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
     unit = db.Column(db.String(20))
-    location = db.Column(db.String(100))
-    expiry_date = db.Column(db.Date)
-    added_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    category = db.Column(db.String(50))
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    stock_movements = db.relationship('StockMovement', backref='inventory_item', lazy=True, cascade="all, delete-orphan")
+    def __repr__(self):
+        return f'<Inventory {self.item_name} (Qty: {self.quantity})>'
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'quantity': self.quantity,
-            'fruit_type': self.fruit_type,
-            'unit': self.unit,
-            'location': self.location,
-            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None,
-            'added_by': self.added_by,
-            'created_at': self.created_at.isoformat(),
-        }
+class StockMovement(db.Model):
+    __tablename__ = 'stock_movements'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    inventory_id = db.Column(db.Integer, db.ForeignKey('inventory.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    quantity_change = db.Column(db.Integer, nullable=False)
+    movement_type = db.Column(db.String(20))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    inventory_item = db.relationship('Inventory', backref='movements')
+    user = db.relationship('User')
+
+    def __repr__(self):
+        return f'<StockMovement {self.movement_type} {self.quantity_change}>'

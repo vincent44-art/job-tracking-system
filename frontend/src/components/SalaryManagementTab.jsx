@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-//import { fetchSalaries, fetchSalaryPayments, createSalary, recordPayment, togglePaymentStatus } from 'http://127.0.0.1:5000/api';
 import { fetchSalaries, fetchSalaryPayments, createSalary, recordPayment, togglePaymentStatus } from './apiHelpers';
 import SalaryFormModal from './SalaryFormModal';
 import PaymentFormModal from './PaymentFormModal';
@@ -9,30 +8,34 @@ const SalaryManagementTab = () => {
   const { getAllUsers } = useAuth();
   const [salaries, setSalaries] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [users, setUsers] = useState([]); // Added users state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  // Fetch data on component mount
+  // Fetch all data on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [salariesRes, paymentsRes] = await Promise.all([
+        const [salariesRes, paymentsRes, usersList] = await Promise.all([
           fetchSalaries(),
-          fetchSalaryPayments()
+          fetchSalaryPayments(),
+          getAllUsers() // Make sure getAllUsers returns a Promise
         ]);
-        setSalaries(salariesRes.data);
-        setPayments(paymentsRes.data);
+        
+        setSalaries(salariesRes.data || []);
+        setPayments(paymentsRes.data || []);
+        setUsers(Array.isArray(usersList) ? usersList : []);
       } catch (err) {
-        console.error('Failed to load salary data:', err);
-        setError('Failed to load salary data. Please try again.');
+        console.error('Failed to load data:', err);
+        setError('Failed to load data. Please try again.');
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, []);
+  }, [getAllUsers]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -44,7 +47,7 @@ const SalaryManagementTab = () => {
   const handleAddSalary = async (salaryData) => {
     try {
       const response = await createSalary(salaryData);
-      setSalaries([...salaries, response.data]);
+      setSalaries(prev => [...prev, response.data]);
       setShowSalaryModal(false);
     } catch (err) {
       console.error('Failed to add salary:', err);
@@ -55,7 +58,7 @@ const SalaryManagementTab = () => {
   const handleRecordPayment = async (paymentData) => {
     try {
       const response = await recordPayment(paymentData);
-      setPayments([...payments, response.data]);
+      setPayments(prev => [...prev, response.data]);
       setShowPaymentModal(false);
     } catch (err) {
       console.error('Failed to record payment:', err);
@@ -66,7 +69,7 @@ const SalaryManagementTab = () => {
   const handleTogglePayment = async (paymentId) => {
     try {
       await togglePaymentStatus(paymentId);
-      setPayments(payments.map(payment => 
+      setPayments(prev => prev.map(payment => 
         payment.id === paymentId 
           ? { ...payment, isPaid: !payment.isPaid } 
           : payment
@@ -77,7 +80,8 @@ const SalaryManagementTab = () => {
     }
   };
 
-  const users = getAllUsers().filter(user => user.role !== 'ceo');
+  // Filter non-CEO users
+  const filteredUsers = users.filter(user => user.role !== 'ceo');
 
   if (loading) {
     return (
@@ -136,17 +140,20 @@ const SalaryManagementTab = () => {
               </thead>
               <tbody>
                 {salaries.length > 0 ? (
-                  salaries.map(salary => (
-                    <tr key={salary.userEmail}>
-                      <td>{salary.userName}</td>
-                      <td>
-                        <span className="badge bg-primary">
-                          {salary.userRole.toUpperCase()}
-                        </span>
-                      </td>
-                      <td>{formatCurrency(salary.baseSalary)}</td>
-                    </tr>
-                  ))
+                  salaries.map(salary => {
+                    const user = users.find(u => u.email === salary.userEmail);
+                    return (
+                      <tr key={salary.userEmail}>
+                        <td>{user ? user.name : salary.userEmail}</td>
+                        <td>
+                          <span className="badge bg-primary">
+                            {user?.role?.toUpperCase() || salary.userRole.toUpperCase()}
+                          </span>
+                        </td>
+                        <td>{formatCurrency(salary.baseSalary)}</td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan="3" className="text-center py-4">
@@ -178,26 +185,29 @@ const SalaryManagementTab = () => {
               </thead>
               <tbody>
                 {payments.length > 0 ? (
-                  payments.map(payment => (
-                    <tr key={payment.id}>
-                      <td>{payment.userName}</td>
-                      <td>{formatCurrency(payment.monthlySalary)}</td>
-                      <td>{new Date(payment.paymentDate).toLocaleDateString()}</td>
-                      <td>
-                        <span className={`badge ${payment.isPaid ? 'bg-success' : 'bg-warning'}`}>
-                          {payment.isPaid ? 'PAID' : 'PENDING'}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className={`btn btn-sm ${payment.isPaid ? 'btn-warning' : 'btn-success'}`}
-                          onClick={() => handleTogglePayment(payment.id)}
-                        >
-                          {payment.isPaid ? 'Mark Unpaid' : 'Mark Paid'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  payments.map(payment => {
+                    const user = users.find(u => u.email === payment.userEmail);
+                    return (
+                      <tr key={payment.id}>
+                        <td>{user ? user.name : payment.userEmail}</td>
+                        <td>{formatCurrency(payment.amount)}</td>
+                        <td>{new Date(payment.paymentDate).toLocaleDateString()}</td>
+                        <td>
+                          <span className={`badge ${payment.isPaid ? 'bg-success' : 'bg-warning'}`}>
+                            {payment.isPaid ? 'PAID' : 'PENDING'}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className={`btn btn-sm ${payment.isPaid ? 'btn-warning' : 'btn-success'}`}
+                            onClick={() => handleTogglePayment(payment.id)}
+                          >
+                            {payment.isPaid ? 'Mark Unpaid' : 'Mark Paid'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan="5" className="text-center py-4">
@@ -215,14 +225,14 @@ const SalaryManagementTab = () => {
         show={showSalaryModal}
         onClose={() => setShowSalaryModal(false)}
         onSave={handleAddSalary}
-        users={users}
+        users={filteredUsers}
       />
 
       <PaymentFormModal
         show={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onSave={handleRecordPayment}
-        users={users}
+        users={filteredUsers}
         salaries={salaries}
       />
     </div>

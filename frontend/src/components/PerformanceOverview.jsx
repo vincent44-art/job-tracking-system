@@ -1,41 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-//import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from 'http://127.0.0.1:5000/api';
-import { fetchPerformanceStats, fetchFruitPerformance, fetchMonthlyData } from './apiHelpers'; // adjust path as needed
 
-
-
-const PerformanceOverview = () => {
-  const [stats, setStats] = useState(null);
-  const [fruitPerformance, setFruitPerformance] = useState([]);
-  const [monthlyData, setMonthlyData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch all performance data
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [statsRes, fruitRes, monthlyRes] = await Promise.all([
-          fetchPerformanceStats(),
-          fetchFruitPerformance(),
-          fetchMonthlyData()
-        ]);
-        
-        setStats(statsRes.data);
-        setFruitPerformance(fruitRes.data);
-        setMonthlyData(monthlyRes.data);
-      } catch (err) {
-        console.error('Failed to load performance data:', err);
-        setError('Failed to load performance data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, []);
+const PerformanceOverview = ({ data }) => {
+  if (!data) {
+    return <div className="text-center py-5">No performance data available.</div>;
+  }
+  const stats = data.stats;
+  const fruitPerformance = data.fruitPerformance || [];
+  const monthlyData = data.monthlyData || [];
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -43,31 +16,6 @@ const PerformanceOverview = () => {
       currency: 'Ksh'
     }).format(amount);
   };
-
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-        <p>Loading performance data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="alert alert-danger">
-        {error}
-        <button 
-          className="btn btn-sm btn-outline-danger ms-3"
-          onClick={() => setError(null)}
-        >
-          Dismiss
-        </button>
-      </div>
-    );
-  }
 
   if (!stats) return null;
 

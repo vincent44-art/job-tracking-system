@@ -14,7 +14,7 @@ import CeoMessagePanel from '../components/CeoMessagePanel';
 import ClearDataModal from '../components/ClearDataModal';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { data, error, loading, refetch } = useDashboardData(); // Added refetch for refresh
   const [activeTab, setActiveTab] = useState('overview');
   const [showClearModal, setShowClearModal] = useState(false);
@@ -34,7 +34,7 @@ const Dashboard = () => {
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadNotifications || 0);
     }
-}, []); // <- run only once
+  }, [data, user?.role]);
 
 
   const markAsRead = (id) => {
@@ -80,7 +80,7 @@ const Dashboard = () => {
         return (
           <>
             {data && <StatsCards stats={data.stats} />}
-            <PerformanceOverview data={data?.performance} />
+            <PerformanceOverview data={data?.performance || data} />
           </>
         );
       case 'purchases':
@@ -106,6 +106,18 @@ const Dashboard = () => {
         );
     }
   };
+
+
+  if (!user) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-warning">
+          <i className="bi bi-exclamation-triangle me-2"></i>
+          Please log in to view the dashboard.
+        </div>
+      </div>
+    );
+  }
 
   if (user?.role !== 'ceo') {
     return (
@@ -161,6 +173,12 @@ const Dashboard = () => {
                 disabled={loading}
               >
                 <i className="bi bi-trash me-2"></i>Clear Data
+              </button>
+              <button 
+                className="btn btn-outline-secondary"
+                onClick={logout}
+              >
+                <i className="bi bi-box-arrow-right me-2"></i>Logout
               </button>
             </div>
           </div>

@@ -92,6 +92,9 @@ const InventoryTab = () => {
           await clearGradientsAPI();
           setGradients([]);
           break;
+        default:
+          // do nothing
+          break;
       }
     } catch (err) {
       console.error(`Failed to clear ${type}:`, err);
@@ -99,12 +102,7 @@ const InventoryTab = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+
 
   if (error) {
     return (

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from './api';
 import { useAuth } from '../contexts/AuthContext'; // Only valid in React components/hooks
-import { get } from '../services/api';
 
 // ✅ Custom Hook (must start with "use")
 export const useDashboardData = () => {
@@ -39,6 +38,7 @@ const loadData = async () => {
 
   useEffect(() => {
     if (user) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   return { data: data || {}, error, loading, refetch: loadData }; // <-- Always returns object
