@@ -21,24 +21,28 @@ export const clearAllDataAPI = () => axiosInstance.delete('/data/clear-all');
 //1 Generic fetch helper to handle errors, headers, etc.
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
-  const response = await fetch(url, options);
+  // Always add JWT token if available
+  const token = localStorage.getItem('access_token');
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+  const fetchOptions = {
+    ...options,
+    headers
+  };
+  const response = await fetch(url, fetchOptions);
   if (!response.ok) {
-    const errorData = await response.json();
+    let errorData = {};
+    try {
+      errorData = await response.json();
+    } catch (e) {}
     throw new Error(errorData.message || 'API request failed');
   }
+  if (response.status === 204) {
+    return null;
+  }
   return response.json();
-}
-
-// Fetch CEO messages
-export async function fetchCeoMessages() {
-  return request('/ceo/messages');
-}
-
-// Update message as read
-export async function updateMessageAsRead(messageId) {
-  return request(`/ceo/messages/${messageId}/read`, {
-    method: 'POST',
-  });
 }
 
 // Add other API functions here as needed
@@ -50,7 +54,13 @@ export async function fetchStats() {
 
 // Sales
 export async function fetchSales() {
-  return request('/sales');
+  return request('/sales', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(localStorage.getItem('access_token') ? { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` } : {})
+    }
+  });
 }
 
 export async function createSale(data) {
@@ -84,6 +94,12 @@ export async function createSalary(salaryData) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(salaryData),
+  });
+}
+
+export async function deleteSalary(id) {
+  return request(`/salaries/${id}`, {
+    method: 'DELETE',
   });
 }
 
@@ -150,16 +166,54 @@ export async function deleteOtherExpense(expenseId) {
 }
 
 // Inventory API
-export async function fetchInventory() {
-  return request('/inventory');
+export async function fetchInventory(token) {
+  return request('/inventory', {
+    method: 'GET',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
 }
 
-export async function fetchStockMovements() {
-  return request('/stock/movements');
+export async function fetchStockMovements(token) {
+  return request('/stock-movements', {
+    method: 'GET',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
 }
 
-export async function fetchGradients() {
-  return request('/gradients');
+export async function createStockMovement(data, token) {
+  return request('/stock-movements', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createGradient(data, token) {
+  // Required fields for gradient creation:
+  // fruit_type, gradient_type, application_date, notes (optional)
+  if (!data.fruit_type || !data.gradient_type || !data.application_date) {
+    throw new Error('Missing required fields: fruit_type, gradient_type, application_date');
+  }
+  return request('/gradients', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({
+      fruit_type: data.fruit_type,
+      gradient_type: data.gradient_type,
+      application_date: data.application_date,
+      notes: data.notes || ''
+    }),
+  });
 }
 
 // Clear API calls
@@ -173,4 +227,66 @@ export async function clearStockMovementsAPI() {
 
 export async function clearGradientsAPI() {
   return request('/gradients', { method: 'DELETE' });
+}
+
+// Assignments API
+
+export async function createAssignment({ seller_id, seller_email, fruit_type, assignment_id }) {
+  return request('/assignments/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ seller_id, seller_email, fruit_type, assignment_id })
+  });
+}
+
+export async function createSaleForAssignment(assignment_id, saleData) {
+  return request(`/assignments/${assignment_id}/sales`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(saleData)
+  });
+}
+
+export async function createInventory(data, token) {
+  return request('/inventory', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchGradients(token) {
+  return request('/gradients', {
+    method: 'GET',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
+}
+
+// Car Expenses API
+
+export async function fetchCarExpenses() {
+  return request('/car-expenses');
+}
+
+export async function deleteCarExpense(expenseId) {
+  const token = localStorage.getItem('access_token');
+  return request(`/api/car-expenses/${expenseId}`, {
+    method: 'DELETE',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
+}
+
+// Users API
+
+export async function fetchUsers() {
+  return request('/users', {
+    method: 'GET',
+  });
 }

@@ -10,7 +10,7 @@ import UserManagementTab from '../components/UserManagementTab';
 import SalaryManagementTab from '../components/SalaryManagementTab';
 import InventoryTab from '../components/InventoryTab';
 import PerformanceOverview from '../components/PerformanceOverview';
-import CeoMessagePanel from '../components/CeoMessagePanel';
+// CeoMessagePanel removed
 import ClearDataModal from '../components/ClearDataModal';
 
 const Dashboard = () => {
@@ -18,7 +18,6 @@ const Dashboard = () => {
   const { data, error, loading, refetch } = useDashboardData(); // Added refetch for refresh
   const [activeTab, setActiveTab] = useState('overview');
   const [showClearModal, setShowClearModal] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch dashboard data
@@ -31,24 +30,13 @@ const Dashboard = () => {
   // }, [data, user?.role]);
   useEffect(() => {
     if (user?.role === 'ceo' && data) {
-      setNotifications(data.notifications || []);
       setUnreadCount(data.unreadNotifications || 0);
     }
   }, [data, user?.role]);
+// Ensure no setNotifications reference remains
 
 
-  const markAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? {...n, read: true} : n)
-    );
-    setUnreadCount(prev => prev - 1);
-  };
-
-  const clearAllNotifications = () => {
-    setNotifications([]);
-    setUnreadCount(0);
-  };
-
+  
   const renderTabContent = () => {
     if (loading) {
       return (
@@ -77,10 +65,11 @@ const Dashboard = () => {
 
     switch (activeTab) {
       case 'overview':
+        console.log('Dashboard overview data:', data);
         return (
           <>
             {data && <StatsCards stats={data.stats} />}
-            <PerformanceOverview data={data?.performance || data} />
+            <PerformanceOverview data={data} />
           </>
         );
       case 'purchases':
@@ -142,84 +131,81 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row">
-        <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h2 className="text-primary mb-0">
-                <i className="bi bi-speedometer2 me-2"></i>
-                CEO Dashboard
-              </h2>
-              <small className="text-muted">
-                Welcome back, <strong>{user?.name}</strong>
-              </small>
+    <div className="fruit-tracking-bg">
+      <div className="container-fluid py-4">
+        <div className="row">
+          <div className="col-12">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <div>
+                <h2 className="text-primary mb-0">
+                  <i className="bi bi-speedometer2 me-2"></i>
+                  CEO Dashboard
+                </h2>
+                <small className="text-muted">
+                  Welcome back, <strong>{user?.name}</strong>
+                </small>
+              </div>
+              <div className="d-flex gap-2">
+                <button 
+                  className="btn btn-outline-primary position-relative"
+                  onClick={() => setActiveTab('notifications')}
+                >
+                  <i className="bi bi-bell"></i>
+                  {unreadCount > 0 && (
+                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                <button 
+                  className="btn btn-outline-danger"
+                  onClick={() => setShowClearModal(true)}
+                  disabled={loading}
+                >
+                  <i className="bi bi-trash me-2"></i>Clear Data
+                </button>
+                <button 
+                  className="btn btn-outline-secondary"
+                  onClick={logout}
+                >
+                  <i className="bi bi-box-arrow-right me-2"></i>Logout
+                </button>
+              </div>
             </div>
-            <div className="d-flex gap-2">
-              <button 
-                className="btn btn-outline-primary position-relative"
-                onClick={() => setActiveTab('notifications')}
-              >
-                <i className="bi bi-bell"></i>
-                {unreadCount > 0 && (
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-              <button 
-                className="btn btn-outline-danger"
-                onClick={() => setShowClearModal(true)}
-                disabled={loading}
-              >
-                <i className="bi bi-trash me-2"></i>Clear Data
-              </button>
-              <button 
-                className="btn btn-outline-secondary"
-                onClick={logout}
-              >
-                <i className="bi bi-box-arrow-right me-2"></i>Logout
-              </button>
-            </div>
-          </div>
 
-          <CeoMessagePanel 
-            notifications={notifications}
-            unreadCount={unreadCount}
-            onMarkAsRead={markAsRead}
-            onClearAll={clearAllNotifications}
-          />
+            {/* CeoMessagePanel removed */}
 
-          <div className="card shadow-sm">
-            <div className="card-header bg-light p-0">
-              <ul className="nav nav-tabs">
-                {tabs.map(tab => (
-                  <li key={tab.id} className="nav-item">
-                    <button
-                      className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
-                      onClick={() => setActiveTab(tab.id)}
-                      disabled={loading}
-                    >
-                      <i className={`bi ${tab.icon} me-2`}></i>
-                      {tab.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="card-body">
-              {renderTabContent()}
+            <div className="card shadow-sm">
+              <div className="card-header bg-light p-0">
+                <ul className="nav nav-tabs">
+                  {tabs.map(tab => (
+                    <li key={tab.id} className="nav-item">
+                      <button
+                        className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
+                        onClick={() => setActiveTab(tab.id)}
+                        disabled={loading}
+                      >
+                        <i className={`bi ${tab.icon} me-2`}></i>
+                        {tab.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="card-body">
+                {renderTabContent()}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <ClearDataModal 
-        show={showClearModal}
-        onClose={() => setShowClearModal(false)}
-        onSuccess={() => refetch()} // Just refetch after clearing
-      />
+        <ClearDataModal 
+          show={showClearModal}
+          onClose={() => setShowClearModal(false)}
+          onSuccess={() => refetch()} // Just refetch after clearing
+        />
+      </div>
     </div>
   );
 };

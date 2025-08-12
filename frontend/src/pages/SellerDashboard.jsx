@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
+// CeoMessagesDisplay removed
 import SaleForm from '../components/seller/SaleForm';
 import SalesTableHeader from '../components/seller/SalesTableHeader';
 import SalesHistoryTable from '../components/seller/SalesHistoryTable';
@@ -10,16 +10,36 @@ import SalesSummary from '../components/seller/SalesSummary';
 const BASE_URL = 'http://127.0.0.1:5000/api';
 
 const fetchSellerAssignments = async (emailOrName) => {
-  const res = await fetch(`${BASE_URL}/assignments?seller=${emailOrName}`);
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(`${BASE_URL}/assignments?seller=${emailOrName}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    }
+  );
   if (!res.ok) throw new Error('Failed to fetch assignments');
   return await res.json();
 };
 
 const addNewSale = async (assignmentId, saleData) => {
-  const res = await fetch(`${BASE_URL}/assignments/${assignmentId}/sales`, {
+  // Post sale directly to /sales endpoint with JWT token
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(`${BASE_URL}/sales`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(saleData),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({
+      assignment: assignmentId,
+      fruit_type: saleData.fruitType,
+      quantity: saleData.quantity,
+      revenue: saleData.revenue,
+      sale_date: saleData.date
+    }),
   });
   if (!res.ok) throw new Error('Failed to add sale');
   return await res.json();
@@ -34,7 +54,7 @@ const clearSellerSales = async (emailOrName) => {
 };
 
 const SellerDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -91,56 +111,43 @@ const SellerDashboard = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       setLoading(true);
-      const assignmentId =
-        formData.assignmentId ||
-        `seller-${user?.email || user?.name}-${Date.now()}`;
-
-      const saleData = {
-        quantitySold: String(formData.quantitySold),
-        revenue: parseFloat(formData.revenue),
-        date: formData.date,
-        fruitType: formData.fruitType,
-        sellerName: formData.sellerName || user?.name,
-      };
-
-      await addNewSale(assignmentId, saleData);
-
-      setAssignments((prev) => {
-        const index = prev.findIndex((a) => a.id === assignmentId);
-        if (index >= 0) {
-          const updated = [...prev];
-          updated[index] = {
-            ...prev[index],
-            sales: [...(prev[index].sales || []), saleData],
-          };
-          return updated;
-        } else {
-          return [
-            ...prev,
-            {
-              id: assignmentId,
-              sellerEmail: user?.email,
-              sellerName: user?.name,
-              fruitType: formData.fruitType,
-              sales: [saleData],
-            },
-          ];
-        }
+      // Use seller's user id for assignment id
+      const sellerId = user?.id;
+      const assignmentId = `assignment-${sellerId}`;
+      // Ensure assignment exists
+      await fetch(`${BASE_URL}/assignments/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seller_id: sellerId,
+          seller_email: user?.email,
+          fruit_type: formData.fruitType,
+          assignment_id: assignmentId
+        })
       });
-
+      // Add sale to assignment
+      const saleData = {
+        fruitType: formData.fruitType,
+        quantity: formData.quantitySold,
+        revenue: formData.revenue,
+        date: formData.date
+      };
+      await addNewSale(assignmentId, saleData);
+      // Refresh assignments and sales
+      const data = await fetchSellerAssignments(user?.email || user?.name);
+      setAssignments(data);
       setFormData({
         assignmentId: '',
         quantitySold: '',
         revenue: '',
         date: new Date().toISOString().split('T')[0],
         fruitType: '',
-        sellerName: user?.name || '',
+        sellerName: user?.name || ''
       });
     } catch (err) {
-      setError('Failed to record sale. Please try again.');
+      setError('Failed to add sale. Please try again.');
       console.error('Error adding sale:', err);
     } finally {
       setLoading(false);
@@ -185,6 +192,11 @@ const SellerDashboard = () => {
 
   return (
     <div className="container py-4">
+      <div className="d-flex justify-content-end mb-3">
+        <button className="btn btn-outline-danger" onClick={logout}>
+          <i className="bi bi-box-arrow-right me-1"></i>Logout
+        </button>
+      </div>
       {error && (
         <div className="alert alert-danger mb-3">
           <i className="bi bi-exclamation-triangle me-2"></i>
@@ -194,7 +206,7 @@ const SellerDashboard = () => {
 
       <div className="row">
         <div className="col-md-6">
-          <CeoMessagesDisplay />
+          {/* CeoMessagesDisplay removed */}
           <SaleForm
             formData={formData}
             handleChange={handleChange}

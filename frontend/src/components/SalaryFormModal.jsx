@@ -1,46 +1,81 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Form, FloatingLabel } from 'react-bootstrap';
 
-const SalaryFormModal = ({ show, handleClose, handleSubmit, user }) => {
+const SalaryFormModal = ({ show, onClose, onSave, users }) => {
+  const [form, setForm] = useState({
+    user_id: '',
+    description: '',
+    amount: '',
+    date: ''
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.user_id || !form.amount || !form.date) return;
+    onSave({
+      user_id: parseInt(form.user_id, 10),
+      description: form.description,
+      amount: parseFloat(form.amount),
+      date: form.date
+    });
+    onClose();
+    setForm({ user_id: '', description: '', amount: '', date: '' });
+  };
+
   return (
-    <Modal show={show} onHide={handleClose} centered>
+    <Modal show={show} onHide={onClose} centered>
       <Modal.Header closeButton className="bg-purple text-white">
-        <Modal.Title>{user ? 'Edit Salary' : 'Add Salary'}</Modal.Title>
+        <Modal.Title>Add Salary</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form onSubmit={handleSubmit}>
-          <FloatingLabel controlId="employeeName" label="Employee Name" className="mb-3">
+          <FloatingLabel controlId="userSelect" label="Employee" className="mb-3">
+            <Form.Select name="user_id" value={form.user_id} onChange={handleChange} required>
+              <option value="">Select Employee</option>
+              {users && users.map(u => (
+                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              ))}
+            </Form.Select>
+          </FloatingLabel>
+          <FloatingLabel controlId="description" label="Description" className="mb-3">
             <Form.Control 
               type="text" 
-              placeholder="Employee Name" 
-              defaultValue={user?.name || ''}
-              required 
+              name="description"
+              placeholder="Description (optional)" 
+              value={form.description}
+              onChange={handleChange}
             />
           </FloatingLabel>
-          
-          <FloatingLabel controlId="salaryAmount" label="Salary Amount (KES)" className="mb-3">
+          <FloatingLabel controlId="amount" label="Salary Amount (KES)" className="mb-3">
             <Form.Control 
               type="number" 
+              name="amount"
               placeholder="Salary in KES" 
-              defaultValue={user?.salary || ''}
+              value={form.amount}
+              onChange={handleChange}
               required 
             />
           </FloatingLabel>
-          
-          <Form.Check 
-            type="checkbox"
-            id="isPaid"
-            label="Mark as paid"
-            defaultChecked={user?.isPaid || false}
-            className="mb-3"
-          />
-          
+          <FloatingLabel controlId="date" label="Date" className="mb-3">
+            <Form.Control 
+              type="date" 
+              name="date"
+              value={form.date}
+              onChange={handleChange}
+              required 
+            />
+          </FloatingLabel>
           <div className="d-flex justify-content-end">
-            <button type="button" className="btn btn-outline-secondary me-2" onClick={handleClose}>
+            <button type="button" className="btn btn-outline-secondary me-2" onClick={onClose}>
               Cancel
             </button>
             <button type="submit" className="btn btn-purple">
-              {user ? 'Update' : 'Add'} Salary
+              Add Salary
             </button>
           </div>
         </Form>

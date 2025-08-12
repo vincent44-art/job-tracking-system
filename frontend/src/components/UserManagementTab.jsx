@@ -1,8 +1,7 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const UserManagementTab = () => {
+const UserManagementTab = ({ data }) => {
   const { getAllUsers, addUser, updateUser, deleteUser } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -11,12 +10,27 @@ const UserManagementTab = () => {
     role: 'purchaser',
     status: 'active'
   });
+  const [users, setUsers] = useState([]);
 
-  const users = getAllUsers();
+  useEffect(() => {
+    async function fetchUsers() {
+      const allUsers = await getAllUsers();
+      setUsers(Array.isArray(allUsers) ? allUsers : []);
+    }
+    fetchUsers();
+  }, [showAddModal]); // Refresh users when modal closes (after add)
 
-  const handleAddUser = (e) => {
+  const handleAddUser = async (e) => {
     e.preventDefault();
-    if (addUser(newUser)) {
+    // Prompt for password
+    const password = window.prompt('Enter password for new user:');
+    if (!password) {
+      alert('Password is required!');
+      return;
+    }
+    const userToAdd = { ...newUser, password };
+    const success = await addUser(userToAdd);
+    if (success) {
       setNewUser({ name: '', email: '', role: 'purchaser', status: 'active' });
       setShowAddModal(false);
     }
@@ -69,15 +83,15 @@ const UserManagementTab = () => {
                 <td>{user.email}</td>
                 <td>
                   <span className={`badge ${getRoleColor(user.role)} text-white`}>
-                    {user.role.toUpperCase()}
+                    {user.role && typeof user.role === 'string' ? user.role.toUpperCase() : ''}
                   </span>
                 </td>
                 <td>
                   <span className={`badge ${user.status === 'active' ? 'bg-success' : 'bg-danger'}`}>
-                    {user.status.toUpperCase()}
+                    {user.status && typeof user.status === 'string' ? user.status.toUpperCase() : ''}
                   </span>
                 </td>
-                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''}</td>
                 <td>
                   {user.role !== 'ceo' && (
                     <>
@@ -150,7 +164,8 @@ const UserManagementTab = () => {
                       <option value="purchaser">Purchaser</option>
                       <option value="seller">Seller</option>
                       <option value="driver">Driver</option>
-                      <option value="storekeeper">Store Keeper</option>
+                      <option value="storekeeper">Storekeeper</option>
+                      <option value="ceo">CEO</option>
                     </select>
                   </div>
                   <div className="mb-3">

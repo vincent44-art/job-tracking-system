@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
+// CeoMessagesDisplay removed
 import { 
   fetchDriverExpenses,
   addDriverExpense 
 } from '../api/driver';
 
 const DriverDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [carExpenses, setCarExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -43,14 +43,15 @@ const DriverDashboard = () => {
     try {
       setLoading(true);
       const newExpense = {
-        ...formData,
-        driverEmail: user.email,
-        amount: parseFloat(formData.amount)
+        driver_email: user.email,
+        amount: parseFloat(formData.amount),
+        category: formData.type,
+        type: formData.type,
+        description: formData.description,
+        date: formData.date
       };
-      
       const addedExpense = await addDriverExpense(newExpense);
       setCarExpenses(prev => [...prev, addedExpense]);
-
       // Reset form
       setFormData({
         type: 'fuel',
@@ -67,62 +68,109 @@ const DriverDashboard = () => {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Welcome, {user?.name || user?.email}</h1>
+    <div className="fruit-tracking-bg">
+      <div className="container py-4">
+        <div className="d-flex justify-content-end mb-3">
+          <button className="btn btn-outline-danger" onClick={logout}>
+            <i className="bi bi-box-arrow-right me-1"></i>Logout
+          </button>
+        </div>
+        <h1 className="text-primary mb-4"><i className="bi bi-truck me-2"></i>Welcome, {user?.name || user?.email}</h1>
 
-      <CeoMessagesDisplay />
+        {error && <div className="alert alert-danger mb-2"><i className="bi bi-exclamation-triangle me-2"></i>{error}</div>}
+        {loading && <div className="text-info mb-2"><span className="spinner-border spinner-border-sm me-2" role="status"></span>Loading...</div>}
 
-      {error && <div className="text-red-500 mb-2">{error}</div>}
-      {loading && <div className="text-blue-500 mb-2">Loading...</div>}
-
-      <form onSubmit={handleSubmit} className="mb-4 space-y-2">
-        <select
-          name="type"
-          value={formData.type}
-          onChange={e => setFormData({ ...formData, type: e.target.value })}
-          className="border p-2"
-        >
-          <option value="fuel">Fuel</option>
-          <option value="repair">Repair</option>
-          <option value="maintenance">Maintenance</option>
-        </select>
-
-        <input
-          type="text"
-          placeholder="Description"
-          value={formData.description}
-          onChange={e => setFormData({ ...formData, description: e.target.value })}
-          className="border p-2 w-full"
-        />
-
-        <input
-          type="number"
-          placeholder="Amount"
-          value={formData.amount}
-          onChange={e => setFormData({ ...formData, amount: e.target.value })}
-          className="border p-2 w-full"
-        />
-
-        <input
-          type="date"
-          value={formData.date}
-          onChange={e => setFormData({ ...formData, date: e.target.value })}
-          className="border p-2 w-full"
-        />
-
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-          Add Expense
-        </button>
-      </form>
-
-      <h2 className="text-lg font-semibold mt-6 mb-2">Your Expenses</h2>
-      <ul className="space-y-2">
-        {carExpenses.map((expense, index) => (
-          <li key={index} className="border p-2 rounded shadow-sm">
-            <strong>{expense.type}</strong>: {expense.description} - KES {expense.amount} on {expense.date}
-          </li>
-        ))}
-      </ul>
+        <div className="row">
+          <div className="col-md-6 mb-4">
+            <div className="card fruit-card shadow-lg fade-in">
+              <div className="card-header bg-gradient text-white">
+                <h5 className="mb-0"><i className="bi bi-cash-coin me-2"></i>Add Car Expense</h5>
+              </div>
+              <div className="card-body">
+                <form onSubmit={handleSubmit}>
+                  <div className="mb-3">
+                    <label className="form-label">Type</label>
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={e => setFormData({ ...formData, type: e.target.value })}
+                      className="form-select"
+                      required
+                    >
+                      <option value="fuel">Fuel</option>
+                      <option value="repair">Repair</option>
+                      <option value="maintenance">Maintenance</option>
+                    </select>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Description</label>
+                    <input
+                      type="text"
+                      placeholder="Description"
+                      value={formData.description}
+                      onChange={e => setFormData({ ...formData, description: e.target.value })}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Amount (KES)</label>
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      value={formData.amount}
+                      onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                      className="form-control"
+                      required
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Date</label>
+                    <input
+                      type="date"
+                      value={formData.date}
+                      onChange={e => setFormData({ ...formData, date: e.target.value })}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-success w-100">
+                    <i className="bi bi-plus-circle me-2"></i>Add Expense
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-6 mb-4">
+            <div className="card fruit-card shadow-lg fade-in">
+              <div className="card-header bg-gradient text-white">
+                <h5 className="mb-0"><i className="bi bi-list-ul me-2"></i>Your Expenses</h5>
+              </div>
+              <div className="card-body">
+                {carExpenses.length === 0 ? (
+                  <div className="text-muted text-center">No expenses recorded yet.</div>
+                ) : (
+                  <ul className="list-group">
+                    {carExpenses.map((expense, index) => (
+                      <li key={index} className="list-group-item d-flex justify-content-between align-items-center fade-in">
+                        <div>
+                          <span className="badge bg-primary me-2 text-uppercase">{expense.type}</span>
+                          <span className="fw-bold">{expense.description}</span>
+                          <br />
+                          <small className="text-muted">{new Date(expense.date).toLocaleDateString()}</small>
+                        </div>
+                        <span className="badge bg-success">KES {expense.amount}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 // src/pages/PurchaserDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
+// CeoMessagesDisplay removed
 import {
   fetchPurchases,
   addPurchase,
@@ -10,7 +10,7 @@ import {
 
 
 const PurchaserDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -111,6 +111,11 @@ const PurchaserDashboard = () => {
 
   return (
     <div className="container py-4">
+      <div className="d-flex justify-content-end mb-3">
+        <button className="btn btn-outline-danger" onClick={logout}>
+          <i className="bi bi-box-arrow-right me-1"></i>Logout
+        </button>
+      </div>
       {error && (
         <div className="alert alert-danger mb-3">
           <i className="bi bi-exclamation-triangle me-2"></i>
@@ -128,7 +133,7 @@ const PurchaserDashboard = () => {
               </h4>
             </div>
             <div className="card-body">
-              <CeoMessagesDisplay />
+              {/* CeoMessagesDisplay removed */}
               
               <form onSubmit={handleSubmit}>
                 <div className="row">

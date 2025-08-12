@@ -3,17 +3,19 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 
 const PerformanceOverview = ({ data }) => {
-  if (!data) {
+  const stats = data?.stats;
+  const fruitPerformance = data?.fruitPerformance || [];
+  const monthlyData = data?.monthlyData || [];
+
+  // Only show 'No data' if all are missing or empty
+  if (!stats && fruitPerformance.length === 0 && monthlyData.length === 0) {
     return <div className="text-center py-5">No performance data available.</div>;
   }
-  const stats = data.stats;
-  const fruitPerformance = data.fruitPerformance || [];
-  const monthlyData = data.monthlyData || [];
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'Ksh'
+      currency: 'KES'
     }).format(amount);
   };
 

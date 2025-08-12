@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus } from 'lucide-react';
 //import { fetchSales, createSale, deleteSale } from 'http://127.0.0.1:5000'; // Import your API functions
-import { fetchSales, createSale, deleteSale } from './apiHelpers';
+import { fetchSales, createAssignment, createSaleForAssignment, deleteSale } from './apiHelpers';
 
 
 const SalesTab = () => {
@@ -22,7 +22,17 @@ const SalesTab = () => {
     const loadSales = async () => {
       try {
         const response = await fetchSales();
-        setSales(response.data);
+        // Map backend fields to frontend fields for display
+        setSales(
+          response.data.map(sale => ({
+            id: sale.id,
+            sellerName: sale.seller_name || sale.sellerName,
+            fruitType: sale.fruit_type || sale.fruitType,
+            quantitySold: sale.quantity || sale.quantitySold,
+            revenue: sale.revenue,
+            date: sale.sale_date || sale.date
+          }))
+        );
       } catch (error) {
         console.error('Failed to fetch sales:', error);
       } finally {
@@ -33,9 +43,9 @@ const SalesTab = () => {
   }, []);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'KES'
     }).format(amount);
   };
 
@@ -52,20 +62,22 @@ const SalesTab = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     try {
-      const newSale = {
-        sellerName: formData.sellerName,
-        fruitType: formData.fruitType,
-        quantitySold: parseFloat(formData.quantitySold),
+      // Ensure assignment exists for seller
+      const seller_id = formData.sellerId || formData.sellerName;
+      const seller_email = formData.sellerEmail || formData.sellerName;
+      const fruit_type = formData.fruitType;
+      const assignment_id = `assignment-${seller_id}`;
+      await createAssignment({ seller_id, seller_email, fruit_type, assignment_id });
+      // Post sale to assignment
+      const saleData = {
+        fruitType: fruit_type,
+        quantity: parseFloat(formData.quantitySold),
         revenue: parseFloat(formData.revenue),
         date: formData.date
       };
-
-      const response = await createSale(newSale);
-      setSales([...sales, response.data]);
-
-      // Reset form
+      const response = await createSaleForAssignment(assignment_id, saleData);
+      setSales([...sales, response]);
       setFormData({
         sellerName: '',
         fruitType: '',

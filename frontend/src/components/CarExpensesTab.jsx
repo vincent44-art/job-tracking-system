@@ -6,7 +6,13 @@ const BASE_URL = 'http://127.0.0.1:5000/api/car-expenses';
 
 // ✅ Define API functions
 const fetchCarExpenses = async () => {
-  const res = await fetch(BASE_URL);
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(BASE_URL, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
   if (!res.ok) throw new Error('Failed to fetch car expenses');
   return await res.json();
 };

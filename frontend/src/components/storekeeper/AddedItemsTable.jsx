@@ -1,7 +1,7 @@
-
 import React from 'react';
 
 const AddedItemsTable = ({ inventory, onClearAll }) => {
+  const items = Array.isArray(inventory) ? inventory : [];
   return (
     <div className="card">
       <div className="card-header d-flex justify-content-between align-items-center">
@@ -29,7 +29,7 @@ const AddedItemsTable = ({ inventory, onClearAll }) => {
               </tr>
             </thead>
             <tbody>
-              {inventory.slice(-20).reverse().map((item) => (
+              {items.slice(-20).reverse().map((item) => (
                 <tr key={item.id}>
                   <td>{new Date(item.date).toLocaleDateString()}</td>
                   <td>

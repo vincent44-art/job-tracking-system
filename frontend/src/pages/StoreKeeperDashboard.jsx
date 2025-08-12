@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import CeoMessagesDisplay from '../components/CeoMessagesDisplay';
+// CeoMessagesDisplay removed
 import InventoryForm from '../components/storekeeper/InventoryForm';
 import StockMovementForm from '../components/storekeeper/StockMovementForm';
 import GradientForm from '../components/storekeeper/GradientForm';
@@ -12,25 +12,49 @@ const BASE_URL = 'http://127.0.0.1:5000/api';
 
 // ✅ Inline API functions
 const fetchInventory = async () => {
-  const res = await fetch(`${BASE_URL}/inventory`);
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(`${BASE_URL}/inventory`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
   if (!res.ok) throw new Error('Failed to fetch inventory');
   return await res.json();
 };
 
 const addInventoryItem = async (item) => {
+  const token = localStorage.getItem('access_token');
+  // Ensure correct payload for inventory POST
+  const payload = {
+    name: item.fruitType,
+    quantity: item.quantity,
+    fruit_type: item.fruitType,
+    unit: item.unit,
+    location: item.location,
+    expiry_date: item.expiryDate
+  };
   const res = await fetch(`${BASE_URL}/inventory`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(item),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error('Failed to add inventory item');
   return await res.json();
 };
 
 const addStockMovement = async (movement) => {
-  const res = await fetch(`${BASE_URL}/stock-movement`, {
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(`${BASE_URL}/stock-movements`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
     body: JSON.stringify(movement),
   });
   if (!res.ok) throw new Error('Failed to add stock movement');
@@ -38,9 +62,13 @@ const addStockMovement = async (movement) => {
 };
 
 const addGradient = async (gradient) => {
-  const res = await fetch(`${BASE_URL}/gradient`, {
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(`${BASE_URL}/gradients`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
     body: JSON.stringify(gradient),
   });
   if (!res.ok) throw new Error('Failed to add gradient');
@@ -63,7 +91,7 @@ const clearInventoryData = async () => {
 
 // ✅ Main Component
 const StoreKeeperDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('inventory');
   const [inventory, setInventory] = useState([]);
   const [currentStock, setCurrentStock] = useState([]);
@@ -131,7 +159,7 @@ const StoreKeeperDashboard = () => {
         storeKeeperName: user.name,
         quantity: inventoryForm.quantity
       });
-      setInventory(prev => [...prev, response.data]);
+      setInventory(prev => Array.isArray(prev) ? [...prev, response.data] : [response.data]);
       setInventoryForm({
         fruitType: '',
         quantity: '',
@@ -153,12 +181,24 @@ const StoreKeeperDashboard = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      await addStockMovement({
-        ...stockForm,
-        storeKeeperEmail: user.email,
-        storeKeeperName: user.name,
-        quantity: stockForm.quantity
-      });
+      // Find inventory item by fruitType
+      const inventoryItem = inventory.find(item => item.fruit_type === stockForm.fruitType || item.name === stockForm.fruitType);
+      if (!inventoryItem) {
+        setError('No inventory item found for selected fruit type.');
+        setLoading(false);
+        return;
+      }
+      // Prepare payload for backend
+      const payload = {
+        inventory_id: inventoryItem.id,
+        movement_type: stockForm.movementType,
+        quantity: stockForm.quantity,
+        unit: stockForm.unit,
+        remaining_stock: '', // You can calculate or leave blank
+        date: stockForm.date,
+        notes: stockForm.reason
+      };
+      await addStockMovement(payload);
       const stockRes = await getCurrentStock();
       setCurrentStock(stockRes.data);
       setStockForm({
@@ -237,83 +277,90 @@ const StoreKeeperDashboard = () => {
   };
 
   return (
-    <div className="container py-4">
-      {error && (
-        <div className="alert alert-danger mb-3">
-          <i className="bi bi-exclamation-triangle me-2"></i>{error}
+    <div className="fruit-tracking-bg">
+      <div className="container py-4">
+        <div className="d-flex justify-content-end mb-3">
+          <button className="btn btn-outline-danger" onClick={logout}>
+            <i className="bi bi-box-arrow-right me-1"></i>Logout
+          </button>
         </div>
-      )}
+        {error && (
+          <div className="alert alert-danger mb-3">
+            <i className="bi bi-exclamation-triangle me-2"></i>{error}
+          </div>
+        )}
 
-      <div className="row">
-        <div className="col-12">
-          <div className="card shadow-sm">
-            <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
-              <h4 className="mb-0"><i className="bi bi-box me-2"></i>Store Keeper Dashboard</h4>
-              <button className="btn btn-outline-light btn-sm" onClick={handleClearInventory} disabled={loading}>
-                {loading ? <span className="spinner-border spinner-border-sm me-1" role="status"></span> : <i className="bi bi-trash me-1"></i>}
-                Clear All Data
-              </button>
-            </div>
+        <div className="row">
+          <div className="col-12">
+            <div className="card shadow-sm">
+              <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h4 className="mb-0"><i className="bi bi-box me-2"></i>Store Keeper Dashboard</h4>
+                <button className="btn btn-outline-light btn-sm" onClick={handleClearInventory} disabled={loading}>
+                  {loading ? <span className="spinner-border spinner-border-sm me-1" role="status"></span> : <i className="bi bi-trash me-1"></i>}
+                  Clear All Data
+                </button>
+              </div>
 
-            <div className="card-body">
-              <CeoMessagesDisplay />
+              <div className="card-body">
+                {/* CeoMessagesDisplay removed */}
 
-              <ul className="nav nav-tabs mb-4">
-                <li className="nav-item"><button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')} disabled={loading}><i className="bi bi-plus-circle me-2"></i>Add Inventory</button></li>
-                <li className="nav-item"><button className={`nav-link ${activeTab === 'stock' ? 'active' : ''}`} onClick={() => setActiveTab('stock')} disabled={loading}><i className="bi bi-arrow-left-right me-2"></i>Stock Movement</button></li>
-                <li className="nav-item"><button className={`nav-link ${activeTab === 'gradient' ? 'active' : ''}`} onClick={() => setActiveTab('gradient')} disabled={loading}><i className="bi bi-droplet me-2"></i>Add Gradient</button></li>
-                <li className="nav-item"><button className={`nav-link ${activeTab === 'current' ? 'active' : ''}`} onClick={() => setActiveTab('current')} disabled={loading}><i className="bi bi-boxes me-2"></i>Current Stock</button></li>
-                <li className="nav-item"><button className={`nav-link ${activeTab === 'added' ? 'active' : ''}`} onClick={() => setActiveTab('added')} disabled={loading}><i className="bi bi-list me-2"></i>All Added Items</button></li>
-              </ul>
+                <ul className="nav nav-tabs mb-4">
+                  <li className="nav-item"><button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')} disabled={loading}><i className="bi bi-plus-circle me-2"></i>Add Inventory</button></li>
+                  <li className="nav-item"><button className={`nav-link ${activeTab === 'stock' ? 'active' : ''}`} onClick={() => setActiveTab('stock')} disabled={loading}><i className="bi bi-arrow-left-right me-2"></i>Stock Movement</button></li>
+                  <li className="nav-item"><button className={`nav-link ${activeTab === 'gradient' ? 'active' : ''}`} onClick={() => setActiveTab('gradient')} disabled={loading}><i className="bi bi-droplet me-2"></i>Add Gradient</button></li>
+                  <li className="nav-item"><button className={`nav-link ${activeTab === 'current' ? 'active' : ''}`} onClick={() => setActiveTab('current')} disabled={loading}><i className="bi bi-boxes me-2"></i>Current Stock</button></li>
+                  <li className="nav-item"><button className={`nav-link ${activeTab === 'added' ? 'active' : ''}`} onClick={() => setActiveTab('added')} disabled={loading}><i className="bi bi-list me-2"></i>All Added Items</button></li>
+                </ul>
 
-              {loading && (
-                <div className="text-center py-4">
-                  <div className="spinner-border text-success" role="status">
-                    <span className="visually-hidden">Loading...</span>
+                {loading && (
+                  <div className="text-center py-4">
+                    <div className="spinner-border text-success" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {!loading && activeTab === 'inventory' && (
-                <InventoryForm
-                  form={inventoryForm}
-                  onChange={setInventoryForm}
-                  onSubmit={handleInventorySubmit}
-                  loading={loading}
-                />
-              )}
+                {!loading && activeTab === 'inventory' && (
+                  <InventoryForm
+                    form={inventoryForm}
+                    onChange={setInventoryForm}
+                    onSubmit={handleInventorySubmit}
+                    loading={loading}
+                  />
+                )}
 
-              {!loading && activeTab === 'stock' && (
-                <StockMovementForm
-                  form={stockForm}
-                  onChange={setStockForm}
-                  onSubmit={handleStockSubmit}
-                  loading={loading}
-                />
-              )}
+                {!loading && activeTab === 'stock' && (
+                  <StockMovementForm
+                    form={stockForm}
+                    onChange={setStockForm}
+                    onSubmit={handleStockSubmit}
+                    loading={loading}
+                  />
+                )}
 
-              {!loading && activeTab === 'gradient' && (
-                <GradientForm
-                  form={gradientForm}
-                  onChange={setGradientForm}
-                  onSubmit={handleGradientSubmit}
-                  loading={loading}
-                />
-              )}
+                {!loading && activeTab === 'gradient' && (
+                  <GradientForm
+                    form={gradientForm}
+                    onChange={setGradientForm}
+                    onSubmit={handleGradientSubmit}
+                    loading={loading}
+                  />
+                )}
 
-              {!loading && activeTab === 'current' && (
-                <CurrentStockTable
-                  currentStock={currentStock}
-                  onClearAll={handleClearInventory}
-                />
-              )}
+                {!loading && activeTab === 'current' && (
+                  <CurrentStockTable
+                    currentStock={currentStock}
+                    onClearAll={handleClearInventory}
+                  />
+                )}
 
-              {!loading && activeTab === 'added' && (
-                <AddedItemsTable
-                  inventory={inventory}
-                  onClearAll={handleClearAddedItems}
-                />
-              )}
+                {!loading && activeTab === 'added' && (
+                  <AddedItemsTable
+                    inventory={inventory}
+                    onClearAll={handleClearAddedItems}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -13,6 +13,12 @@
   -webkit-text-size-adjust: 100%;
 }
 
+@media (max-width: 576px) {
+  html {
+    font-size: 15px;
+  }
+}
+
 /* Enhanced Fruit Tracking System Background */
 .fruit-tracking-bg {
   background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 25%, #32cd32 50%, #ff69b4 75%, #9370db 100%);
@@ -20,6 +26,13 @@
   animation: gradientShift 8s ease infinite;
   min-height: 100vh;
   position: relative;
+}
+
+@media (max-width: 576px) {
+  .fruit-tracking-bg {
+    min-height: 100vh;
+    padding: 0.5rem;
+  }
 }
 
 @keyframes gradientShift {
@@ -100,6 +113,13 @@
   border: 2px solid rgba(255, 165, 0, 0.3);
 }
 
+@media (max-width: 576px) {
+  .fruit-card {
+    border-radius: 10px;
+    padding: 0.5rem;
+  }
+}
+
 .fruit-card:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow: 0 15px 35px rgba(255, 165, 0, 0.3);
@@ -117,6 +137,15 @@
 
 .max-height-200 {
   max-height: 200px;
+  overflow-x: auto;
+}
+
+/* Responsive table container */
+@media (max-width: 768px) {
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Enhanced table styling for fruit tracking */
@@ -128,6 +157,13 @@
   border: none;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   border-radius: 15px;
+}
+
+@media (max-width: 576px) {
+  .card {
+    border-radius: 8px;
+    padding: 0.5rem;
+  }
 }
 
 .badge {
@@ -145,6 +181,13 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   border: 2px solid rgba(255, 165, 0, 0.2);
   transition: all 0.3s ease;
+}
+
+@media (max-width: 576px) {
+  .stats-card {
+    border-radius: 10px;
+    padding: 1rem;
+  }
 }
 
 .stats-card:hover {

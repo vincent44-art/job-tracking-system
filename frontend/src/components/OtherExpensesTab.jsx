@@ -10,6 +10,7 @@ const OtherExpensesTab = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
+    expense_type: '',
     description: '',
     amount: '',
     date: new Date().toISOString().split('T')[0]
@@ -20,7 +21,7 @@ const OtherExpensesTab = () => {
     const loadExpenses = async () => {
       try {
         const response = await fetchOtherExpenses();
-        setExpenses(response.data);
+        setExpenses(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         console.error('Failed to fetch expenses:', err);
         setError('Failed to load expenses. Please try again.');
@@ -35,6 +36,7 @@ const OtherExpensesTab = () => {
     e.preventDefault();
     try {
       const newExpense = {
+        expense_type: formData.expense_type,
         description: formData.description,
         amount: parseFloat(formData.amount),
         date: formData.date
@@ -45,6 +47,7 @@ const OtherExpensesTab = () => {
       
       // Reset form
       setFormData({
+        expense_type: '',
         description: '',
         amount: '',
         date: new Date().toISOString().split('T')[0]
@@ -56,9 +59,9 @@ const OtherExpensesTab = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'KES'
     }).format(amount);
   };
 
@@ -112,6 +115,16 @@ const OtherExpensesTab = () => {
             </div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
+                <div className="mb-3">
+                  <label className="form-label">Expense Type</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.expense_type}
+                    onChange={(e) => setFormData({...formData, expense_type: e.target.value})}
+                    required
+                  />
+                </div>
                 <div className="mb-3">
                   <label className="form-label">Description</label>
                   <textarea

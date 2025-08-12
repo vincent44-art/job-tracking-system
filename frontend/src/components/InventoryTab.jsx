@@ -14,9 +14,10 @@ import {
   fetchGradients,
   clearInventoryAPI,
   clearStockMovementsAPI,
-  clearGradientsAPI
+  clearGradientsAPI,
+  createInventory
 } from './apiHelpers';  // adjust path as needed
-
+import { useAuth } from '../contexts/AuthContext';
 
 const InventoryTab = () => {
   const [inventory, setInventory] = useState([]);
@@ -28,19 +29,32 @@ const InventoryTab = () => {
     gradients: true
   });
   const [error, setError] = useState(null);
+  const { user } = useAuth();
+  const [form, setForm] = useState({
+    fruitType: '',
+    quantity: '',
+    unit: 'kg',
+    location: '',
+    supplierName: '',
+    expiryDate: '',
+    date: ''
+  });
+  const [adding, setAdding] = useState(false);
 
   // Fetch all inventory data
   useEffect(() => {
     const loadData = async () => {
       try {
+        const token = localStorage.getItem('access_token');
         const [inventoryRes, movementsRes, gradientsRes] = await Promise.all([
-          fetchInventory(),
-          fetchStockMovements(),
-          fetchGradients()
+          fetchInventory(token),
+          fetchStockMovements(token),
+          fetchGradients(token)
         ]);
         
         setInventory(inventoryRes.data);
-        setStockMovements(movementsRes.data);
+        // Ensure stockMovements is always an array
+        setStockMovements(Array.isArray(movementsRes.data) ? movementsRes.data : []);
         setGradients(gradientsRes.data);
       } catch (err) {
         console.error('Failed to load inventory data:', err);
@@ -59,7 +73,9 @@ const InventoryTab = () => {
   // Calculate current stock
   const getCurrentStock = () => {
     const stockMap = {};
-    stockMovements.forEach(movement => {
+    // Defensive: ensure stockMovements is always an array
+    const movementsArr = Array.isArray(stockMovements) ? stockMovements : [];
+    movementsArr.forEach(movement => {
       if (!stockMap[movement.fruitType]) {
         stockMap[movement.fruitType] = 0;
       }
@@ -102,7 +118,33 @@ const InventoryTab = () => {
     }
   };
 
+  const handleFormChange = (newForm) => setForm(newForm);
 
+  const handleAddInventory = async (e) => {
+    e.preventDefault();
+    setAdding(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const payload = {
+        name: form.fruitType,
+        quantity: form.quantity,
+        fruit_type: form.fruitType,
+        unit: form.unit,
+        location: form.location,
+        expiry_date: form.expiryDate
+      };
+      await createInventory(payload, token);
+      setForm({ fruitType: '', quantity: '', unit: 'kg', location: '', supplierName: '', expiryDate: '', date: '' });
+      // Refresh inventory
+      const inventoryRes = await fetchInventory(token);
+      setInventory(inventoryRes.data);
+    } catch (err) {
+      setError('Failed to add inventory. Please try again.');
+      console.error('Error adding inventory:', err);
+    } finally {
+      setAdding(false);
+    }
+  };
 
   if (error) {
     return (
@@ -351,6 +393,56 @@ const InventoryTab = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mt-4">
+        <div className="col-md-6">
+          <div className="card shadow-lg">
+            <div className="card-header bg-gradient text-white">
+              <h5><i className="bi bi-plus-circle me-2"></i>Add Inventory</h5>
+            </div>
+            <div className="card-body">
+              <form onSubmit={handleAddInventory}>
+                <div className="mb-3">
+                  <label className="form-label">Fruit Type</label>
+                  <select className="form-select" value={form.fruitType} onChange={e => handleFormChange({ ...form, fruitType: e.target.value })} required>
+                    <option value="">Select Fruit</option>
+                    <option value="Orange">Orange</option>
+                    <option value="Apple">Apple</option>
+                    <option value="Banana">Banana</option>
+                    <option value="Mango">Mango</option>
+                    <option value="Pineapple">Pineapple</option>
+                    <option value="Watermelon">Watermelon</option>
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Quantity</label>
+                  <input type="text" className="form-control" value={form.quantity} onChange={e => handleFormChange({ ...form, quantity: e.target.value })} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Unit</label>
+                  <select className="form-select" value={form.unit} onChange={e => handleFormChange({ ...form, unit: e.target.value })} required>
+                    <option value="kg">kg</option>
+                    <option value="lbs">lbs</option>
+                    <option value="pieces">pieces</option>
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Location</label>
+                  <input type="text" className="form-control" value={form.location} onChange={e => handleFormChange({ ...form, location: e.target.value })} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Expiry Date</label>
+                  <input type="date" className="form-control" value={form.expiryDate} onChange={e => handleFormChange({ ...form, expiryDate: e.target.value })} required />
+                </div>
+                <button type="submit" className="btn btn-success" disabled={adding}>
+                  {adding ? <span className="spinner-border spinner-border-sm me-2" role="status"></span> : <i className="bi bi-plus-circle me-2"></i>}
+                  Add to Inventory
+                </button>
+              </form>
             </div>
           </div>
         </div>

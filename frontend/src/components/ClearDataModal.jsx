@@ -114,7 +114,7 @@ const ClearDataModal = ({ show, onClose }) => {
                 {isClearing ? (
                   <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 ) : (
-                  <i className="bi bi-currency-dollar me-2"></i>
+                  <i className="bi bi-currency-exchange me-2"></i>
                 )}
                 Clear Sales Data
               </button>

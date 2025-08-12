@@ -66,45 +66,57 @@ const AppContent = () => {
     return <div className="text-center mt-5">Loading...</div>; // Prevent rendering until user is verified
   }
   
+  // Role-based dashboard routing
+  if (user) {
+    if (user.role === 'ceo') {
+      // CEO can access all dashboards
+      return (
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/seller" element={<SellerDashboard />} />
+          <Route path="/driver" element={<DriverDashboard />} />
+          <Route path="/purchaser" element={<PurchaserDashboard />} />
+          <Route path="/storekeeper" element={<StoreKeeperDashboard />} />
+          <Route path="*" element={<Dashboard />} />
+        </Routes>
+      );
+    } else if (user.role === 'seller') {
+      return (
+        <Routes>
+          <Route path="/" element={<SellerDashboard />} />
+          <Route path="*" element={<SellerDashboard />} />
+        </Routes>
+      );
+    } else if (user.role === 'driver') {
+      return (
+        <Routes>
+          <Route path="/" element={<DriverDashboard />} />
+          <Route path="*" element={<DriverDashboard />} />
+        </Routes>
+      );
+    } else if (user.role === 'purchaser') {
+      return (
+        <Routes>
+          <Route path="/" element={<PurchaserDashboard />} />
+          <Route path="*" element={<PurchaserDashboard />} />
+        </Routes>
+      );
+    } else if (user.role === 'storekeeper' || user.role === 'store keeper') {
+      return (
+        <Routes>
+          <Route path="/" element={<StoreKeeperDashboard />} />
+          <Route path="*" element={<StoreKeeperDashboard />} />
+        </Routes>
+      );
+    }
+  }
+
+  // If not logged in, show login
   return (
-    <div className="min-vh-100 fruit-tracking-bg">
-      {user && <Navbar />}
-      <Routes>
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-        
-        {/* CEO Routes */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            {user?.role === 'ceo' && <Dashboard />}
-            {user?.role === 'purchaser' && <PurchaserDashboard />}
-            {user?.role === 'seller' && <SellerDashboard />}
-            {user?.role === 'driver' && <DriverDashboard />}
-            {(user?.role === 'storekeeper' || user?.role === 'store keeper') && <StoreKeeperDashboard />}
-          </ProtectedRoute>
-        } />
-
-        {/* Purchaser-specific routes */}
-        <Route path="/purchases" element={
-          <ProtectedRoute requiredRoles={['purchaser', 'ceo']}>
-            <PurchaserDashboard showPurchasesTab />
-          </ProtectedRoute>
-        } />
-
-        {/* Salary management routes */}
-        <Route path="/salaries" element={
-          <ProtectedRoute requiredRoles={['ceo']}>
-            <Dashboard showSalaryTab />
-          </ProtectedRoute>
-        } />
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-
-      {/* Global Modals that can be triggered from anywhere */}
-      <PurchaseFormModal />
-      <SalaryFormModal />
-      <PaymentFormModal />
-    </div>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 };
 
@@ -112,30 +124,32 @@ const App = () => {
   return (
     <AuthProvider>
       <Router>
-        <AppContent />
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              borderRadius: '12px',
-              padding: '16px',
-              fontSize: '14px',
-            },
-            success: {
-              iconTheme: {
-                primary: '#4BB543',
-                secondary: 'white',
-              },
-            },
-            error: {
+        <div className="fruit-tracking-bg" style={{ minHeight: '100vh', minWidth: '100vw' }}>
+          <AppContent />
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
               style: {
-                background: '#FFEBEE',
-                color: '#C62828',
+                borderRadius: '12px',
+                padding: '16px',
+                fontSize: '14px',
               },
-            },
-          }}
-        />
+              success: {
+                iconTheme: {
+                  primary: '#4BB543',
+                  secondary: 'white',
+                },
+              },
+              error: {
+                style: {
+                  background: '#FFEBEE',
+                  color: '#C62828',
+                },
+              },
+            }}
+          />
+        </div>
       </Router>
     </AuthProvider>
   );
