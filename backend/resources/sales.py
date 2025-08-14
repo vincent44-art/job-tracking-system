@@ -1,9 +1,9 @@
 from flask_restful import Resource, reqparse
 from datetime import datetime
 from sqlalchemy import func
-from models import db, Sale, UserRole
-from utils.helpers import make_response_data, get_current_user
-from utils.decorators import role_required
+from ..models import db, Sale, UserRole
+from ..utils.helpers import make_response_data, get_current_user
+from ..utils.decorators import role_required
 
 parser = reqparse.RequestParser()
 parser.add_argument('assignment', type=str, required=True)

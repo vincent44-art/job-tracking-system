@@ -1,8 +1,8 @@
 from flask_restful import Resource, reqparse
 from sqlalchemy import or_
-from models import db, Message, UserRole
-from utils.helpers import make_response_data, get_current_user
-from utils.decorators import role_required
+from ..models import db, Message, UserRole
+from ..utils.helpers import make_response_data, get_current_user
+from ..utils.decorators import role_required
 
 parser = reqparse.RequestParser()
 parser.add_argument('message', type=str, required=True)

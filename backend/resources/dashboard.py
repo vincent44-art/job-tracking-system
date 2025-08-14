@@ -1,8 +1,8 @@
 from flask_restful import Resource
 from sqlalchemy import func
-from models import db, User, Inventory, Sale, Purchase, UserRole
-from utils.helpers import make_response_data, get_current_user
-from utils.decorators import role_required
+from ..models import db, User, Inventory, Sale, Purchase, UserRole
+from ..utils.helpers import make_response_data, get_current_user
+from ..utils.decorators import role_required
 
 
 from flask_jwt_extended import jwt_required, get_jwt_identity

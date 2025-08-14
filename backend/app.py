@@ -6,13 +6,13 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from datetime import timedelta
 
-from config import Config
-from models.user import db, User, UserRole
-from utils.helpers import make_response_data
-from resources import api_bp  # Your API blueprints
-from resources.dashboard import dashboard_bp
-from resources.__init__ import CurrentStockResource
-from resources.ceo_dashboard import CEODashboardResource
+from .config import Config
+from .models.user import db, User, UserRole
+from .utils.helpers import make_response_data
+from .resources import api_bp  # Your API blueprints
+from .resources.dashboard import dashboard_bp
+from .resources.__init__ import CurrentStockResource
+from .resources.ceo_dashboard import CEODashboardResource
 from flask_restful import Api
 
 # Load environment variables
@@ -27,7 +27,7 @@ cors = CORS()
 migrate = Migrate()
 
 def create_app(config_class=Config):
-    from resources.salaries import SalaryPaymentsResource
+    from .resources.salaries import SalaryPaymentsResource
     app = Flask(__name__, static_folder=FRONTEND_BUILD_DIR, static_url_path='/')
     app.config.from_object(config_class)
 
@@ -77,14 +77,14 @@ def create_app(config_class=Config):
 
     # Register Blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
-    from resources.assignments import assignments_bp
+    from .resources.assignments import assignments_bp
     app.register_blueprint(assignments_bp)
     app.register_blueprint(dashboard_bp)
-    from resources.drivers import drivers_bp
+    from .resources.drivers import drivers_bp
     app.register_blueprint(drivers_bp)
-    from resources.other_expenses import OtherExpensesResource, OtherExpenseResource
-    from resources.salaries import SalariesResource, SalaryResource
-    from resources.expenses import CarExpensesResource
+    from .resources.other_expenses import OtherExpensesResource, OtherExpenseResource
+    from .resources.salaries import SalariesResource, SalaryResource
+    from .resources.expenses import CarExpensesResource
     api = Api(app)
     api.add_resource(CurrentStockResource, '/api/current-stock')
     api.add_resource(OtherExpensesResource, '/api/expenses/other')

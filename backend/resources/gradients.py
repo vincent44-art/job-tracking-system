@@ -1,13 +1,19 @@
 from flask_restful import Resource, reqparse
 from datetime import datetime
-from models import db, Gradient
-from utils.helpers import make_response_data, get_current_user
-from utils.decorators import role_required
+from ..models import db, Gradient
+from ..utils.helpers import make_response_data, get_current_user
+from ..utils.decorators import role_required
 
 gradient_parser = reqparse.RequestParser()
 gradient_parser.add_argument('application_date', type=str, required=True)
 gradient_parser.add_argument('name', type=str, required=True)
 gradient_parser.add_argument('description', type=str)
+gradient_parser.add_argument('fruit_type', type=str, required=True)
+gradient_parser.add_argument('gradient_type', type=str, required=True)
+gradient_parser.add_argument('notes', type=str)
+gradient_parser.add_argument('quantity', type=str)
+gradient_parser.add_argument('unit', type=str)
+gradient_parser.add_argument('purpose', type=str)
 
 class GradientListResource(Resource):
     @role_required('ceo', 'storekeeper')
@@ -28,7 +34,13 @@ class GradientListResource(Resource):
         new_gradient = Gradient(
             application_date=app_date,
             name=data['name'],
-            description=data.get('description')
+            description=data.get('description'),
+            fruit_type=data['fruit_type'],
+            gradient_type=data['gradient_type'],
+            notes=data.get('notes'),
+            quantity=data.get('quantity'),
+            unit=data.get('unit'),
+            purpose=data.get('purpose')
         )
         db.session.add(new_gradient)
         db.session.commit()

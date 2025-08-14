@@ -1,8 +1,8 @@
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required
-from models import db, OtherExpense
-from models.driver import DriverExpense
-from utils.helpers import make_response_data, get_current_user
+from ..models import db, OtherExpense
+from ..models.driver import DriverExpense
+from ..utils.helpers import make_response_data, get_current_user
 from datetime import datetime
 
 class OtherExpensesResource(Resource):

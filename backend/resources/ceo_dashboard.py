@@ -1,10 +1,10 @@
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 from sqlalchemy import func
-from models import db, User, Inventory, Sale, Purchase, UserRole
-from models.driver import DriverExpense
-from models.other_expense import OtherExpense
-from utils.helpers import make_response_data
+from ..models import db, User, Inventory, Sale, Purchase, UserRole
+from ..models.driver import DriverExpense
+from ..models.other_expense import OtherExpense
+from ..utils.helpers import make_response_data
 
 class CEODashboardResource(Resource):
     @jwt_required()

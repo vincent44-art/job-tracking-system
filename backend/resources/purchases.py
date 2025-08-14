@@ -2,9 +2,9 @@ from flask import Blueprint, jsonify
 from flask_restful import Resource, reqparse
 from datetime import datetime
 from sqlalchemy import func
-from models import db, Purchase, UserRole
-from utils.helpers import make_response_data, get_current_user
-from utils.decorators import role_required
+from ..models import db, Purchase, UserRole
+from ..utils.helpers import make_response_data, get_current_user
+from ..utils.decorators import role_required
 
 # Blueprint for non-Resource routes
 purchases_bp = Blueprint('purchases_bp', __name__)
