@@ -5,7 +5,7 @@ class Sale(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     assignment = db.Column(db.String(100))  # Deprecated, use assignment_id
-    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignments.id'), nullable=True)
     fruit_type = db.Column(db.String(50), nullable=False)
     quantity = db.Column(db.String(50), nullable=False)
     revenue = db.Column(db.Float, nullable=False)
