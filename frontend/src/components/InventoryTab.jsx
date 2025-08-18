@@ -171,7 +171,7 @@ const InventoryTab = () => {
                 {loading.inventory ? (
                   <span className="spinner-border spinner-border-sm" role="status"></span>
                 ) : (
-                  currentStock.length
+                  inventory.length
                 )}
               </h3>
             </div>
@@ -227,35 +227,34 @@ const InventoryTab = () => {
                     <tr>
                       <th>Name</th>
                       <th>Qty</th>
+                      <th>Fruit Type</th>
+                      <th>Unit</th>
+                      <th>Location</th>
+                      <th>Expiry Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading.inventory ? (
                       <tr>
-                        <td colSpan="2" className="text-center py-4">
+                        <td colSpan="6" className="text-center py-4">
                           <span className="spinner-border spinner-border-sm me-2" role="status"></span>
                           Loading inventory...
                         </td>
                       </tr>
-                    ) : currentStock.length > 0 ? (
-                      currentStock.map((item, index) => (
-                        <tr key={index}>
-                          <td>
-                            <span className="fw-bold text-success">
-                              <i className="bi bi-apple me-1"></i>
-                              {item.fruitType}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="badge bg-primary">
-                              {item.quantity}
-                            </span>
-                          </td>
+                    ) : inventory.length > 0 ? (
+                      inventory.map((item, index) => (
+                        <tr key={item.id || index}>
+                          <td>{item.name}</td>
+                          <td>{item.quantity}</td>
+                          <td>{item.fruit_type}</td>
+                          <td>{item.unit}</td>
+                          <td>{item.location}</td>
+                          <td>{item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : ''}</td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="2" className="text-center text-muted">No stock available</td>
+                        <td colSpan="6" className="text-center text-muted">No inventory available</td>
                       </tr>
                     )}
                   </tbody>
@@ -308,8 +307,8 @@ const InventoryTab = () => {
                               {movement.fruitType}
                             </td>
                             <td>
-                              <span className={`badge ${movement.movementType === 'in' ? 'bg-success' : 'bg-danger'}`}>
-                                {movement.movementType.toUpperCase()}
+                              <span className={`badge ${movement.movementType && movement.movementType.toLowerCase() === 'in' ? 'bg-success' : 'bg-danger'}`}>
+                                {typeof movement.movementType === 'string' ? movement.movementType.toUpperCase() : ''}
                               </span>
                             </td>
                             <td>{movement.quantity}</td>

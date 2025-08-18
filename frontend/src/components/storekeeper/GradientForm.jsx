@@ -16,6 +16,16 @@ const GradientForm = ({ form, onChange, onSubmit }) => {
           />
         </div>
         <div className="col-md-6 mb-3">
+          <label className="form-label">Gradient Type</label>
+          <input
+            type="text"
+            className="form-control"
+            value={form.gradientType}
+            onChange={(e) => onChange({...form, gradientType: e.target.value})}
+            required
+          />
+        </div>
+        <div className="col-md-6 mb-3">
           <label className="form-label">Fruit Type</label>
           <select
             className="form-select"
@@ -70,7 +80,7 @@ const GradientForm = ({ form, onChange, onSubmit }) => {
       </div>
       
       <div className="row">
-        <div className="col-md-6 mb-3">
+        <div className="col-md-4 mb-3">
           <label className="form-label">Purpose</label>
           <input
             type="text"
@@ -80,7 +90,16 @@ const GradientForm = ({ form, onChange, onSubmit }) => {
             required
           />
         </div>
-        <div className="col-md-6 mb-3">
+        <div className="col-md-4 mb-3">
+          <label className="form-label">Description</label>
+          <input
+            type="text"
+            className="form-control"
+            value={form.description}
+            onChange={(e) => onChange({...form, description: e.target.value})}
+          />
+        </div>
+        <div className="col-md-4 mb-3">
           <label className="form-label">Notes</label>
           <textarea
             className="form-control"

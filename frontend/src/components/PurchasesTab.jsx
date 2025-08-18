@@ -5,8 +5,9 @@ import { fetchPurchases, deletePurchase } from './apiHelpers'; // adjust path ac
 
 import PurchaseFormModal from './PurchaseFormModal';
 
-const PurchasesTab = () => {
-  const [purchases, setPurchases] = useState([]);
+const PurchasesTab = (props) => {
+  // Accept data prop for dashboard integration, fallback to fetching if not provided
+  const [purchases, setPurchases] = useState(Array.isArray(props.data) ? props.data : []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,24 +15,30 @@ const PurchasesTab = () => {
 
   // Fetch purchases from API
   useEffect(() => {
-    const loadPurchases = async () => {
-      try {
-        const response = await fetchPurchases();
-        setPurchases(response.data);
-      } catch (err) {
-        console.error('Failed to fetch purchases:', err);
-        setError('Failed to load purchases. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadPurchases();
-  }, []);
+    // If data is passed as prop, use it, otherwise fetch
+    if (Array.isArray(props.data)) {
+      setPurchases(props.data);
+      setLoading(false);
+    } else {
+      const loadPurchases = async () => {
+        try {
+          const response = await fetchPurchases();
+          setPurchases(Array.isArray(response.data) ? response.data : []);
+        } catch (err) {
+          console.error('Failed to fetch purchases:', err);
+          setError('Failed to load purchases. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadPurchases();
+    }
+  }, [props.data]);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'KES'
     }).format(amount);
   };
 
@@ -51,7 +58,9 @@ const PurchasesTab = () => {
     setPurchases([...purchases, newPurchase]);
   };
 
-  const filteredPurchases = purchases.filter(purchase =>
+  // Always work with an array for filtering
+  const safePurchases = Array.isArray(purchases) ? purchases : [];
+  const filteredPurchases = safePurchases.filter(purchase =>
     purchase.purchaserEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     purchase.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     purchase.fruitType?.toLowerCase().includes(searchTerm.toLowerCase()) ||

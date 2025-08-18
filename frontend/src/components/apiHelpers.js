@@ -10,13 +10,13 @@ const axiosInstance = axios.create({
   withCredentials: true // needed if you're using cookies for auth
 });
 
-export const clearPurchasesDataAPI = () => axiosInstance.delete('/data/clear-purchases');
-export const clearSalesDataAPI = () => axiosInstance.delete('/data/clear-sales');
-export const clearInventoryDataAPI = () => axiosInstance.delete('/data/clear-inventory');
-export const clearCarExpensesDataAPI = () => axiosInstance.delete('/data/clear-car-expenses');
-export const clearOtherExpensesDataAPI = () => axiosInstance.delete('/data/clear-other-expenses');
-export const clearSalariesDataAPI = () => axiosInstance.delete('/data/clear-salaries');
-export const clearAllDataAPI = () => axiosInstance.delete('/data/clear-all');
+export const clearPurchasesDataAPI = () => axiosInstance.delete('/purchases/clear');
+export const clearSalesDataAPI = () => axiosInstance.delete('/sales/clear');
+export const clearInventoryDataAPI = () => axiosInstance.delete('/inventory/clear');
+export const clearCarExpensesDataAPI = () => axiosInstance.delete('/car-expenses/clear');
+export const clearOtherExpensesDataAPI = () => axiosInstance.delete('/expenses/other/clear');
+export const clearSalariesDataAPI = () => axiosInstance.delete('/salaries/clear');
+export const clearAllDataAPI = () => axiosInstance.delete('/clear-all');
 
 //1 Generic fetch helper to handle errors, headers, etc.
 async function request(endpoint, options = {}) {
@@ -218,7 +218,7 @@ export async function createGradient(data, token) {
 
 // Clear API calls
 export async function clearInventoryAPI() {
-  return request('/inventory', { method: 'DELETE' });
+  return request('/inventory/clear', { method: 'DELETE' });
 }
 
 export async function clearStockMovementsAPI() {

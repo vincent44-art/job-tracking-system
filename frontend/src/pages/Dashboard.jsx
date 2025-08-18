@@ -90,7 +90,7 @@ const Dashboard = () => {
         return (
           <>
             {data && <StatsCards stats={data.stats} />}
-            <PerformanceOverview data={data?.performance} />
+            <PerformanceOverview data={data} />
           </>
         );
     }

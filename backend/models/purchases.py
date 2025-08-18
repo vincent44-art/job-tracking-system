@@ -23,6 +23,6 @@ class Purchase(db.Model):
             'unit': self.unit,
             'buyerName': self.buyer_name,
             'amount': self.cost,
-            'date': self.purchase_date.isoformat(),
-            'created_at': self.created_at.isoformat()
+            'date': self.purchase_date.isoformat() if self.purchase_date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }

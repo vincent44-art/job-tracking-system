@@ -19,10 +19,11 @@ from .gradients import GradientListResource, ClearGradientsResource
 from .messages import MessageListResource, MessageResource, ClearMessagesResource
 from .dashboard import CEODashboardResource, SellerDashboardResource, PurchaserDashboardResource, StorekeeperDashboardResource
 from flask_restful import Resource
+from .clear_all import ClearAllDataResource
 
 class CurrentStockResource(Resource):
     def get(self):
-        from models.inventory import Inventory
+        from backend.models.inventory import Inventory
         # Query all inventory items
         items = Inventory.query.all()
         data = []
@@ -96,6 +97,9 @@ api.add_resource(CEODashboardResource, '/ceo/dashboard')
 api.add_resource(SellerDashboardResource, '/seller/dashboard')
 api.add_resource(PurchaserDashboardResource, '/purchaser/dashboard')
 api.add_resource(StorekeeperDashboardResource, '/storekeeper/dashboard')
+
+# ----------- CLEAR ALL DATA -----------
+api.add_resource(ClearAllDataResource, '/clear-all')
 
 # ----------- EXTRA ROUTES (from purchases.py) -----------
 # This ensures /api/purchases/<email> and /api/ceo/messages work

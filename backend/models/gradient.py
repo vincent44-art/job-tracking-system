@@ -1,6 +1,19 @@
 from . import db
 
 class Gradient(db.Model):
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'application_date': self.application_date.isoformat() if self.application_date else None,
+            'name': self.name,
+            'description': self.description,
+            'fruit_type': self.fruit_type,
+            'gradient_type': self.gradient_type,
+            'notes': self.notes,
+            'quantity': self.quantity,
+            'unit': self.unit,
+            'purpose': self.purpose
+        }
     __tablename__ = 'gradients'
     id = db.Column(db.Integer, primary_key=True)
     application_date = db.Column(db.Date, nullable=False)

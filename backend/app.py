@@ -6,13 +6,14 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from datetime import timedelta
 
-from .config import Config
-from .models.user import db, User, UserRole
-from .utils.helpers import make_response_data
-from .resources import api_bp  # Your API blueprints
-from .resources.dashboard import dashboard_bp
-from .resources.__init__ import CurrentStockResource
-from .resources.ceo_dashboard import CEODashboardResource
+from backend.config import Config
+from backend.extensions import db
+from backend.models.user import User, UserRole
+from backend.utils.helpers import make_response_data
+from backend.resources import api_bp  # Your API blueprints
+from backend.resources.dashboard import dashboard_bp
+from backend.resources.__init__ import CurrentStockResource
+from backend.resources.ceo_dashboard import CEODashboardResource
 from flask_restful import Api
 
 # Load environment variables
@@ -27,9 +28,10 @@ cors = CORS()
 migrate = Migrate()
 
 def create_app(config_class=Config):
-    from .resources.salaries import SalaryPaymentsResource
+    from backend.resources.salaries import SalaryPaymentsResource
     app = Flask(__name__, static_folder=FRONTEND_BUILD_DIR, static_url_path='/')
     app.config.from_object(config_class)
+    app.config['DEBUG'] = False  # Always run in production mode for speed
 
     # CORS setup
     app.config['CORS_HEADERS'] = 'Content-Type'
@@ -77,14 +79,14 @@ def create_app(config_class=Config):
 
     # Register Blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
-    from .resources.assignments import assignments_bp
+    from backend.resources.assignments import assignments_bp
     app.register_blueprint(assignments_bp)
     app.register_blueprint(dashboard_bp)
-    from .resources.drivers import drivers_bp
+    from backend.resources.drivers import drivers_bp
     app.register_blueprint(drivers_bp)
-    from .resources.other_expenses import OtherExpensesResource, OtherExpenseResource
-    from .resources.salaries import SalariesResource, SalaryResource
-    from .resources.expenses import CarExpensesResource
+    from backend.resources.other_expenses import OtherExpensesResource, OtherExpenseResource
+    from backend.resources.salaries import SalariesResource, SalaryResource
+    from backend.resources.expenses import CarExpensesResource
     api = Api(app)
     api.add_resource(CurrentStockResource, '/api/current-stock')
     api.add_resource(OtherExpensesResource, '/api/expenses/other')
@@ -136,4 +138,4 @@ app = create_app()
 
 # Local Development
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

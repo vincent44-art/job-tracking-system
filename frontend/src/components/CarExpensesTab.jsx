@@ -18,9 +18,13 @@ const fetchCarExpenses = async () => {
 };
 
 const createCarExpense = async (expense) => {
+  const token = localStorage.getItem('access_token');
   const res = await fetch(BASE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
     body: JSON.stringify(expense),
   });
   if (!res.ok) throw new Error('Failed to create expense');
@@ -28,16 +32,21 @@ const createCarExpense = async (expense) => {
 };
 
 const deleteCarExpense = async (id) => {
+  const token = localStorage.getItem('access_token');
   const res = await fetch(`${BASE_URL}/${id}`, {
     method: 'DELETE',
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
   });
   if (!res.ok) throw new Error('Failed to delete expense');
   return await res.json();
 };
 
 // ✅ Main component
-const CarExpensesTab = () => {
-  const [expenses, setExpenses] = useState([]);
+const CarExpensesTab = (props) => {
+  // Accept data prop for dashboard integration, fallback to fetching if not provided
+  const [expenses, setExpenses] = useState(Array.isArray(props.data) ? props.data : []);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -51,21 +60,27 @@ const CarExpensesTab = () => {
   });
 
   useEffect(() => {
-    const loadExpenses = async () => {
-      try {
-        const response = await fetchCarExpenses();
-        setExpenses(response.data);
-      } catch (error) {
-        console.error('Failed to fetch car expenses:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadExpenses();
-  }, []);
+    // If data is passed as prop, use it, otherwise fetch
+    if (Array.isArray(props.data)) {
+      setExpenses(props.data);
+      setLoading(false);
+    } else {
+      const loadExpenses = async () => {
+        try {
+          const response = await fetchCarExpenses();
+          setExpenses(Array.isArray(response.data) ? response.data : []);
+        } catch (error) {
+          console.error('Failed to fetch car expenses:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadExpenses();
+    }
+  }, [props.data]);
 
   const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this car expense?')) {
@@ -114,7 +129,9 @@ const CarExpensesTab = () => {
     }
   };
 
-  const filteredExpenses = expenses.filter(exp =>
+  // Always work with an array for filtering
+  const safeExpenses = Array.isArray(expenses) ? expenses : [];
+  const filteredExpenses = safeExpenses.filter(exp =>
     exp.driverEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     exp.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     exp.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,7 +188,7 @@ const CarExpensesTab = () => {
                   </select>
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label">Amount ($)</label>
+                  <label className="form-label">Amount (KES)</label>
                   <input type="number" step="0.01" min="0" className="form-control" value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })} required />
                 </div>

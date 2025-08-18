@@ -1,5 +1,5 @@
 from datetime import datetime
-from .user import db # <-- CORRECTED LINE
+from backend.extensions import db
 
 
 class Inventory(db.Model):

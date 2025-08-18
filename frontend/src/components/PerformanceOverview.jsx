@@ -1,35 +1,58 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 
 const PerformanceOverview = ({ data }) => {
-  const stats = data?.stats;
-  const fruitPerformance = data?.fruitPerformance || [];
-  const monthlyData = data?.monthlyData || [];
-
-  // Only show 'No data' if all are missing or empty
-  if (!stats && fruitPerformance.length === 0 && monthlyData.length === 0) {
-    return <div className="text-center py-5">No performance data available.</div>;
+  console.log('PerformanceOverview received data:', data);
+  
+  // Handle completely empty data
+  if (!data || Object.keys(data).length === 0) {
+    return (
+      <div className="text-center py-5">
+        <h4>No Data Available</h4>
+        <p className="text-muted">No performance data could be loaded.</p>
+      </div>
+    );
   }
 
+  const stats = data?.stats || {};
+  const fruitPerformance = data?.fruitPerformance || [];
+  const monthlyData = data?.monthlyData || [];
+  const weeklyData = data?.weeklyData || [];
+  const getPerformerLabel = (fruit, best, worst) => {
+    if (!fruit || !best || !worst) return null;
+    if (fruit.fruitType === best.fruitType) return <span className="badge bg-success ms-2">Best</span>;
+    if (fruit.fruitType === worst.fruitType) return <span className="badge bg-danger ms-2">Worst</span>;
+    return null;
+  };
+
+  // Always render the dashboard tables, even if empty
+
   const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return 'KES 0.00';
+    }
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES'
     }).format(amount);
   };
 
-  if (!stats) return null;
+  const totalExpenses = (stats.totalPurchases || 0) + 
+                       (stats.totalCarExpenses || 0) + 
+                       (stats.totalOtherExpenses || 0) + 
+                       (stats.totalSalaries || 0);
+
+  // expenseBreakdown removed (was only used for removed charts)
 
   const bestPerformingFruit = fruitPerformance[0] || null;
-  const totalExpenses = stats.totalPurchases + stats.totalCarExpenses + stats.totalOtherExpenses + stats.totalSalaries;
 
-  const expenseBreakdown = [
-    { name: 'Purchases', value: stats.totalPurchases, color: '#8884d8' },
-    { name: 'Car Expenses', value: stats.totalCarExpenses, color: '#82ca9d' },
-    { name: 'Other Expenses', value: stats.totalOtherExpenses, color: '#ffc658' },
-    { name: 'Salaries', value: stats.totalSalaries, color: '#ff7300' }
-  ];
+  // Ensure monthlyData has profitOrLoss for each month
+  const monthlyDataWithProfit = monthlyData.map(month => ({
+    ...month,
+    profitOrLoss: typeof month.profitOrLoss === 'number'
+      ? month.profitOrLoss
+      : (month.sales || 0) - ((month.purchases || 0) + (month.expenses || 0) + (month.salaries || 0))
+  }));
 
   return (
     <div className="container-fluid py-4">
@@ -84,61 +107,45 @@ const PerformanceOverview = ({ data }) => {
         </div>
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="row mb-4 g-3">
-        <div className="col-lg-8">
-          <div className="card shadow-sm h-100">
+      {/* Monthly Performance Table (ALWAYS VISIBLE) */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="card shadow-sm">
             <div className="card-body">
-              <h5 className="card-title">Monthly Financial Performance</h5>
-              <div style={{ height: '300px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => formatCurrency(value)}
-                      labelFormatter={(month) => `Month: ${month}`}
-                    />
-                    <Bar dataKey="sales" fill="#28a745" name="Sales" />
-                    <Bar dataKey="purchases" fill="#dc3545" name="Purchases" />
-                    <Bar dataKey="expenses" fill="#ffc107" name="Expenses" />
-                    <Bar dataKey="salaries" fill="#17a2b8" name="Salaries" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-4">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h5 className="card-title">Expense Distribution</h5>
-              <div style={{ height: '300px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expenseBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      innerRadius={40}
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {expenseBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
+              <h5 className="card-title">Monthly Performance</h5>
+              <div className="table-responsive">
+                <table className="table table-bordered table-hover">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Month</th>
+                      <th>Sales</th>
+                      <th>Purchases</th>
+                      <th>Expenses</th>
+                      <th>Profit/Loss</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyDataWithProfit.map((month, idx) => (
+                      <tr key={month.month}>
+                        <td>{month.month}</td>
+                        <td>{formatCurrency(month.sales)}</td>
+                        <td>{formatCurrency(month.purchases)}</td>
+                        <td>{formatCurrency(month.expenses)}</td>
+                        <td className={month.profitOrLoss >= 0 ? 'text-success' : 'text-danger'}>
+                          {formatCurrency(month.profitOrLoss)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Charts removed: replaced with tables for reliability */}
+      {/* You can add more summary tables here if needed */}
 
       {/* Fruit Performance */}
       <div className="row mb-4">
@@ -197,33 +204,64 @@ const PerformanceOverview = ({ data }) => {
         </div>
       </div>
 
-      {/* Fruit Profitability Chart */}
-      <div className="row">
+      {/* Weekly Performance Table */}
+      <div className="row mb-4">
         <div className="col-12">
           <div className="card shadow-sm">
             <div className="card-body">
-              <h5 className="card-title">Product Profitability Comparison</h5>
-              <div style={{ height: '400px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={fruitPerformance}
-                    layout="vertical"
-                    margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="fruitType" type="category" width={100} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Bar dataKey="purchases" fill="#ff7300" name="Purchases" />
-                    <Bar dataKey="sales" fill="#28a745" name="Sales" />
-                    <Bar dataKey="profit" fill="#0088ff" name="Profit" />
-                  </BarChart>
-                </ResponsiveContainer>
+              <h5 className="card-title">Weekly Fruit Performance</h5>
+              <div className="table-responsive" style={{maxHeight: '400px', overflowY: 'auto'}}>
+                <table className="table table-bordered table-hover">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Week</th>
+                      <th>Fruit</th>
+                      <th>Sales</th>
+                      <th>Purchases</th>
+                      <th>Car Expenses</th>
+                      <th>Other Expenses</th>
+                      <th>Profit/Loss</th>
+                      <th>Margin</th>
+                      <th>Performance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weeklyData.length === 0 && (
+                      <tr><td colSpan="9" className="text-center text-muted">No weekly data</td></tr>
+                    )}
+                    {weeklyData.map((week) => (
+                      week.fruits.map((fruit, idx) => (
+                        <tr key={week.week + '-' + fruit.fruitType}>
+                          {idx === 0 && (
+                            <td rowSpan={week.fruits.length} style={{verticalAlign: 'middle', fontWeight: 'bold'}}>
+                              Week {week.week}<br/>
+                              <small>{week.start} - {week.end}</small>
+                              <div className="mt-2">
+                                <span className="badge bg-success">Best: {week.bestPerformer?.fruitType || 'N/A'}</span><br/>
+                                <span className="badge bg-danger mt-1">Worst: {week.worstPerformer?.fruitType || 'N/A'}</span>
+                              </div>
+                            </td>
+                          )}
+                          <td>{fruit.fruitType} {getPerformerLabel(fruit, week.bestPerformer, week.worstPerformer)}</td>
+                          <td>{formatCurrency(fruit.sales)}</td>
+                          <td>{formatCurrency(fruit.purchases)}</td>
+                          <td>{formatCurrency(fruit.carExpenses)}</td>
+                          <td>{formatCurrency(fruit.otherExpenses)}</td>
+                          <td className={fruit.profit >= 0 ? 'text-success' : 'text-danger'}>{formatCurrency(fruit.profit)}</td>
+                          <td className={fruit.profitMargin >= 0 ? 'text-success' : 'text-danger'}>{fruit.profitMargin.toFixed(1)}%</td>
+                          <td>{fruit.isLoss ? <span className="badge bg-danger">Loss</span> : <span className="badge bg-success">Profit</span>}</td>
+                        </tr>
+                      ))
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Fruit Profitability Chart removed: all data now in tables above */}
     </div>
   );
 };

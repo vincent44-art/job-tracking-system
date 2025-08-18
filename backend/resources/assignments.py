@@ -46,13 +46,12 @@ def create_assignment():
     seller_id = data.get('seller_id')
     seller_email = data.get('seller_email')
     fruit_type = data.get('fruit_type', 'mango')
-    assignment_id = data.get('assignment_id') or f"assignment-{seller_id}"
-    # Check if assignment exists
-    assignment = Assignment.query.get(assignment_id)
+    # assignment_id is not used as primary key, let DB autoincrement id
+    # Only check for duplicate by seller_id, seller_email, fruit_type
+    assignment = Assignment.query.filter_by(seller_id=seller_id, seller_email=seller_email, fruit_type=fruit_type).first()
     if assignment:
         return jsonify(assignment.to_dict()), 200
     assignment = Assignment(
-        id=assignment_id,
         seller_id=seller_id,
         seller_email=seller_email,
         fruit_type=fruit_type

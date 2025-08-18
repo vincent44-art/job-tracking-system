@@ -136,7 +136,7 @@ const OtherExpensesTab = () => {
                   />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Amount ($)</label>
+                  <label className="form-label">Amount (KES)</label>
                   <input
                     type="number"
                     step="0.01"

@@ -28,7 +28,7 @@ const addInventoryItem = async (item) => {
   const token = localStorage.getItem('access_token');
   // Ensure correct payload for inventory POST
   const payload = {
-    name: item.fruitType,
+    name: item.ItemType,
     quantity: item.quantity,
     fruit_type: item.fruitType,
     unit: item.unit,
@@ -63,13 +63,25 @@ const addStockMovement = async (movement) => {
 
 const addGradient = async (gradient) => {
   const token = localStorage.getItem('access_token');
+  // Map frontend fields to backend expected fields
+  const payload = {
+    application_date: gradient.applicationDate,
+    name: gradient.gradientName,
+    description: gradient.description,
+    fruit_type: gradient.fruitType,
+    gradient_type: gradient.gradientType,
+    notes: gradient.notes,
+    quantity: gradient.quantity,
+    unit: gradient.unit,
+    purpose: gradient.purpose
+  };
   const res = await fetch(`${BASE_URL}/gradients`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    body: JSON.stringify(gradient),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error('Failed to add gradient');
   return await res.json();
@@ -99,7 +111,7 @@ const StoreKeeperDashboard = () => {
   const [error, setError] = useState(null);
 
   const [inventoryForm, setInventoryForm] = useState({
-    fruitType: '',
+    ItemType: '',
     quantity: '',
     unit: 'kg',
     location: '',
@@ -120,12 +132,14 @@ const StoreKeeperDashboard = () => {
 
   const [gradientForm, setGradientForm] = useState({
     gradientName: '',
+    gradientType: '',
     fruitType: '',
     quantity: '',
     unit: 'kg',
     purpose: '',
     applicationDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    description: ''
   });
 
   useEffect(() => {
@@ -136,8 +150,15 @@ const StoreKeeperDashboard = () => {
           fetchInventory(),
           getCurrentStock()
         ]);
-        setInventory(inventoryRes.data);
-        setCurrentStock(stockRes.data);
+        // Filter out undefined/null/invalid items to prevent runtime errors in child components
+        const safeInventory = Array.isArray(inventoryRes.data)
+          ? inventoryRes.data.filter(item => item && typeof item === 'object' && (item.name || item.fruit_type))
+          : [];
+        setInventory(safeInventory);
+        const safeStock = Array.isArray(stockRes.data)
+          ? stockRes.data.filter(item => item && typeof item === 'object')
+          : [];
+        setCurrentStock(safeStock);
       } catch (err) {
         setError('Failed to load inventory data. Please try again later.');
         console.error(err);
@@ -159,9 +180,14 @@ const StoreKeeperDashboard = () => {
         storeKeeperName: user.name,
         quantity: inventoryForm.quantity
       });
-      setInventory(prev => Array.isArray(prev) ? [...prev, response.data] : [response.data]);
+      // Defensive: filter out undefined/null/invalid items after add
+      const newItem = response && response.data ? response.data : response;
+      setInventory(prev => {
+        const arr = Array.isArray(prev) ? [...prev, newItem] : [newItem];
+        return arr.filter(item => item && typeof item === 'object' && (item.name || item.fruit_type));
+      });
       setInventoryForm({
-        fruitType: '',
+        ItemType: '',
         quantity: '',
         unit: 'kg',
         location: '',
@@ -222,20 +248,17 @@ const StoreKeeperDashboard = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      await addGradient({
-        ...gradientForm,
-        storeKeeperEmail: user.email,
-        storeKeeperName: user.name,
-        quantity: gradientForm.quantity
-      });
+      await addGradient(gradientForm);
       setGradientForm({
         gradientName: '',
+        gradientType: '',
         fruitType: '',
         quantity: '',
         unit: 'kg',
         purpose: '',
         applicationDate: new Date().toISOString().split('T')[0],
-        notes: ''
+        notes: '',
+        description: ''
       });
     } catch (err) {
       setError('Failed to add gradient.');
@@ -356,7 +379,7 @@ const StoreKeeperDashboard = () => {
 
                 {!loading && activeTab === 'added' && (
                   <AddedItemsTable
-                    inventory={inventory}
+                    inventory={Array.isArray(inventory) ? inventory.filter(item => item && typeof item === 'object' && (item.name || item.fruit_type)) : []}
                     onClearAll={handleClearAddedItems}
                   />
                 )}

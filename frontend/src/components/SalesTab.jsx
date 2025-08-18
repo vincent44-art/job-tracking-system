@@ -172,7 +172,7 @@ const SalesTab = () => {
                   />
                 </div>
                 <div className="col-md-4 mb-3">
-                  <label className="form-label">Revenue ($)</label>
+                  <label className="form-label">Revenue (KES)</label>
                   <input
                     type="number"
                     step="0.01"

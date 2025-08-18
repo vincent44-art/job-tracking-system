@@ -1,5 +1,5 @@
 from datetime import datetime
-from .user import db # <-- CORRECTED LINE
+from backend.extensions import db
 
 class Sale(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -16,12 +16,12 @@ class Sale(db.Model):
         return {
             'id': self.id,
             'seller_id': self.seller_id,
-            'seller_name': self.seller.name if self.seller else None,
+            'seller_name': getattr(self, 'seller', None).name if hasattr(self, 'seller') and self.seller else None,
             'assignment': self.assignment,
             'assignment_id': self.assignment_id,
             'fruit_type': self.fruit_type,
             'quantity': self.quantity,
             'revenue': self.revenue,
-            'sale_date': self.sale_date.isoformat(),
-            'created_at': self.created_at.isoformat()
+            'sale_date': self.sale_date.isoformat() if self.sale_date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }
