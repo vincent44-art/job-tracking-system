@@ -2,10 +2,35 @@ import React from 'react';
 
 
 const PerformanceOverview = ({ data }) => {
-  console.log('PerformanceOverview received data:', data);
-  
-  // Handle completely empty data
-  if (!data || Object.keys(data).length === 0) {
+  // Debug: Log incoming data
+  try {
+    console.log('PerformanceOverview data prop:', JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.log('PerformanceOverview data prop (raw):', data);
+  }
+  // Defensive: always provide default values for all expected fields
+  const stats = data && typeof data === 'object' && data.stats ? data.stats : {
+    totalUsers: 0,
+    totalInventoryItems: 0,
+    totalSales: 0,
+    totalPurchases: 0,
+    totalCarExpenses: 0,
+    totalOtherExpenses: 0,
+    totalSalaries: 0,
+    netProfit: 0,
+    profitMargin: 0
+  };
+  const fruitPerformance = Array.isArray(data?.fruitPerformance) ? data.fruitPerformance : [];
+  const monthlyData = Array.isArray(data?.monthlyData) ? data.monthlyData : [];
+  const weeklyData = Array.isArray(data?.weeklyData) ? data.weeklyData : [];
+
+  // If all are empty, show a message
+  if (
+    (!stats || Object.values(stats).every(v => v === 0)) &&
+    fruitPerformance.length === 0 &&
+    monthlyData.length === 0 &&
+    weeklyData.length === 0
+  ) {
     return (
       <div className="text-center py-5">
         <h4>No Data Available</h4>
@@ -13,11 +38,6 @@ const PerformanceOverview = ({ data }) => {
       </div>
     );
   }
-
-  const stats = data?.stats || {};
-  const fruitPerformance = data?.fruitPerformance || [];
-  const monthlyData = data?.monthlyData || [];
-  const weeklyData = data?.weeklyData || [];
   const getPerformerLabel = (fruit, best, worst) => {
     if (!fruit || !best || !worst) return null;
     if (fruit.fruitType === best.fruitType) return <span className="badge bg-success ms-2">Best</span>;

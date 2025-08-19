@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Modal } from 'antd';
-import Navbar from './components/Navbar';
+// import { Modal } from 'antd';
+// import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PurchaserDashboard from './pages/PurchaserDashboard';
@@ -13,9 +13,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './index.css';
 
 // Import modal components
-import PurchaseFormModal from './components/modals/PurchaseFormModal';
-import SalaryFormModal from './components/modals/SalaryFormModal';
-import PaymentFormModal from './components/modals/PaymentFormModal';
+// import PurchaseFormModal from './components/modals/PurchaseFormModal';
+// import SalaryFormModal from './components/modals/SalaryFormModal';
+// import PaymentFormModal from './components/modals/PaymentFormModal';
 
 // const ProtectedRoute = ({ children, requiredRoles = [] }) => {
 //   const { user } = useAuth();
@@ -37,27 +37,7 @@ import PaymentFormModal from './components/modals/PaymentFormModal';
 
 // const AppContent = () => {
 //   const { user } = useAuth();
-const ProtectedRoute = ({ children, requiredRoles = [] }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div className="text-center mt-5">Loading...</div>; // Wait until verifyAuth finishes
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
-    Modal.error({
-      title: 'Unauthorized Access',
-      content: 'You do not have permission to access this page.',
-    });
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-};
+// Removed unused ProtectedRoute
 
 const AppContent = () => {
   const { user, loading } = useAuth();

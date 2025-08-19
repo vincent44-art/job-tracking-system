@@ -17,7 +17,7 @@ import {
   clearGradientsAPI,
   createInventory
 } from './apiHelpers';  // adjust path as needed
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext';
 
 const InventoryTab = () => {
   const [inventory, setInventory] = useState([]);
@@ -29,7 +29,7 @@ const InventoryTab = () => {
     gradients: true
   });
   const [error, setError] = useState(null);
-  const { user } = useAuth();
+  // const { user } = useAuth(); // removed unused user
   const [form, setForm] = useState({
     fruitType: '',
     quantity: '',
@@ -71,23 +71,9 @@ const InventoryTab = () => {
   }, []);
 
   // Calculate current stock
-  const getCurrentStock = () => {
-    const stockMap = {};
-    // Defensive: ensure stockMovements is always an array
-    const movementsArr = Array.isArray(stockMovements) ? stockMovements : [];
-    movementsArr.forEach(movement => {
-      if (!stockMap[movement.fruitType]) {
-        stockMap[movement.fruitType] = 0;
-      }
-      stockMap[movement.fruitType] += 
-        movement.movementType === 'in' ? movement.quantity : -movement.quantity;
-    });
-    return Object.entries(stockMap)
-      .map(([fruitType, quantity]) => ({ fruitType, quantity }))
-      .filter(item => item.quantity > 0);
-  };
+  // Removed unused getCurrentStock function
 
-  const currentStock = getCurrentStock();
+  // const currentStock = getCurrentStock(); // removed unused currentStock
   const totalStockMovements = stockMovements.length;
   const totalGradients = gradients.length;
 

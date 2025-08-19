@@ -78,7 +78,7 @@ const OtherExpensesTab = () => {
   };
 
   const filteredExpenses = expenses.filter(expense =>
-    expense.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (expense.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {

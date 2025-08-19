@@ -18,7 +18,7 @@ const UserManagementTab = ({ data }) => {
       setUsers(Array.isArray(allUsers) ? allUsers : []);
     }
     fetchUsers();
-  }, [showAddModal]); // Refresh users when modal closes (after add)
+  }, [showAddModal, getAllUsers]); // Add getAllUsers to dependency array
 
   const handleAddUser = async (e) => {
     e.preventDefault();
