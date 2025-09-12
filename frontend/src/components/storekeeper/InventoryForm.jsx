@@ -91,6 +91,30 @@ const InventoryForm = ({ form, onChange, onSubmit }) => {
           />
         </div>
       </div>
+
+      <div className="row">
+        <div className="col-md-6 mb-3">
+          <label className="form-label">Purchase Price</label>
+          <input
+            type="number"
+            step="0.01"
+            className="form-control"
+            value={form.purchasePrice || ''}
+            onChange={(e) => onChange({...form, purchasePrice: e.target.value})}
+            required
+          />
+        </div>
+        <div className="col-md-6 mb-3">
+          <label className="form-label">Purchase Date</label>
+          <input
+            type="date"
+            className="form-control"
+            value={form.purchaseDate || ''}
+            onChange={(e) => onChange({...form, purchaseDate: e.target.value})}
+            required
+          />
+        </div>
+      </div>
       
       <button type="submit" className="btn btn-success">
         <i className="bi bi-plus-circle me-2"></i>

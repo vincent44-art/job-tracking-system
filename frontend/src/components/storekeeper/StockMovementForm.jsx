@@ -31,6 +31,8 @@ const StockMovementForm = ({ form, onChange, onSubmit }) => {
           >
             <option value="in">Stock In</option>
             <option value="out">Stock Out</option>
+            <option value="sale">Sale</option>
+            <option value="spoilage">Spoilage</option>
           </select>
         </div>
       </div>
@@ -92,6 +94,22 @@ const StockMovementForm = ({ form, onChange, onSubmit }) => {
           />
         </div>
       </div>
+
+      {form.movementType === 'sale' && (
+        <div className="row">
+          <div className="col-md-6 mb-3">
+            <label className="form-label">Selling Price</label>
+            <input
+              type="number"
+              step="0.01"
+              className="form-control"
+              value={form.sellingPrice || ''}
+              onChange={(e) => onChange({...form, sellingPrice: e.target.value})}
+              required
+            />
+          </div>
+        </div>
+      )}
       
       <button type="submit" className="btn btn-warning">
         <i className="bi bi-arrow-left-right me-2"></i>

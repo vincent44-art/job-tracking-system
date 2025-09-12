@@ -1,13 +1,33 @@
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 
 const SaleForm = ({ 
   formData, 
   handleChange, 
   handleSubmit, 
   userAssignments, 
-  user 
+  user,
+  stockRecords = []
 }) => {
+  const [showStockDetails, setShowStockDetails] = useState(false);
+
+  const stockOutOptions = useMemo(() => {
+    return (stockRecords || []).map(r => ({
+      id: r.id,
+      label: `${r.stockName} | ${r.fruitType} | In: ${r.dateIn} | Out: ${r.dateOut}`,
+      data: r
+    }));
+  }, [stockRecords]);
+
+  const selectedStock = useMemo(() => {
+    return stockRecords.find(r => String(r.id) === String(formData.stockTrackingId));
+  }, [stockRecords, formData.stockTrackingId]);
+
+  const handleView = (e) => {
+    e.preventDefault();
+    setShowStockDetails(true);
+  };
+
   return (
     <div className="card shadow-sm">
       <div className="card-header bg-success text-white">
@@ -19,82 +39,45 @@ const SaleForm = ({
       <div className="card-body">
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label">Assignment (Optional)</label>
-            <select
-              className="form-select"
-              name="assignmentId"
-              value={formData.assignmentId}
-              onChange={handleChange}
-            >
-              <option value="">Create New Sale</option>
-              {userAssignments.map(assignment => (
-                <option key={assignment.id} value={assignment.id}>
-                  {assignment.fruitType} - {assignment.quantityAssigned} units
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="mb-3">
-            <label className="form-label">Fruit Type</label>
-            <select
-              className="form-select"
-              name="fruitType"
-              value={formData.fruitType}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select Fruit</option>
-              <option value="Orange">Orange</option>
-              <option value="Apple">Apple</option>
-              <option value="Banana">Banana</option>
-              <option value="Mango">Mango</option>
-              <option value="Pineapple">Pineapple</option>
-              <option value="Watermelon">Watermelon</option>
-            </select>
-          </div>
-          
-          <div className="mb-3">
-            <label className="form-label">Quantity Sold</label>
-            <input
-              type="text"
-              className="form-control"
-              name="quantitySold"
-              value={formData.quantitySold}
-              onChange={handleChange}
-              placeholder="e.g., 10 kg, 5 boxes, 20 pieces"
-              required
-            />
-          </div>
-          
-          <div className="mb-3">
-            <label className="form-label">Revenue (KES)</label>
-            <input
-              type="number"
-              step="0.01"
-              className="form-control"
-              name="revenue"
-              value={formData.revenue}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          
-          <div className="mb-3">
-            <label className="form-label">Date</label>
-            <input
-              type="date"
-              className="form-control"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              required
-            />
+            <label className="form-label">Stock Name (from Storekeeper Stock-Out)</label>
+            <div className="d-flex gap-2">
+              <select
+                className="form-select"
+                name="stockTrackingId"
+                value={formData.stockTrackingId || ''}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Stock</option>
+                {stockOutOptions.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </select>
+              <button className="btn btn-outline-primary" onClick={handleView} disabled={!formData.stockTrackingId}>
+                <i className="bi bi-eye me-1"></i>
+                View
+              </button>
+            </div>
+            {showStockDetails && selectedStock && (
+              <div className="alert alert-info mt-2">
+                <div><strong>Stock Name:</strong> {selectedStock.stockName}</div>
+                <div><strong>Fruit Type:</strong> {selectedStock.fruitType}</div>
+                <div><strong>Date In:</strong> {selectedStock.dateIn}</div>
+                <div><strong>Date Out:</strong> {selectedStock.dateOut}</div>
+                <div><strong>Quantity In:</strong> {selectedStock.quantityIn}</div>
+                {selectedStock.quantityOut && (
+                  <div><strong>Quantity Out:</strong> {selectedStock.quantityOut}</div>
+                )}
+                {selectedStock.totalStockCost && (
+                  <div><strong>Total Stock Cost:</strong> {selectedStock.totalStockCost}</div>
+                )}
+              </div>
+            )}
           </div>
           
           <button type="submit" className="btn btn-success">
             <i className="bi bi-plus-circle me-2"></i>
-            Record Sale
+            Add to Table
           </button>
         </form>
       </div>

@@ -1,5 +1,7 @@
 import logging
 from logging.config import fileConfig
+import sys
+import os
 
 from flask import current_app
 
@@ -13,6 +15,8 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 
 def get_engine():
@@ -36,8 +40,8 @@ def get_engine_url():
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-config.set_main_option('sqlalchemy.url', get_engine_url())
-target_db = current_app.extensions['migrate'].db
+# config.set_main_option('sqlalchemy.url', get_engine_url())
+# target_db = current_app.extensions['migrate'].db
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -45,10 +49,15 @@ target_db = current_app.extensions['migrate'].db
 # ... etc.
 
 
+# For autogenerate support, import your models and set target_metadata
+from backend.models import stock_tracking, assignment, inventory, other_expense, driver, gradient, purchases, salary, sales, message, stock_movement, user
+from backend.extensions import db
+
+target_metadata = db.metadata
+
+
 def get_metadata():
-    if hasattr(target_db, 'metadatas'):
-        return target_db.metadatas[None]
-    return target_db.metadata
+    return target_metadata
 
 
 def run_migrations_offline():
@@ -80,9 +89,7 @@ def run_migrations_online():
 
     """
 
-    # this callback is used to prevent an auto-migration from being generated
-    # when there are no changes to the schema
-    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
+    # Remove Flask-specific conf_args and current_app usage
     def process_revision_directives(context, revision, directives):
         if getattr(config.cmd_opts, 'autogenerate', False):
             script = directives[0]
@@ -90,17 +97,14 @@ def run_migrations_online():
                 directives[:] = []
                 logger.info('No changes in schema detected.')
 
-    conf_args = current_app.extensions['migrate'].configure_args
-    if conf_args.get("process_revision_directives") is None:
-        conf_args["process_revision_directives"] = process_revision_directives
-
-    connectable = get_engine()
+    from sqlalchemy import create_engine
+    connectable = create_engine(config.get_main_option("sqlalchemy.url"))
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
-            **conf_args
+            process_revision_directives=process_revision_directives,
         )
 
         with context.begin_transaction():

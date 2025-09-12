@@ -9,6 +9,8 @@ import OtherExpensesTab from '../components/OtherExpensesTab';
 import UserManagementTab from '../components/UserManagementTab';
 import SalaryManagementTab from '../components/SalaryManagementTab';
 import InventoryTab from '../components/InventoryTab';
+import StockTrackerTab from '../components/StockTrackerTab';
+import ReportsTab from '../components/ReportsTab';
 import PerformanceOverview from '../components/PerformanceOverview';
 // CeoMessagePanel removed
 import ClearDataModal from '../components/ClearDataModal';
@@ -78,6 +80,10 @@ const Dashboard = () => {
         return <SalesTab data={data?.sales} />;
       case 'inventory':
         return <InventoryTab data={data?.inventory} />;
+      case 'stock-tracker':
+        return <StockTrackerTab />;
+      case 'reports':
+        return <ReportsTab />;
       case 'salaries':
         return <SalaryManagementTab data={data?.salaries} />;
       case 'car-expenses':
@@ -124,6 +130,8 @@ const Dashboard = () => {
     { id: 'purchases', icon: 'bi-cart-plus', label: 'Purchases' },
     { id: 'sales', icon: 'bi-currency-dollar', label: 'Sales' },
     { id: 'inventory', icon: 'bi-boxes', label: 'Inventory' },
+    { id: 'stock-tracker', icon: 'bi-bar-chart-line', label: 'Stock Tracker' },
+    { id: 'reports', icon: 'bi-file-earmark-text', label: 'Reports' },
     { id: 'salaries', icon: 'bi-cash', label: 'Salaries' },
     { id: 'car-expenses', icon: 'bi-car-front', label: 'Car Expenses' },
     { id: 'other-expenses', icon: 'bi-receipt', label: 'Other Expenses' },

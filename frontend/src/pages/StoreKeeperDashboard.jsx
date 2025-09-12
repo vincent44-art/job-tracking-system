@@ -1,389 +1,284 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-// CeoMessagesDisplay removed
-import InventoryForm from '../components/storekeeper/InventoryForm';
-import StockMovementForm from '../components/storekeeper/StockMovementForm';
-import GradientForm from '../components/storekeeper/GradientForm';
-import CurrentStockTable from '../components/storekeeper/CurrentStockTable';
-import AddedItemsTable from '../components/storekeeper/AddedItemsTable';
+import { addStockTracking, fetchStockTracking } from '../api/stockTracking';
 
-// ✅ Base URL
-const BASE_URL = 'http://127.0.0.1:5000/api';
-
-// ✅ Inline API functions
-const fetchInventory = async () => {
-  const token = localStorage.getItem('access_token');
-  const res = await fetch(`${BASE_URL}/inventory`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    }
-  });
-  if (!res.ok) throw new Error('Failed to fetch inventory');
-  return await res.json();
+const initialStockIn = {
+  stockName: '',
+  dateIn: '',
+  fruitType: '',
+  quantityIn: '',
+  amountPerKg: '',
+  totalAmount: '',
+  otherCharges: '',
 };
 
-const addInventoryItem = async (item) => {
-  const token = localStorage.getItem('access_token');
-  // Ensure correct payload for inventory POST
-  const payload = {
-    name: item.ItemType,
-    quantity: item.quantity,
-    fruit_type: item.fruitType,
-    unit: item.unit,
-    location: item.location,
-    expiry_date: item.expiryDate
-  };
-  const res = await fetch(`${BASE_URL}/inventory`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error('Failed to add inventory item');
-  return await res.json();
+const initialStockOut = {
+  stockInId: '', // Link to Stock In record
+  dateOut: '',
+  gradientUsed: '',
+  gradientAmountUsed: '',
+  gradientCostPerUnit: '',
+  totalGradientCost: '',
+  quantityOut: '',
+  spoilage: '',
 };
 
-const addStockMovement = async (movement) => {
-  const token = localStorage.getItem('access_token');
-  const res = await fetch(`${BASE_URL}/stock-movements`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(movement),
-  });
-  if (!res.ok) throw new Error('Failed to add stock movement');
-  return await res.json();
-};
-
-const addGradient = async (gradient) => {
-  const token = localStorage.getItem('access_token');
-  // Map frontend fields to backend expected fields
-  const payload = {
-    application_date: gradient.applicationDate,
-    name: gradient.gradientName,
-    description: gradient.description,
-    fruit_type: gradient.fruitType,
-    gradient_type: gradient.gradientType,
-    notes: gradient.notes,
-    quantity: gradient.quantity,
-    unit: gradient.unit,
-    purpose: gradient.purpose
-  };
-  const res = await fetch(`${BASE_URL}/gradients`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error('Failed to add gradient');
-  return await res.json();
-};
-
-const getCurrentStock = async () => {
-  const res = await fetch(`${BASE_URL}/current-stock`);
-  if (!res.ok) throw new Error('Failed to get current stock');
-  return await res.json();
-};
-
-const clearInventoryData = async () => {
-  const res = await fetch(`${BASE_URL}/inventory/clear`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) throw new Error('Failed to clear inventory');
-  return await res.json();
-};
-
-// ✅ Main Component
 const StoreKeeperDashboard = () => {
-  const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('inventory');
-  const [inventory, setInventory] = useState([]);
-  const [currentStock, setCurrentStock] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const { logout } = useAuth();
+  const [stockIn, setStockIn] = useState(initialStockIn);
+  const [stockOut, setStockOut] = useState(initialStockOut);
+  const [records, setRecords] = useState([]);
 
-  const [inventoryForm, setInventoryForm] = useState({
-    ItemType: '',
-    quantity: '',
-    unit: 'kg',
-    location: '',
-    expiryDate: '',
-    supplierName: '',
-    date: new Date().toISOString().split('T')[0]
-  });
-
-  const [stockForm, setStockForm] = useState({
-    fruitType: '',
-    movementType: 'in',
-    quantity: '',
-    unit: 'kg',
-    reason: '',
-    location: '',
-    date: new Date().toISOString().split('T')[0]
-  });
-
-  const [gradientForm, setGradientForm] = useState({
-    gradientName: '',
-    gradientType: '',
-    fruitType: '',
-    quantity: '',
-    unit: 'kg',
-    purpose: '',
-    applicationDate: new Date().toISOString().split('T')[0],
-    notes: '',
-    description: ''
-  });
-
+  // Fetch all stock records on mount
   useEffect(() => {
-    const loadData = async () => {
+    const load = async () => {
       try {
-        setLoading(true);
-        const [inventoryRes, stockRes] = await Promise.all([
-          fetchInventory(),
-          getCurrentStock()
-        ]);
-        // Filter out undefined/null/invalid items to prevent runtime errors in child components
-        const safeInventory = Array.isArray(inventoryRes.data)
-          ? inventoryRes.data.filter(item => item && typeof item === 'object' && (item.name || item.fruit_type))
-          : [];
-        setInventory(safeInventory);
-        const safeStock = Array.isArray(stockRes.data)
-          ? stockRes.data.filter(item => item && typeof item === 'object')
-          : [];
-        setCurrentStock(safeStock);
-      } catch (err) {
-        setError('Failed to load inventory data. Please try again later.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+        const token = localStorage.getItem('access_token');
+        const res = await fetchStockTracking(token);
+        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        setRecords(list);
+      } catch (e) {}
     };
-
-    loadData();
+    load();
   }, []);
 
-  const handleInventorySubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      const response = await addInventoryItem({
-        ...inventoryForm,
-        storeKeeperEmail: user.email,
-        storeKeeperName: user.name,
-        quantity: inventoryForm.quantity
-      });
-      // Defensive: filter out undefined/null/invalid items after add
-      const newItem = response && response.data ? response.data : response;
-      setInventory(prev => {
-        const arr = Array.isArray(prev) ? [...prev, newItem] : [newItem];
-        return arr.filter(item => item && typeof item === 'object' && (item.name || item.fruit_type));
-      });
-      setInventoryForm({
-        ItemType: '',
-        quantity: '',
-        unit: 'kg',
-        location: '',
-        expiryDate: '',
-        supplierName: '',
-        date: new Date().toISOString().split('T')[0]
-      });
-    } catch (err) {
-      setError('Failed to add inventory item.');
-      console.error(err);
-    } finally {
-      setLoading(false);
+  // Auto-calculate totalAmount and totalGradientCost
+  useEffect(() => {
+    const totalAmount = parseFloat(stockIn.quantityIn || 0) * parseFloat(stockIn.amountPerKg || 0);
+    setStockIn((prev) => ({ ...prev, totalAmount: totalAmount ? totalAmount.toFixed(2) : '' }));
+  }, [stockIn.quantityIn, stockIn.amountPerKg]);
+
+  useEffect(() => {
+    const totalGradientCost = parseFloat(stockOut.gradientAmountUsed || 0) * parseFloat(stockOut.gradientCostPerUnit || 0);
+    setStockOut((prev) => ({ ...prev, totalGradientCost: totalGradientCost ? totalGradientCost.toFixed(2) : '' }));
+  }, [stockOut.gradientAmountUsed, stockOut.gradientCostPerUnit]);
+
+  // Auto-calculate duration
+  const getDuration = (dateIn, dateOut) => {
+    if (dateIn && dateOut) {
+      const d1 = new Date(dateIn);
+      const d2 = new Date(dateOut);
+      const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      return diff >= 0 ? diff : '';
     }
+    return '';
   };
 
-  const handleStockSubmit = async (e) => {
+  // Auto-calculate total stock cost
+  const getTotalStockCost = (totalAmount, otherCharges, totalGradientCost) => {
+    const ta = parseFloat(totalAmount || 0);
+    const oc = parseFloat(otherCharges || 0);
+    const tgc = parseFloat(totalGradientCost || 0);
+    return (ta + oc + tgc).toFixed(2);
+  };
+
+  const handleStockInChange = (e) => {
+    const { name, value } = e.target;
+    setStockIn((prev) => ({ ...prev, [name]: value }));
+  };
+  const handleStockOutChange = (e) => {
+    const { name, value } = e.target;
+    setStockOut((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Submit Stock In
+  const handleStockInSubmit = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
-      // Find inventory item by fruitType
-      const inventoryItem = inventory.find(item => item.fruit_type === stockForm.fruitType || item.name === stockForm.fruitType);
-      if (!inventoryItem) {
-        setError('No inventory item found for selected fruit type.');
-        setLoading(false);
-        return;
-      }
-      // Prepare payload for backend
-      const payload = {
-        inventory_id: inventoryItem.id,
-        movement_type: stockForm.movementType,
-        quantity: stockForm.quantity,
-        unit: stockForm.unit,
-        remaining_stock: '', // You can calculate or leave blank
-        date: stockForm.date,
-        notes: stockForm.reason
+      const token = localStorage.getItem('access_token');
+      const record = { ...stockIn };
+      const res = await addStockTracking(record, token);
+      setRecords((prev) => ([...(Array.isArray(prev) ? prev : []), res.data]));
+      setStockIn(initialStockIn);
+    } catch (e) {}
+  };
+
+  // Submit Stock Out
+  const handleStockOutSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('access_token');
+      // Find the selected Stock In record
+      const stockInRecord = records.find(r => r.id === parseInt(stockOut.stockInId));
+      if (!stockInRecord) return;
+      const duration = getDuration(stockInRecord.dateIn, stockOut.dateOut);
+      const totalStockCost = getTotalStockCost(
+        stockInRecord.totalAmount,
+        stockInRecord.otherCharges,
+        stockOut.totalGradientCost
+      );
+      // Merge Stock In and Stock Out data
+      const record = {
+        ...stockInRecord,
+        ...stockOut,
+        duration,
+        totalStockCost,
       };
-      await addStockMovement(payload);
-      const stockRes = await getCurrentStock();
-      setCurrentStock(stockRes.data);
-      setStockForm({
-        fruitType: '',
-        movementType: 'in',
-        quantity: '',
-        unit: 'kg',
-        reason: '',
-        location: '',
-        date: new Date().toISOString().split('T')[0]
-      });
-    } catch (err) {
-      setError('Failed to record stock movement.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      const res = await addStockTracking(record, token);
+      setRecords((prev) => ([...(Array.isArray(prev) ? prev : []), res.data]));
+      setStockOut(initialStockOut);
+    } catch (e) {}
   };
 
-  const handleGradientSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      await addGradient(gradientForm);
-      setGradientForm({
-        gradientName: '',
-        gradientType: '',
-        fruitType: '',
-        quantity: '',
-        unit: 'kg',
-        purpose: '',
-        applicationDate: new Date().toISOString().split('T')[0],
-        notes: '',
-        description: ''
-      });
-    } catch (err) {
-      setError('Failed to add gradient.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClearInventory = async () => {
-    if (window.confirm('Are you sure you want to clear all inventory data?')) {
-      try {
-        setLoading(true);
-        await clearInventoryData();
-        setInventory([]);
-        setCurrentStock([]);
-      } catch (err) {
-        setError('Failed to clear inventory.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const handleClearAddedItems = async () => {
-    if (window.confirm('Are you sure you want to clear added items?')) {
-      try {
-        setLoading(true);
-        await clearInventoryData();
-        setInventory([]);
-      } catch (err) {
-        setError('Failed to clear added items.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
+  // Only show Stock In records that have not been stocked out (no dateOut)
+  const recordsArr = Array.isArray(records) ? records : [];
+  const availableStockIn = recordsArr.filter(r => !r.dateOut);
 
   return (
-    <div className="fruit-tracking-bg">
-      <div className="container py-4">
-        <div className="d-flex justify-content-end mb-3">
-          <button className="btn btn-outline-danger" onClick={logout}>
-            <i className="bi bi-box-arrow-right me-1"></i>Logout
-          </button>
-        </div>
-        {error && (
-          <div className="alert alert-danger mb-3">
-            <i className="bi bi-exclamation-triangle me-2"></i>{error}
+    <div className="container py-4">
+      <div className="d-flex justify-content-end mb-3">
+        <button className="btn btn-outline-danger" onClick={logout}>
+          <i className="bi bi-box-arrow-right me-1"></i>Logout
+        </button>
+      </div>
+      <div className="row">
+        {/* Stock In Form */}
+        <div className="col-md-6">
+          <div className="card mb-4">
+            <div className="card-header bg-primary text-white">Stock In Form</div>
+            <div className="card-body">
+              <form onSubmit={handleStockInSubmit}>
+                <div className="mb-3">
+                  <label className="form-label">Stock Name</label>
+                  <input type="text" className="form-control" name="stockName" value={stockIn.stockName} onChange={handleStockInChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Date In</label>
+                  <input type="date" className="form-control" name="dateIn" value={stockIn.dateIn} onChange={handleStockInChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Fruit Type</label>
+                  <input type="text" className="form-control" name="fruitType" value={stockIn.fruitType} onChange={handleStockInChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Quantity In (Kg)</label>
+                  <input type="number" className="form-control" name="quantityIn" value={stockIn.quantityIn} onChange={handleStockInChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Amount per Kg</label>
+                  <input type="number" className="form-control" name="amountPerKg" value={stockIn.amountPerKg} onChange={handleStockInChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Total Amount</label>
+                  <input type="number" className="form-control" name="totalAmount" value={stockIn.totalAmount} readOnly />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Other Charges</label>
+                  <input type="number" className="form-control" name="otherCharges" value={stockIn.otherCharges} onChange={handleStockInChange} />
+                </div>
+                <button type="submit" className="btn btn-success w-100">Submit Stock In</button>
+              </form>
+            </div>
           </div>
-        )}
-
-        <div className="row">
-          <div className="col-12">
-            <div className="card shadow-sm">
-              <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h4 className="mb-0"><i className="bi bi-box me-2"></i>Store Keeper Dashboard</h4>
-                <button className="btn btn-outline-light btn-sm" onClick={handleClearInventory} disabled={loading}>
-                  {loading ? <span className="spinner-border spinner-border-sm me-1" role="status"></span> : <i className="bi bi-trash me-1"></i>}
-                  Clear All Data
-                </button>
-              </div>
-
-              <div className="card-body">
-                {/* CeoMessagesDisplay removed */}
-
-                <ul className="nav nav-tabs mb-4">
-                  <li className="nav-item"><button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')} disabled={loading}><i className="bi bi-plus-circle me-2"></i>Add Inventory</button></li>
-                  <li className="nav-item"><button className={`nav-link ${activeTab === 'stock' ? 'active' : ''}`} onClick={() => setActiveTab('stock')} disabled={loading}><i className="bi bi-arrow-left-right me-2"></i>Stock Movement</button></li>
-                  <li className="nav-item"><button className={`nav-link ${activeTab === 'gradient' ? 'active' : ''}`} onClick={() => setActiveTab('gradient')} disabled={loading}><i className="bi bi-droplet me-2"></i>Add Gradient</button></li>
-                  <li className="nav-item"><button className={`nav-link ${activeTab === 'current' ? 'active' : ''}`} onClick={() => setActiveTab('current')} disabled={loading}><i className="bi bi-boxes me-2"></i>Current Stock</button></li>
-                  <li className="nav-item"><button className={`nav-link ${activeTab === 'added' ? 'active' : ''}`} onClick={() => setActiveTab('added')} disabled={loading}><i className="bi bi-list me-2"></i>All Added Items</button></li>
-                </ul>
-
-                {loading && (
-                  <div className="text-center py-4">
-                    <div className="spinner-border text-success" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                  </div>
-                )}
-
-                {!loading && activeTab === 'inventory' && (
-                  <InventoryForm
-                    form={inventoryForm}
-                    onChange={setInventoryForm}
-                    onSubmit={handleInventorySubmit}
-                    loading={loading}
-                  />
-                )}
-
-                {!loading && activeTab === 'stock' && (
-                  <StockMovementForm
-                    form={stockForm}
-                    onChange={setStockForm}
-                    onSubmit={handleStockSubmit}
-                    loading={loading}
-                  />
-                )}
-
-                {!loading && activeTab === 'gradient' && (
-                  <GradientForm
-                    form={gradientForm}
-                    onChange={setGradientForm}
-                    onSubmit={handleGradientSubmit}
-                    loading={loading}
-                  />
-                )}
-
-                {!loading && activeTab === 'current' && (
-                  <CurrentStockTable
-                    currentStock={currentStock}
-                    onClearAll={handleClearInventory}
-                  />
-                )}
-
-                {!loading && activeTab === 'added' && (
-                  <AddedItemsTable
-                    inventory={Array.isArray(inventory) ? inventory.filter(item => item && typeof item === 'object' && (item.name || item.fruit_type)) : []}
-                    onClearAll={handleClearAddedItems}
-                  />
-                )}
-              </div>
+        </div>
+        {/* Stock Out Form */}
+        <div className="col-md-6">
+          <div className="card mb-4">
+            <div className="card-header bg-info text-white">Stock Out Form</div>
+            <div className="card-body">
+              <form onSubmit={handleStockOutSubmit}>
+                <div className="mb-3">
+                  <label className="form-label">Select Stock In</label>
+                  <select className="form-select" name="stockInId" value={stockOut.stockInId} onChange={handleStockOutChange} required>
+                    <option value="">-- Select --</option>
+                    {availableStockIn.map((rec) => (
+                      <option key={rec.id} value={rec.id}>
+                        {rec.stockName} | {rec.fruitType} | {rec.dateIn}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Date Out</label>
+                  <input type="date" className="form-control" name="dateOut" value={stockOut.dateOut} onChange={handleStockOutChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Duration (days)</label>
+                  <input type="number" className="form-control" name="duration" value={getDuration(availableStockIn.find(r => r.id === parseInt(stockOut.stockInId))?.dateIn, stockOut.dateOut)} readOnly />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Gradient Used</label>
+                  <input type="text" className="form-control" name="gradientUsed" value={stockOut.gradientUsed} onChange={handleStockOutChange} />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Gradient Amount Used</label>
+                  <input type="number" className="form-control" name="gradientAmountUsed" value={stockOut.gradientAmountUsed} onChange={handleStockOutChange} />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Gradient Cost per Unit</label>
+                  <input type="number" className="form-control" name="gradientCostPerUnit" value={stockOut.gradientCostPerUnit} onChange={handleStockOutChange} />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Total Gradient Cost</label>
+                  <input type="number" className="form-control" name="totalGradientCost" value={stockOut.totalGradientCost} readOnly />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Quantity Out</label>
+                  <input type="number" className="form-control" name="quantityOut" value={stockOut.quantityOut} onChange={handleStockOutChange} />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Spoilage</label>
+                  <input type="number" className="form-control" name="spoilage" value={stockOut.spoilage} onChange={handleStockOutChange} />
+                </div>
+                <button type="submit" className="btn btn-primary w-100">Submit Stock Out</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Table remains unchanged */}
+      <div className="row">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-header bg-dark text-white">Stock Tracking Table</div>
+            <div className="card-body table-responsive">
+              <table className="table table-bordered table-striped">
+                <thead>
+                  <tr>
+                    <th>Stock Name</th>
+                    <th>Date In</th>
+                    <th>Fruit Type</th>
+                    <th>Quantity In</th>
+                    <th>Amount per Kg</th>
+                    <th>Total Amount</th>
+                    <th>Other Charges</th>
+                    <th>Duration</th>
+                    <th>Gradient Used</th>
+                    <th>Gradient Amount Used</th>
+                    <th>Gradient Cost per Unit</th>
+                    <th>Total Gradient Cost</th>
+                    <th>Date Out</th>
+                    <th>Quantity Out</th>
+                    <th>Spoilage</th>
+                    <th>Total Stock Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recordsArr.map((rec, idx) => (
+                    <tr key={rec.id || idx}>
+                      <td>{rec.stockName}</td>
+                      <td>{rec.dateIn}</td>
+                      <td>{rec.fruitType}</td>
+                      <td>{rec.quantityIn}</td>
+                      <td>{rec.amountPerKg}</td>
+                      <td>{rec.totalAmount}</td>
+                      <td>{rec.otherCharges}</td>
+                      <td>{rec.duration}</td>
+                      <td>{rec.gradientUsed}</td>
+                      <td>{rec.gradientAmountUsed}</td>
+                      <td>{rec.gradientCostPerUnit}</td>
+                      <td>{rec.totalGradientCost}</td>
+                      <td>{rec.dateOut}</td>
+                      <td>{rec.quantityOut}</td>
+                      <td>{rec.spoilage}</td>
+                      <td>{rec.totalStockCost}</td>
+                    </tr>
+                  ))}
+                  {records.length === 0 && (
+                    <tr><td colSpan="16" className="text-center text-muted">No records yet</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

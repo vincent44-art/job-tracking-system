@@ -96,6 +96,8 @@ def create_app(config_class=Config):
     api.add_resource(SalaryResource, '/api/salaries/<int:salary_id>')
     api.add_resource(SalaryPaymentsResource, '/api/salary-payments')
     api.add_resource(CarExpensesResource, '/api/car-expenses', '/api/car-expenses/<int:expense_id>')
+    from backend.resources.profile_image import ProfileImageUploadResource
+    api.add_resource(ProfileImageUploadResource, '/api/profile-image')
 
     # Health Check
     @app.route('/api/health')
@@ -112,10 +114,13 @@ def create_app(config_class=Config):
             'message': 'CORS test route',
         })
 
-    # Serve React frontend
+    # Serve React frontend for all non-API routes
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
+        # If the path starts with 'api/', return 404 so Flask API routes work
+        if path.startswith('api/'):
+            return make_response_data(False, 404, "API endpoint not found.", [path])
         full_path = os.path.join(FRONTEND_BUILD_DIR, path)
         if path != "" and os.path.exists(full_path):
             return send_from_directory(FRONTEND_BUILD_DIR, path)

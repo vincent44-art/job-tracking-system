@@ -20,6 +20,7 @@ parser.add_argument('unit', type=str, required=True)
 parser.add_argument('buyerName', type=str, required=True)
 parser.add_argument('amount', type=float, required=True)
 parser.add_argument('date', type=str, required=True)
+parser.add_argument('amountPerKg', type=float, required=True)
 
 
 # --- New Routes ---
@@ -79,7 +80,8 @@ class PurchaseListResource(Resource):
             unit=data['unit'],
             buyer_name=data['buyerName'],
             cost=data['amount'],
-            purchase_date=purchase_date
+            purchase_date=purchase_date,
+            amount_per_kg=data['amountPerKg']
         )
         db.session.add(new_purchase)
         db.session.commit()

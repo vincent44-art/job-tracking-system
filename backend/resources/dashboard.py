@@ -16,39 +16,66 @@ dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/api/stats')
 def stats():
-    # Replace with real stats logic
+    """Real stats from database"""
+    total_users = User.query.count()
+    total_sales = Sale.query.count()
+    total_revenue = db.session.query(func.sum(Sale.revenue)).scalar() or 0
+    
     return jsonify({
-        "users": 10,
-        "sales": 100,
-        "revenue": 5000
+        "users": total_users,
+        "sales": total_sales,
+        "revenue": total_revenue
     })
 
 @dashboard_bp.route('/api/performance/stats')
 def performance_stats():
-    # Replace with real performance stats logic
+    """Real performance stats from database"""
+    current_month = datetime.now().strftime('%B')
+    total_sales = Sale.query.count()
+    total_revenue = db.session.query(func.sum(Sale.revenue)).scalar() or 0
+    
     return jsonify({
-        "month": "June",
-        "total_sales": 120,
-        "total_revenue": 6000
+        "month": current_month,
+        "total_sales": total_sales,
+        "total_revenue": total_revenue
     })
 
 @dashboard_bp.route('/api/performance/fruit')
 def performance_fruit():
-    # Replace with real fruit performance logic
-    return jsonify({
-        "apples": 50,
-        "bananas": 30,
-        "oranges": 40
-    })
+    """Real fruit performance from database"""
+    fruit_performance = db.session.query(
+        Sale.fruit_type,
+        func.count(Sale.id).label('count'),
+        func.sum(Sale.revenue).label('total_revenue')
+    ).group_by(Sale.fruit_type).all()
+    
+    result = {}
+    for fruit, count, revenue in fruit_performance:
+        result[fruit] = {
+            "count": count,
+            "revenue": revenue or 0
+        }
+    
+    return jsonify(result)
 
 @dashboard_bp.route('/api/performance/monthly')
 def performance_monthly():
-    # Replace with real monthly performance logic
-    return jsonify([
-        {"month": "April", "sales": 80, "revenue": 4000},
-        {"month": "May", "sales": 100, "revenue": 5000},
-        {"month": "June", "sales": 120, "revenue": 6000}
-    ])
+    """Real monthly performance from database"""
+    monthly_data = db.session.query(
+        func.strftime('%Y-%m', Sale.sale_date).label('month'),
+        func.count(Sale.id).label('sales'),
+        func.sum(Sale.revenue).label('revenue')
+    ).group_by(func.strftime('%Y-%m', Sale.sale_date)).all()
+    
+    result = []
+    for month, sales, revenue in monthly_data:
+        result.append({
+            "month": month,
+            "sales": sales,
+            "revenue": revenue or 0
+        })
+    
+    return jsonify(result)
 
 # class DashboardResource(Resource):
 #     @jwt_required()

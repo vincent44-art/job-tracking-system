@@ -1,21 +1,16 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-// import { Modal } from 'antd';
-// import Navbar from './components/Navbar';
+import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PurchaserDashboard from './pages/PurchaserDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import StoreKeeperDashboard from './pages/StoreKeeperDashboard';
+import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './index.css';
-
-// Import modal components
-// import PurchaseFormModal from './components/modals/PurchaseFormModal';
-// import SalaryFormModal from './components/modals/SalaryFormModal';
-// import PaymentFormModal from './components/modals/PaymentFormModal';
 
 // const ProtectedRoute = ({ children, requiredRoles = [] }) => {
 //   const { user } = useAuth();
@@ -57,6 +52,7 @@ const AppContent = () => {
           <Route path="/driver" element={<DriverDashboard />} />
           <Route path="/purchaser" element={<PurchaserDashboard />} />
           <Route path="/storekeeper" element={<StoreKeeperDashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       );
@@ -64,6 +60,7 @@ const AppContent = () => {
       return (
         <Routes>
           <Route path="/" element={<SellerDashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<SellerDashboard />} />
         </Routes>
       );
@@ -71,6 +68,7 @@ const AppContent = () => {
       return (
         <Routes>
           <Route path="/" element={<DriverDashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<DriverDashboard />} />
         </Routes>
       );
@@ -78,6 +76,7 @@ const AppContent = () => {
       return (
         <Routes>
           <Route path="/" element={<PurchaserDashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<PurchaserDashboard />} />
         </Routes>
       );
@@ -85,6 +84,7 @@ const AppContent = () => {
       return (
         <Routes>
           <Route path="/" element={<StoreKeeperDashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<StoreKeeperDashboard />} />
         </Routes>
       );
@@ -104,6 +104,7 @@ const App = () => {
   return (
     <AuthProvider>
       <Router>
+        <Navbar />
         <div className="fruit-tracking-bg" style={{ minHeight: '100vh', minWidth: '100vw' }}>
           <AppContent />
           <Toaster 

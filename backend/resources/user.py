@@ -10,6 +10,7 @@ parser.add_argument('name', type=str, required=True)
 parser.add_argument('role', type=str, required=True, choices=[role.value for role in UserRole])
 parser.add_argument('salary', type=float)
 parser.add_argument('is_active', type=bool)
+parser.add_argument('profile_image', type=str)
 
 class UserListResource(Resource):
     @role_required('ceo')
@@ -52,6 +53,7 @@ class UserResource(Resource):
         user.role = UserRole(data['role'])
         user.salary = data.get('salary', user.salary)
         user.is_active = data.get('is_active', user.is_active)
+        user.profile_image = data.get('profile_image', user.profile_image)
         
         if data.get('password'):
             user.set_password(data['password'])
