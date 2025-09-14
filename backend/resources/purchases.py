@@ -7,6 +7,12 @@ from backend.models.purchases import Purchase
 from backend.models.user import UserRole
 from ..utils.helpers import make_response_data, get_current_user
 from ..utils.decorators import role_required
+from flask import send_file
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+import io
 
 # Blueprint for non-Resource routes
 purchases_bp = Blueprint('purchases_bp', __name__)
@@ -147,3 +153,75 @@ class PurchaseSummaryResource(Resource):
             ]
         }
         return make_response_data(data=summary, message="Purchase summary fetched.")
+
+class DailyPurchasesReportResource(Resource):
+    @role_required('ceo')
+    def get(self, date_str):
+        try:
+            report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return make_response_data(success=False, message="Invalid date format. Use YYYY-MM-DD.", status_code=400)
+
+        # Get all purchases for the specified date
+        purchases = Purchase.query.filter_by(purchase_date=report_date).all()
+
+        if not purchases:
+            return make_response_data(success=False, message=f"No purchases found for {date_str}.", status_code=404)
+
+        # Create PDF buffer
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # Title
+        title = Paragraph(f"Daily Purchases Report - {report_date.strftime('%B %d, %Y')}", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+
+        # Summary
+        total_cost = sum(purchase.cost for purchase in purchases)
+        total_quantity = sum(float(purchase.quantity) for purchase in purchases)
+        summary_text = f"Total Purchases: {len(purchases)} | Total Quantity: {total_quantity:.2f} | Total Cost: KES {total_cost:,.2f}"
+        summary = Paragraph(summary_text, styles['Normal'])
+        elements.append(summary)
+        elements.append(Spacer(1, 12))
+
+        # Table data
+        data = [['Date', 'Purchaser', 'Employee', 'Fruit Type', 'Quantity', 'Buyer', 'Amount']]
+        for purchase in purchases:
+            data.append([
+                purchase.purchase_date.strftime('%Y-%m-%d'),
+                purchase.purchaser_email or 'N/A',
+                purchase.employee_name,
+                purchase.fruit_type,
+                f"{purchase.quantity} {purchase.unit}",
+                purchase.buyer_name,
+                f'KES {purchase.cost:,.2f}'
+            ])
+
+        # Create table
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+
+        elements.append(table)
+
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"purchases_report_{date_str}.pdf",
+            mimetype='application/pdf'
+        )

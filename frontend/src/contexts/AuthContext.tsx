@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 
@@ -6,7 +5,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ceo' | 'purchaser' | 'seller' | 'driver' | 'storekeeper';
+  role: 'ceo' | 'purchaser' | 'seller' | 'driver' | 'storekeeper' | 'it' | 'admin';
   status: 'active' | 'blocked';
   createdAt: string;
 }
@@ -57,40 +56,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const users: User[] = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
-    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!foundUser) {
-      toast.error('User not found. Please contact CEO to add your account.');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const user = data.data.user;
+        const token = data.data.access_token;
+
+        setUser(user);
+        localStorage.setItem('fruittrack_user', JSON.stringify(user));
+        localStorage.setItem('access_token', token); // Store JWT token
+        toast.success(`Welcome back, ${user.name}!`);
+        return true;
+      } else {
+        toast.error(data.message || 'Login failed');
+        return false;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Network error. Please try again.');
       return false;
     }
-
-    if (foundUser.status === 'blocked') {
-      toast.error('Your account has been blocked. Please contact CEO.');
-      return false;
-    }
-
-    // Simple password check (in real app, this would be hashed)
-    if (password !== 'password123') {
-      toast.error('Invalid password.');
-      return false;
-    }
-
-    setUser(foundUser);
-    localStorage.setItem('fruittrack_user', JSON.stringify(foundUser));
-    toast.success(`Welcome back, ${foundUser.name}!`);
-    return true;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('fruittrack_user');
+    localStorage.removeItem('access_token'); // Remove JWT token
     toast.success('Logged out successfully');
   };
 
   const addUser = (userData: Omit<User, 'id' | 'createdAt'>): boolean => {
     const users: User[] = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
-    
+
     // Check if user already exists
     if (users.find(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
       toast.error('User with this email already exists');
@@ -119,18 +125,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUser = (id: string, updates: Partial<User>): boolean => {
     const users: User[] = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
     const userIndex = users.findIndex(u => u.id === id);
-    
+
     if (userIndex === -1) return false;
 
     users[userIndex] = { ...users[userIndex], ...updates };
     localStorage.setItem('fruittrack_users', JSON.stringify(users));
-    
+
     // Update current user if it's the same user
     if (user && user.id === id) {
       setUser(users[userIndex]);
       localStorage.setItem('fruittrack_user', JSON.stringify(users[userIndex]));
     }
-    
+
     return true;
   };
 

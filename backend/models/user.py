@@ -10,6 +10,8 @@ class UserRole(Enum):
     SELLER = "seller"
     PURCHASER = "purchaser"
     DRIVER = "driver"
+    IT = "it"
+    ADMIN = "admin"
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)

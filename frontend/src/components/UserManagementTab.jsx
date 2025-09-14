@@ -48,6 +48,8 @@ const UserManagementTab = ({ data }) => {
       case 'seller': return 'bg-success';
       case 'driver': return 'bg-warning';
       case 'storekeeper': return 'bg-info';
+      case 'it': return 'bg-dark';
+      case 'admin': return 'bg-secondary';
       default: return 'bg-secondary';
     }
   };
@@ -165,6 +167,8 @@ const UserManagementTab = ({ data }) => {
                       <option value="seller">Seller</option>
                       <option value="driver">Driver</option>
                       <option value="storekeeper">Storekeeper</option>
+                      <option value="it">IT</option>
+                      <option value="admin">Admin</option>
                       <option value="ceo">CEO</option>
                     </select>
                   </div>

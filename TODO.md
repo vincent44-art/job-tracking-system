@@ -1,15 +1,8 @@
-# Stock Tracker Tab Implementation
+# TODO: Change Receipt Download to Text Format
 
-## Completed Tasks
-- [x] Create StockTrackerTab.jsx component with data fetching and aggregation
-- [x] Update Dashboard.jsx to include the new tab
-- [x] Add import for StockTrackerTab
-- [x] Add 'stock-tracker' to tabs array
-- [x] Add case in renderTabContent for 'stock-tracker'
-
-## Followup Steps
-- [ ] Test the new Stock Tracker tab in the dashboard
-- [ ] Verify data loading and aggregation (bought, sold, expenses, profit)
-- [ ] Check stock usage and entry days display
-- [ ] Add date filters if needed for better tracking
-- [ ] Ensure profit calculation is accurate
+## Tasks
+- [x] Modify `downloadPDF` function in `SaleReceiptForm.jsx` to `downloadReceipt` and change it to generate a text-based receipt instead of PDF.
+- [x] Format the receipt content as plain text mimicking a thermal receipt.
+- [x] Update the download to save as a .txt file using a blob.
+- [x] Change the button text from "Download PDF" to "Download Receipt".
+- [ ] Test the download functionality.

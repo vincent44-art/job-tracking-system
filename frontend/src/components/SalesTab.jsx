@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Trash2, Plus } from 'lucide-react';
+import { Search, Trash2, Plus, Download } from 'lucide-react';
 //import { fetchSales, createSale, deleteSale } from 'http://127.0.0.1:5000'; // Import your API functions
 import { fetchSales, createAssignment, createSaleForAssignment, deleteSale } from './apiHelpers';
 
@@ -103,10 +103,50 @@ const SalesTab = () => {
     }
   };
 
+  const downloadDailyReport = async (dateStr) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/sales/report/${dateStr}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sales_report_${dateStr}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('Failed to download report');
+      }
+    } catch (error) {
+      console.error('Error downloading report:', error);
+    }
+  };
+
   const filteredSales = sales.filter(sale =>
     sale.sellerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sale.fruitType?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Group sales by date
+  const groupedSales = filteredSales.reduce((groups, sale) => {
+    const date = sale.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(sale);
+    return groups;
+  }, {});
+
+  // Sort dates in descending order
+  const sortedDates = Object.keys(groupedSales).sort((a, b) => new Date(b) - new Date(a));
 
   if (loading) return <div className="text-center py-5">Loading sales data...</div>;
 
@@ -210,7 +250,7 @@ const SalesTab = () => {
           </div>
         </div>
       )}
-      
+
       <div className="card card-custom mb-4">
         <div className="card-body">
           <div className="d-flex align-items-center mb-3">
@@ -230,48 +270,87 @@ const SalesTab = () => {
 
       <div className="card card-custom">
         <div className="card-body">
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Seller</th>
-                  <th>Fruit Type</th>
-                  <th>Quantity Sold</th>
-                  <th>Revenue</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSales.length > 0 ? (
-                  filteredSales.map(sale => (
-                    <tr key={sale.id}>
-                      <td>{new Date(sale.date).toLocaleDateString()}</td>
-                      <td>{sale.sellerName}</td>
-                      <td>{sale.fruitType}</td>
-                      <td>{sale.quantitySold}</td>
-                      <td>{formatCurrency(sale.revenue)}</td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDelete(sale.id)}
-                          title="Delete sale"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="text-center py-4">
-                      {sales.length === 0 ? 'No sales records found' : 'No matching sales found'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {sortedDates.length > 0 ? (
+            sortedDates.map((date, index) => {
+              const daySales = groupedSales[date];
+              const totalRevenue = daySales.reduce((sum, sale) => sum + sale.revenue, 0);
+              const totalQuantity = daySales.reduce((sum, sale) => sum + parseFloat(sale.quantitySold || 0), 0);
+
+              return (
+                <div key={date}>
+                  {/* Black column separator */}
+                  {index > 0 && <div style={{height: '2px', backgroundColor: 'black', margin: '20px 0'}}></div>}
+
+                  {/* Day header with PDF download */}
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h4 className="mb-0">
+                      {new Date(date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </h4>
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="text-muted">
+                        <small>
+                          {daySales.length} sale{daySales.length !== 1 ? 's' : ''} |
+                          Total: {formatCurrency(totalRevenue)} |
+                          Qty: {totalQuantity.toFixed(2)}
+                        </small>
+                      </div>
+                      <button
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => downloadDailyReport(date)}
+                        title="Download PDF Report"
+                      >
+                        <Download size={16} className="me-1" />
+                        PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sales table for this day */}
+                  <div className="table-responsive mb-4">
+                    <table className="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Seller</th>
+                          <th>Fruit Type</th>
+                          <th>Quantity Sold</th>
+                          <th>Revenue</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {daySales.map(sale => (
+                          <tr key={sale.id}>
+                            <td>{sale.sellerName}</td>
+                            <td>{sale.fruitType}</td>
+                            <td>{sale.quantitySold}</td>
+                            <td>{formatCurrency(sale.revenue)}</td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDelete(sale.id)}
+                                title="Delete sale"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-4">
+              {sales.length === 0 ? 'No sales records found' : 'No matching sales found'}
+            </div>
+          )}
         </div>
       </div>
     </div>

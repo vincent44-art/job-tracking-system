@@ -3,6 +3,7 @@ from flask import Flask, jsonify, send_from_directory
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -26,6 +27,7 @@ FRONTEND_BUILD_DIR = os.path.join(os.getcwd(), 'Frontend', 'build')
 jwt = JWTManager()
 cors = CORS()
 migrate = Migrate()
+socketio = SocketIO()
 
 def create_app(config_class=Config):
     from backend.resources.salaries import SalaryPaymentsResource
@@ -63,6 +65,10 @@ def create_app(config_class=Config):
     )
 
     migrate.init_app(app, db)
+    socketio.init_app(app, cors_allowed_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ])
 
     # JWT error handlers
     @jwt.expired_token_loader
@@ -98,6 +104,16 @@ def create_app(config_class=Config):
     api.add_resource(CarExpensesResource, '/api/car-expenses', '/api/car-expenses/<int:expense_id>')
     from backend.resources.profile_image import ProfileImageUploadResource
     api.add_resource(ProfileImageUploadResource, '/api/profile-image')
+    from backend.resources.it_events import ITEventsResource, ITEventResource, ITAcknowledgeAlertsResource
+    api.add_resource(ITEventsResource, '/api/it/events')
+    api.add_resource(ITEventResource, '/api/it/events/<string:event_id>')
+    api.add_resource(ITAcknowledgeAlertsResource, '/api/it/alerts/acknowledge')
+    from backend.resources.it_alerts import ITIncidentsResource
+    api.add_resource(ITIncidentsResource, '/api/it/incidents')
+    from backend.resources.sales import DailySalesReportResource
+    from backend.resources.purchases import DailyPurchasesReportResource
+    api.add_resource(DailySalesReportResource, '/api/sales/report/<string:date_str>')
+    api.add_resource(DailyPurchasesReportResource, '/api/purchases/report/<string:date_str>')
 
     # Health Check
     @app.route('/api/health')
@@ -143,4 +159,4 @@ app = create_app()
 
 # Local Development
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)

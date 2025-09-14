@@ -1,7 +1,4 @@
 import React, { useState } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { autoTable } from 'jspdf-autotable';
 
 function generateReceiptNumber() {
   // TTL yyyyMMdd-NNN random receipt num
@@ -61,57 +58,47 @@ export default function SaleReceiptForm() {
     setSubmittedData({ seller, buyer, receiptNum, date, payment, items, subtotal: getSubtotal(), discount, finalTotal: getFinalTotal() });
   }
 
-  function downloadPDF() {
-    const doc = new jsPDF();
-    // Add logo if available
-    const addLogoAndContinue = (logoBase64) => {
-      if (logoBase64) {
-        doc.addImage(logoBase64, 'JPEG', 10, 10, 40, 20);
-      }
-      doc.setFontSize(16);
-      doc.text(seller.name || 'Business Name', 60, 18);
-      doc.setFontSize(10);
-      doc.text(`Address: ${seller.address || 'N/A'}`, 60, 24);
-      doc.text(`Phone: ${seller.phone || 'N/A'}`, 60, 30);
-      doc.text(`Receipt #: ${receiptNum}`, 150, 15);
-      doc.text(`Date: ${date}`, 150, 22);
-      doc.text(`Buyer: ${buyer.name || 'N/A'}`, 10, 38);
-      doc.text(`Contact: ${buyer.contact || 'N/A'}`, 10, 43);
-      doc.text(`Payment: ${payment}`, 150, 28);
-      autoTable(doc, {
-        startY: 48,
-        head: [[
-          'Fruit Name',
-          'Quantity',
-          'Unit Price',
-          'Total'
-        ]],
-        body: items
-          .filter(i => i.fruit && i.quantity && i.unitPrice)
-          .map(i => [i.fruit, i.quantity, i.unitPrice, i.total]),
-        styles: { fontSize: 11 },
-      });
-      let finalY = doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : 58;
-      doc.text(`Subtotal: KES ${getSubtotal().toLocaleString()}`, 10, finalY + 10);
-      doc.text(`TOTAL: KES ${getFinalTotal().toLocaleString()}`, 10, finalY + 16);
-      doc.setFontSize(14);
-      doc.text('Thank You for Your Business!', 10, finalY + 30);
-      doc.save(`Receipt_${receiptNum}.pdf`);
-    };
-    // Async logo load
-    const logoUrl = '/logo.jpeg';
-    fetch(logoUrl)
-      .then(response => response.ok ? response.blob() : null)
-      .then(blob => {
-        if (!blob) return null;
-        return new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      })
-      .then(addLogoAndContinue)
-      .catch(() => addLogoAndContinue(null));
+  function downloadReceipt() {
+    let receiptText = '';
+
+    // Header
+    receiptText += `${seller.name || 'Business Name'}\n`;
+    receiptText += `${seller.address || 'N/A'} | ${seller.phone || 'N/A'}\n`;
+    receiptText += `Receipt #: ${receiptNum}\n`;
+    receiptText += `Date: ${date}\n`;
+    receiptText += `Payment: ${payment}\n`;
+    receiptText += `Buyer: ${buyer.name || 'N/A'}`;
+    if (buyer.contact) receiptText += ` | ${buyer.contact}`;
+    receiptText += '\n\n';
+
+    // Items header
+    receiptText += 'Fruit Name     Qty   Unit Price   Total\n';
+    receiptText += '--------------------------------------\n';
+
+    // Items
+    items.filter(i => i.fruit && i.quantity && i.unitPrice).forEach(i => {
+      const fruit = i.fruit.padEnd(15);
+      const qty = i.quantity.toString().padStart(5);
+      const unitPrice = parseFloat(i.unitPrice).toLocaleString().padStart(10);
+      const total = parseFloat(i.total).toLocaleString().padStart(8);
+      receiptText += `${fruit}${qty}${unitPrice}${total}\n`;
+    });
+
+    receiptText += '\n';
+    receiptText += `Subtotal: KES ${getSubtotal().toLocaleString()}\n`;
+    receiptText += `TOTAL: KES ${getFinalTotal().toLocaleString()}\n\n`;
+    receiptText += 'Thank You for Your Business!\n';
+
+    // Create blob and download
+    const blob = new Blob([receiptText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Receipt_${receiptNum}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -221,7 +208,7 @@ export default function SaleReceiptForm() {
               Thank You for Your Business!
             </div>
             <div className="text-center mt-2">
-              <button className="btn btn-outline-primary" onClick={downloadPDF}>Download PDF</button>
+              <button className="btn btn-outline-primary" onClick={downloadReceipt}>Download Receipt</button>
             </div>
           </div>
         </div>)}

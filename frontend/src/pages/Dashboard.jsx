@@ -18,7 +18,7 @@ import ClearDataModal from '../components/ClearDataModal';
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const { data, error, loading, refetch } = useDashboardData(); // Added refetch for refresh
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('purchases');
   const [showClearModal, setShowClearModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -66,20 +66,22 @@ const Dashboard = () => {
     }
 
     switch (activeTab) {
-      case 'overview':
-        console.log('Dashboard overview data:', data);
-        return (
-          <>
-            {data && <StatsCards stats={data.stats} />}
-            <PerformanceOverview data={data} />
-          </>
-        );
+      // Removed Overview tab content as requested
+      // case 'overview':
+      //   console.log('Dashboard overview data:', data);
+      //   return (
+      //     <>
+      //       {data && <StatsCards stats={data.stats} />}
+      //       <PerformanceOverview data={data} />
+      //     </>
+      //   );
       case 'purchases':
         return <PurchasesTab data={data?.purchases} />;
       case 'sales':
         return <SalesTab data={data?.sales} />;
-      case 'inventory':
-        return <InventoryTab data={data?.inventory} />;
+      // Removed Inventory tab content as requested
+      // case 'inventory':
+      //   return <InventoryTab data={data?.inventory} />;
       case 'stock-tracker':
         return <StockTrackerTab />;
       case 'reports':
@@ -126,10 +128,12 @@ const Dashboard = () => {
   }
 
   const tabs = [
-    { id: 'overview', icon: 'bi-graph-up', label: 'Overview' },
+    // Removed Overview tab as requested
+    // { id: 'overview', icon: 'bi-graph-up', label: 'Overview' },
     { id: 'purchases', icon: 'bi-cart-plus', label: 'Purchases' },
     { id: 'sales', icon: 'bi-currency-dollar', label: 'Sales' },
-    { id: 'inventory', icon: 'bi-boxes', label: 'Inventory' },
+    // Removed Inventory tab as requested
+    // { id: 'inventory', icon: 'bi-boxes', label: 'Inventory' },
     { id: 'stock-tracker', icon: 'bi-bar-chart-line', label: 'Stock Tracker' },
     { id: 'reports', icon: 'bi-file-earmark-text', label: 'Reports' },
     { id: 'salaries', icon: 'bi-cash', label: 'Salaries' },

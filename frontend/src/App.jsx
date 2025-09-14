@@ -8,6 +8,7 @@ import PurchaserDashboard from './pages/PurchaserDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import StoreKeeperDashboard from './pages/StoreKeeperDashboard';
+import ITActivityDashboard from './pages/ITActivityDashboard';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './index.css';
@@ -86,6 +87,14 @@ const AppContent = () => {
           <Route path="/" element={<StoreKeeperDashboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<StoreKeeperDashboard />} />
+        </Routes>
+      );
+    } else if (user.role === 'it' || user.role === 'admin') {
+      return (
+        <Routes>
+          <Route path="/" element={<ITActivityDashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<ITActivityDashboard />} />
         </Routes>
       );
     }
