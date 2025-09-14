@@ -5,4 +5,4 @@
 - [x] Format the receipt content as plain text mimicking a thermal receipt.
 - [x] Update the download to save as a .txt file using a blob.
 - [x] Change the button text from "Download PDF" to "Download Receipt".
-- [ ] Test the download functionality.
+- [x] Test the download functionality.

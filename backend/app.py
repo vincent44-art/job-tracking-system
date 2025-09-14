@@ -112,8 +112,12 @@ def create_app(config_class=Config):
     api.add_resource(ITIncidentsResource, '/api/it/incidents')
     from backend.resources.sales import DailySalesReportResource
     from backend.resources.purchases import DailyPurchasesReportResource
+    from backend.resources.ai_assistance import AIAssistanceResource
+    from backend.resources.receipts import ReceiptResource
     api.add_resource(DailySalesReportResource, '/api/sales/report/<string:date_str>')
     api.add_resource(DailyPurchasesReportResource, '/api/purchases/report/<string:date_str>')
+    api.add_resource(AIAssistanceResource, '/api/ai-assistance')
+    api.add_resource(ReceiptResource, '/api/receipts', '/api/receipts/<string:receipt_num>')
 
     # Health Check
     @app.route('/api/health')
@@ -129,6 +133,11 @@ def create_app(config_class=Config):
             'headers': dict(request.headers),
             'message': 'CORS test route',
         })
+
+    # Serve logo
+    @app.route('/logo/<path:filename>')
+    def serve_logo(filename):
+        return send_from_directory(os.path.join(os.getcwd(), 'logo'), filename)
 
     # Serve React frontend for all non-API routes
     @app.route('/', defaults={'path': ''})

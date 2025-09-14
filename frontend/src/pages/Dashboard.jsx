@@ -8,10 +8,11 @@ import CarExpensesTab from '../components/CarExpensesTab';
 import OtherExpensesTab from '../components/OtherExpensesTab';
 import UserManagementTab from '../components/UserManagementTab';
 import SalaryManagementTab from '../components/SalaryManagementTab';
-import InventoryTab from '../components/InventoryTab';
+
 import StockTrackerTab from '../components/StockTrackerTab';
 import ReportsTab from '../components/ReportsTab';
 import PerformanceOverview from '../components/PerformanceOverview';
+import AIAssistanceTab from '../components/AIAssistanceTab';
 // CeoMessagePanel removed
 import ClearDataModal from '../components/ClearDataModal';
 
@@ -94,6 +95,8 @@ const Dashboard = () => {
         return <OtherExpensesTab data={data?.otherExpenses} />;
       case 'users':
         return <UserManagementTab data={data?.users} />;
+      case 'ai-assistance':
+        return <AIAssistanceTab />;
       default:
         return (
           <>
@@ -139,7 +142,8 @@ const Dashboard = () => {
     { id: 'salaries', icon: 'bi-cash', label: 'Salaries' },
     { id: 'car-expenses', icon: 'bi-car-front', label: 'Car Expenses' },
     { id: 'other-expenses', icon: 'bi-receipt', label: 'Other Expenses' },
-    { id: 'users', icon: 'bi-people', label: 'Users' }
+    { id: 'users', icon: 'bi-people', label: 'Users' },
+    { id: 'ai-assistance', icon: 'bi-robot', label: 'AI Assistance' }
   ];
 
   return (
