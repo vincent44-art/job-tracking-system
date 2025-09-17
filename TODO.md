@@ -1,8 +1,5 @@
-# TODO: Change Receipt Download to Text Format
+# TODO: Delete Sale History Table in Sellers Dashboard
 
-## Tasks
-- [x] Modify `downloadPDF` function in `SaleReceiptForm.jsx` to `downloadReceipt` and change it to generate a text-based receipt instead of PDF.
-- [x] Format the receipt content as plain text mimicking a thermal receipt.
-- [x] Update the download to save as a .txt file using a blob.
-- [x] Change the button text from "Download PDF" to "Download Receipt".
-- [x] Test the download functionality.
+- [x] Remove the sales table block from SellerDashboard.jsx (the table-responsive div with the sales table)
+- [x] Remove the SalesSummary component usage from SellerDashboard.jsx
+- [x] Remove the import for SalesSummary from SellerDashboard.jsx

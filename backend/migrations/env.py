@@ -50,7 +50,7 @@ def get_engine_url():
 
 
 # For autogenerate support, import your models and set target_metadata
-from backend.models import stock_tracking, assignment, inventory, other_expense, driver, gradient, purchases, salary, sales, message, stock_movement, user
+from backend.models import stock_tracking, assignment, inventory, other_expense, driver, gradient, purchases, salary, sales, message, stock_movement, user, seller_fruit
 from backend.extensions import db
 
 target_metadata = db.metadata

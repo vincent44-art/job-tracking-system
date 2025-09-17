@@ -4,8 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import SaleForm from '../components/seller/SaleForm';
 import SaleReceiptForm from '../components/SaleReceiptForm';
 import SalesTableHeader from '../components/seller/SalesTableHeader';
-import SalesSummary from '../components/seller/SalesSummary';
+import SellerFruitsForm from '../components/seller/SellerFruitsForm';
 import { fetchStockTracking } from '../api/stockTracking';
+import { fetchSellerFruits, deleteSellerFruit } from '../api/sellerFruits';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -88,6 +89,9 @@ const SellerDashboard = () => {
   const [error, setError] = useState(null);
   const [stockRecords, setStockRecords] = useState([]);
   const [sellerSales, setSellerSales] = useState([]);
+  const [sellerFruits, setSellerFruits] = useState([]);
+  const [showSellerFruitsForm, setShowSellerFruitsForm] = useState(false);
+  const [editingFruit, setEditingFruit] = useState(null);
 
   const [formData, setFormData] = useState({
     assignmentId: '',
@@ -110,7 +114,7 @@ const SellerDashboard = () => {
 
         // Load stock tracking records and keep only those that are stocked out
         const token = localStorage.getItem('access_token');
-        if (token) {
+      if (token) {
           const stockRes = await fetchStockTracking(token);
           const outRecords = (stockRes.data || []).filter(r => r.dateOut);
           setStockRecords(outRecords);
@@ -126,6 +130,10 @@ const SellerDashboard = () => {
           } else {
             setSellerSales([]);
           }
+
+          // Load seller fruits for table display
+          const fruits = await fetchSellerFruits();
+          setSellerFruits(Array.isArray(fruits) ? fruits : []);
         } else {
           console.warn('Missing access_token; skipping stock-tracking and sales fetch');
         }
@@ -239,6 +247,65 @@ const SellerDashboard = () => {
         theme: 'plain',
       });
       doc.save(`sales_receipt_${stockName.replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      alert('Failed to generate PDF. Please try again.');
+      console.error('PDF generation error:', err);
+    } finally {
+      setPdfLoading(null);
+    }
+  };
+
+  const downloadSellerFruitsPDF = async (stockName, items) => {
+    setPdfLoading(stockName);
+    try {
+      const doc = new jsPDF();
+      // Always load logo as Base64
+      const logoUrl = '/logo.jpeg';
+      const getBase64FromUrl = async (url) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error('Logo not found');
+          const blob = await response.blob();
+          return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.warn('Logo could not be loaded:', err);
+          return null;
+        }
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'JPEG', 10, 10, 40, 20);
+      }
+      doc.setFontSize(18);
+      doc.text('Seller Fruits Report', 60, 18);
+      doc.setFontSize(12);
+      doc.text(`Stock: ${stockName}`, 60, 28);
+      // Table
+      autoTable(doc, {
+        head: [["Fruit Name", "Quantity", "Unit Price", "Date", "Amount"]],
+        body: items.map((r) => [
+          r.fruit,
+          r.qty,
+          formatKenyanCurrency(r.unitPrice),
+          formatDateCell(r.date),
+          formatKenyanCurrency(r.amount),
+        ]),
+        startY: 35,
+        styles: { fontSize: 11 },
+      });
+      const totalAmount = items.reduce((s, r) => s + (r.amount || 0), 0);
+      autoTable(doc, {
+        head: [["", "", "", "Total", formatKenyanCurrency(totalAmount)]],
+        body: [],
+        startY: (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 5 : 50,
+        styles: { fontStyle: 'bold', fontSize: 12 },
+        theme: 'plain',
+      });
+      doc.save(`seller_fruits_${stockName.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       alert('Failed to generate PDF. Please try again.');
       console.error('PDF generation error:', err);
@@ -369,6 +436,45 @@ const SellerDashboard = () => {
     }
   };
 
+  const handleAddSellerFruit = () => {
+    setEditingFruit(null);
+    setShowSellerFruitsForm(true);
+  };
+
+  const handleEditSellerFruit = (fruit) => {
+    setEditingFruit(fruit);
+    setShowSellerFruitsForm(true);
+  };
+
+  const handleDeleteSellerFruit = async (fruitId) => {
+    if (window.confirm('Are you sure you want to delete this seller fruit record?')) {
+      try {
+        await deleteSellerFruit(fruitId);
+        setSellerFruits(prev => prev.filter(fruit => fruit.id !== fruitId));
+      } catch (err) {
+        setError('Failed to delete seller fruit. Please try again.');
+        console.error('Error deleting seller fruit:', err);
+      }
+    }
+  };
+
+  const handleSellerFruitSave = async () => {
+    try {
+      const fruits = await fetchSellerFruits();
+      setSellerFruits(Array.isArray(fruits) ? fruits : []);
+      setShowSellerFruitsForm(false);
+      setEditingFruit(null);
+    } catch (err) {
+      setError('Failed to refresh seller fruits data.');
+      console.error('Error refreshing seller fruits:', err);
+    }
+  };
+
+  const handleSellerFruitCancel = () => {
+    setShowSellerFruitsForm(false);
+    setEditingFruit(null);
+  };
+
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-end mb-3">
@@ -388,16 +494,7 @@ const SellerDashboard = () => {
           {/* Sale Receipt Form below */}
           <SaleReceiptForm />
           <hr />
-          {/* Existing Simple SaleForm still available if needed */}
-          <SaleForm
-            formData={formData}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            userAssignments={userAssignments}
-            user={user}
-            loading={loading}
-            stockRecords={stockRecords}
-          />
+          {/* SaleForm removed */}
         </div>
 
         <div className="col-md-6">
@@ -416,73 +513,91 @@ const SellerDashboard = () => {
                 </div>
               ) : (
                 <>
-                  {/* New Seller Sales Table */}
-                  <div className="table-responsive">
-                    <table className="table table-striped table-hover align-middle">
-                      <thead className="table-dark">
-                        <tr>
-                          <th>Stock Name</th>
-                          <th>Date</th>
-                          <th>Fruit</th>
-                          <th>Qty</th>
-                          <th>Qty per Unit</th>
-                          <th>Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Array.from(groupedByStock.entries()).length === 0 ? (
-                          <tr>
-                            <td colSpan="6" className="text-center text-muted py-4">
-                              <i className="bi bi-inbox display-4 d-block mb-2"></i>
-                              No sales recorded yet
-                            </td>
-                          </tr>
-                        ) : (
-                          Array.from(groupedByStock.entries()).map(([stockName, items]) => {
-                            const totalQty = items.reduce((s, r) => s + (isNaN(r.qty) ? 0 : r.qty), 0);
-                            const totalAmount = items.reduce((s, r) => s + (r.amount || 0), 0);
-                            return (
-                              <React.Fragment key={stockName}>
-                                <tr>
-                                  <td colSpan={6} className="bg-light fw-bold">
-                                    {stockName}
-                                    <button
-                                      className="btn btn-sm btn-outline-primary ms-2"
-                                      onClick={async (e) => { e.preventDefault(); await downloadPDF(stockName, items); }}
-                                      disabled={pdfLoading === stockName}
-                                    >
-                                      {pdfLoading === stockName ? 'Generating PDF...' : 'Download PDF'}
-                                    </button>
-                                  </td>
-                                </tr>
-                                {items.map((r, idx) => (
-                                  <tr key={`${stockName}-${idx}`}>
-                                    <td>{r.stockName}</td>
-                                    <td>{formatDateCell(r.date)}</td>
-                                    <td><span className="badge bg-primary">{r.fruit}</span></td>
-                                    <td>{isNaN(r.qty) ? '' : r.qty}</td>
-                                    <td>{r.unitPrice != null && !isNaN(r.unitPrice) ? formatKenyanCurrency(r.unitPrice) : '-'}</td>
-                                    <td className="fw-bold text-success">{formatKenyanCurrency(r.amount || 0)}</td>
-                                  </tr>
-                                ))}
-                                <tr>
-                                  <td colSpan={3} className="text-end fw-bold">Total Sold</td>
-                                  <td className="fw-bold">{totalQty}</td>
-                                  <td></td>
-                                  <td className="fw-bold text-success">{formatKenyanCurrency(totalAmount)}</td>
-                                </tr>
-                                <tr><td colSpan={6} style={{ background: '#f8f9fa' }}></td></tr>
-                              </React.Fragment>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
+
+                  {/* Seller Fruits Table */}
+                  <div className="card mt-4 shadow-sm">
+                    <div className="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                      <h5 className="mb-0">Seller Fruits Table</h5>
+                      <button
+                        className="btn btn-light btn-sm"
+                        onClick={handleAddSellerFruit}
+                      >
+                        <i className="bi bi-plus-circle me-1"></i>
+                        Add Fruit
+                      </button>
+                    </div>
+                    <div className="card-body table-responsive">
+                      <table className="table table-striped table-hover align-middle">
+                          <thead className="table-dark">
+                            <tr>
+                              <th>Stock Name</th>
+                              <th>Fruit Name</th>
+                              <th>Quantity</th>
+                              <th>Unit Price</th>
+                              <th>Date</th>
+                              <th>Amount</th>
+                              <th>Total Sold</th>
+                              <th>Download PDF</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sellerFruits.length === 0 ? (
+                              <tr>
+                                <td colSpan="8" className="text-center text-muted py-4">
+                                  No seller fruits data available
+                                </td>
+                              </tr>
+                            ) : (
+                              Array.from(groupedByStock.entries()).map(([stockName, items]) => {
+                                const totalSold = items.reduce((sum, item) => sum + (item.qty || 0), 0);
+                                const totalAmount = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+                                return (
+                                  <React.Fragment key={stockName}>
+                                    {items.map((fruit, index) => (
+                                      <tr key={fruit.id || index}>
+                                        {index === 0 && (
+                                          <td rowSpan={items.length}>{stockName}</td>
+                                        )}
+                                        <td>{fruit.fruit}</td>
+                                        <td>{fruit.qty}</td>
+                                        <td>{formatKenyanCurrency(fruit.unitPrice)}</td>
+                                        <td>{formatDateCell(fruit.date)}</td>
+                                        <td>{formatKenyanCurrency(fruit.amount)}</td>
+                                        {index === 0 && (
+                                          <>
+                                            <td rowSpan={items.length}>{totalSold}</td>
+                                            <td rowSpan={items.length}>
+                                              <button
+                                                className="btn btn-sm btn-outline-primary"
+                                                onClick={() => downloadSellerFruitsPDF(stockName, items)}
+                                                disabled={pdfLoading === stockName}
+                                              >
+                                                {pdfLoading === stockName ? 'Generating...' : 'Download PDF'}
+                                              </button>
+                                            </td>
+                                          </>
+                                        )}
+                                      </tr>
+                                    ))}
+                                  </React.Fragment>
+                                );
+                              })
+                            )}
+                          </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <SalesSummary
-                    userSales={sellerSales}
-                    formatKenyanCurrency={formatKenyanCurrency}
-                  />
+
+                  {/* Seller Fruits Form Modal */}
+                  {showSellerFruitsForm && (
+                    <div className="mt-4">
+                      <SellerFruitsForm
+                        fruit={editingFruit}
+                        onSave={handleSellerFruitSave}
+                        onCancel={handleSellerFruitCancel}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>

@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../api/api';
+import { createSellerFruit } from '../api/sellerFruits';
+import { fetchStockTracking } from '../api/stockTracking';
 
 function generateReceiptNumber() {
   // TTL yyyyMMdd-NNN random receipt num
@@ -26,6 +29,25 @@ export default function SaleReceiptForm() {
   const [tax, setTax] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
   const [submittedData, setSubmittedData] = useState(null);
+  const [stockRecords, setStockRecords] = useState([]);
+  const [selectedStockName, setSelectedStockName] = useState('');
+  const [showStockSelection, setShowStockSelection] = useState(false);
+
+  useEffect(() => {
+    const loadStockRecords = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          const stockRes = await fetchStockTracking(token);
+          const outRecords = (stockRes.data || []).filter(r => r.dateOut);
+          setStockRecords(outRecords);
+        }
+      } catch (err) {
+        console.error('Error loading stock records:', err);
+      }
+    };
+    loadStockRecords();
+  }, []);
 
   function handleItemChange(idx, field, value) {
     const newItems = items.map((item, i) =>
@@ -70,7 +92,10 @@ export default function SaleReceiptForm() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    setSubmittedData({ seller, buyer, receiptNum, date, payment, items, subtotal: getSubtotal(), tax, taxAmount: getTaxAmount(), discount, finalTotal: getFinalTotal(), amountReceived, balance: getBalance() });
+    const data = { seller, buyer, receiptNum, date, payment, items, subtotal: getSubtotal(), tax, taxAmount: getTaxAmount(), discount, finalTotal: getFinalTotal(), amountReceived, balance: getBalance() };
+    setSubmittedData(data);
+    // Save to backend
+    api.post('/receipts', data).catch(err => console.error('Failed to save receipt:', err));
   }
 
   function downloadReceipt() {
@@ -236,6 +261,52 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
       });
   }
 
+  const handleAddToTable = () => {
+    setShowStockSelection(true);
+  };
+
+  const handleStockSelection = async () => {
+    if (!selectedStockName || !submittedData) return;
+
+    try {
+      // Add each item from the receipt to the seller_fruits table
+      for (const item of submittedData.items.filter(i => i.fruit && i.quantity && i.unitPrice)) {
+        await createSellerFruit({
+          fruit_name: item.fruit,
+          qty: parseFloat(item.quantity),
+          unit_price: parseFloat(item.unitPrice),
+          date: submittedData.date,
+          amount: parseFloat(item.total)
+        });
+      }
+      alert('Items added to seller fruits table successfully!');
+      setShowStockSelection(false);
+      setSelectedStockName('');
+      // Optionally refresh the seller fruits table in parent component
+      if (window.location.reload) {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Error adding to seller fruits table:', err);
+      alert('Failed to add items to table. Please try again.');
+    }
+  };
+
+  function handleSaveToTable() {
+    // Save each item in the receipt to the seller fruits table
+    items.filter(i => i.fruit && i.quantity && i.unitPrice).forEach(async (i) => {
+      await createSellerFruit({
+        stock_name: selectedStockName || '',
+        fruit_name: i.fruit,
+        qty: parseFloat(i.quantity),
+        unit_price: parseFloat(i.unitPrice),
+        date: date,
+        amount: parseFloat(i.total)
+      });
+    });
+    alert('Receipt items saved to seller fruits table!');
+  }
+
   return (
     <div className="card shadow-lg border-0 bg-light">
       <div className="card-header bg-primary text-white"><h4>New Sale Receipt</h4></div>
@@ -353,13 +424,45 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
               Thank You for Your Business!
             </div>
             <div className="text-center mt-2">
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${submittedData.receiptNum}`} alt="QR Code" style={{ margin: '10px' }} />
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/receipt/' + submittedData.receiptNum)}`} alt="QR Code" style={{ margin: '10px' }} />
             </div>
             <div className="text-center mt-2">
               <button className="btn btn-outline-primary" onClick={downloadReceipt}>Download Receipt</button>
+              <button className="btn btn-outline-success ms-2" onClick={handleSaveToTable}>Save to Table</button>
             </div>
+            {showStockSelection && (
+              <div className="mt-3 p-3 border rounded bg-light">
+                <h6>Select Stock Name:</h6>
+                <select
+                  className="form-select mb-2"
+                  value={selectedStockName}
+                  onChange={(e) => setSelectedStockName(e.target.value)}
+                >
+                  <option value="">Choose a stock name...</option>
+                  {stockRecords.map((stock) => (
+                    <option key={stock.id} value={stock.stockName || stock.fruitType}>
+                      {stock.stockName || stock.fruitType}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="btn btn-primary btn-sm me-2"
+                  onClick={handleStockSelection}
+                  disabled={!selectedStockName}
+                >
+                  Confirm Add to Table
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowStockSelection(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         </div>)}
     </div>
   );
 }
+

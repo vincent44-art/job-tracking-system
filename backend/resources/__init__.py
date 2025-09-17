@@ -22,6 +22,7 @@ from flask_restful import Resource
 from .clear_all import ClearAllDataResource
 from .stock_tracking import StockTrackingListResource, ClearStockTrackingResource
 from .profile_image import ProfileImageUploadResource
+from .seller_fruits import SellerFruitListResource, SellerFruitResource
 
 class CurrentStockResource(Resource):
     def get(self):
@@ -106,6 +107,10 @@ api.add_resource(ClearAllDataResource, '/clear-all')
 # ----------- STOCK TRACKING -----------
 api.add_resource(StockTrackingListResource, '/stock-tracking')
 api.add_resource(ClearStockTrackingResource, '/stock-tracking/clear')
+
+# ----------- SELLER FRUITS -----------
+api.add_resource(SellerFruitListResource, '/seller-fruits')
+api.add_resource(SellerFruitResource, '/seller-fruits/<int:fruit_id>')
 
 # ----------- EXTRA ROUTES (from purchases.py) -----------
 # This ensures /api/purchases/<email> and /api/ceo/messages work

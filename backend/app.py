@@ -114,10 +114,15 @@ def create_app(config_class=Config):
     from backend.resources.purchases import DailyPurchasesReportResource
     from backend.resources.ai_assistance import AIAssistanceResource
     from backend.resources.receipts import ReceiptResource
+    from backend.resources.seller_fruits import SellerFruitListResource, SellerFruitResource
+    from backend.resources.seller_fruits_bulk import SellerFruitBulkResource
     api.add_resource(DailySalesReportResource, '/api/sales/report/<string:date_str>')
     api.add_resource(DailyPurchasesReportResource, '/api/purchases/report/<string:date_str>')
     api.add_resource(AIAssistanceResource, '/api/ai-assistance')
     api.add_resource(ReceiptResource, '/api/receipts', '/api/receipts/<string:receipt_num>')
+    api.add_resource(SellerFruitListResource, '/api/seller-fruits')
+    api.add_resource(SellerFruitResource, '/api/seller-fruits/<int:fruit_id>')
+    api.add_resource(SellerFruitBulkResource, '/api/seller-fruits/bulk')
 
     # Health Check
     @app.route('/api/health')
