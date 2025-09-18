@@ -11,6 +11,11 @@ class SellerFruitListResource(Resource):
 
     def post(self):
         data = request.get_json()
+
+        # Log incoming data for debugging
+        print(f"Received POST data: {data}")
+
+        # Extract fields
         stock_name = data.get('stock_name')
         fruit_name = data.get('fruit_name')
         qty = data.get('qty')
@@ -18,14 +23,67 @@ class SellerFruitListResource(Resource):
         date_str = data.get('date')
         amount = data.get('amount')
 
-        if not all([stock_name, fruit_name, qty, unit_price, date_str, amount]):
-            return {"message": "Missing required fields"}, 400
+        # Check for missing fields
+        missing_fields = []
+        if not stock_name:
+            missing_fields.append('stock_name')
+        if not fruit_name:
+            missing_fields.append('fruit_name')
+        if qty is None:
+            missing_fields.append('qty')
+        if unit_price is None:
+            missing_fields.append('unit_price')
+        if not date_str:
+            missing_fields.append('date')
+        if amount is None:
+            missing_fields.append('amount')
+
+        if missing_fields:
+            error_message = f"Missing required fields: {', '.join(missing_fields)}"
+            print(error_message)
+            return {"message": error_message}, 400
+
+        # Validate numeric fields
+        try:
+            qty = float(qty)
+            if qty <= 0:
+                error_message = "Quantity must be a positive number"
+                print(error_message)
+                return {"message": error_message}, 400
+        except (ValueError, TypeError):
+            error_message = "Quantity must be a valid number"
+            print(error_message)
+            return {"message": error_message}, 400
+
+        try:
+            unit_price = float(unit_price)
+            if unit_price <= 0:
+                error_message = "Unit price must be a positive number"
+                print(error_message)
+                return {"message": error_message}, 400
+        except (ValueError, TypeError):
+            error_message = "Unit price must be a valid number"
+            print(error_message)
+            return {"message": error_message}, 400
+
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                error_message = "Amount must be a positive number"
+                print(error_message)
+                return {"message": error_message}, 400
+        except (ValueError, TypeError):
+            error_message = "Amount must be a valid number"
+            print(error_message)
+            return {"message": error_message}, 400
 
         # Convert date string to date object
         try:
             date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
-            return {"message": "Invalid date format. Use YYYY-MM-DD"}, 400
+            error_message = "Invalid date format. Use YYYY-MM-DD"
+            print(error_message)
+            return {"message": error_message}, 400
 
         new_fruit = SellerFruit(
             stock_name=stock_name,

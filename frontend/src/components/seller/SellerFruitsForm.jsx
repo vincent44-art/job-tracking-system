@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createSellerFruit, updateSellerFruit } from '../../api/sellerFruits';
 
-const SellerFruitsForm = ({ fruit, onSave, onCancel }) => {
+const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     stock_name: '',
     fruit_name: '',
@@ -23,8 +23,17 @@ const SellerFruitsForm = ({ fruit, onSave, onCancel }) => {
         date: fruit.date ? new Date(fruit.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         amount: fruit.amount || ''
       });
+    } else if (initialData) {
+      setFormData({
+        stock_name: initialData.stock_name || '',
+        fruit_name: initialData.fruit_name || '',
+        qty: initialData.qty || '',
+        unit_price: initialData.unit_price || '',
+        date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        amount: initialData.amount || ''
+      });
     }
-  }, [fruit]);
+  }, [fruit, initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

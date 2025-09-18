@@ -17,7 +17,7 @@ const initialItem = { fruit: '', quantity: '', unitPrice: '', total: 0 };
 
 const paymentMethods = ['Cash', 'M-Pesa', 'Bank Transfer', 'Cheque', 'Other'];
 
-export default function SaleReceiptForm() {
+export default function SaleReceiptForm({ onSellerFruitsAdded }) {
   const today = new Date().toISOString().slice(0, 10);
   const [seller, setSeller] = useState({ name: 'Rymat Fruit Company', address: 'Rymat Fruit Company', phone: '' });
   const [buyer, setBuyer] = useState({ name: '', contact: '' });
@@ -261,17 +261,23 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
       });
   }
 
-  const handleAddToTable = () => {
-    setShowStockSelection(true);
-  };
+  // Removed unused showSelectStockButton, handleAddToTableAndShowSelectStock, and handleStockSelection
 
-  const handleStockSelection = async () => {
-    if (!selectedStockName || !submittedData) return;
-
+  // Save to seller fruits table only after stock name is selected
+  const handleSaveToTable = async () => {
+    if (!selectedStockName) {
+      alert('Please select a stock name before saving to table.');
+      setShowStockSelection(true);
+      return;
+    }
+    if (!submittedData) {
+      alert('Please preview the receipt first.');
+      return;
+    }
     try {
-      // Add each item from the receipt to the seller_fruits table
       for (const item of submittedData.items.filter(i => i.fruit && i.quantity && i.unitPrice)) {
         await createSellerFruit({
+          stock_name: selectedStockName,
           fruit_name: item.fruit,
           qty: parseFloat(item.quantity),
           unit_price: parseFloat(item.unitPrice),
@@ -282,30 +288,15 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
       alert('Items added to seller fruits table successfully!');
       setShowStockSelection(false);
       setSelectedStockName('');
-      // Optionally refresh the seller fruits table in parent component
-      if (window.location.reload) {
-        window.location.reload();
+      // Call parent callback to refresh table
+      if (typeof onSellerFruitsAdded === 'function') {
+        onSellerFruitsAdded();
       }
     } catch (err) {
       console.error('Error adding to seller fruits table:', err);
       alert('Failed to add items to table. Please try again.');
     }
   };
-
-  function handleSaveToTable() {
-    // Save each item in the receipt to the seller fruits table
-    items.filter(i => i.fruit && i.quantity && i.unitPrice).forEach(async (i) => {
-      await createSellerFruit({
-        stock_name: selectedStockName || '',
-        fruit_name: i.fruit,
-        qty: parseFloat(i.quantity),
-        unit_price: parseFloat(i.unitPrice),
-        date: date,
-        amount: parseFloat(i.total)
-      });
-    });
-    alert('Receipt items saved to seller fruits table!');
-  }
 
   return (
     <div className="card shadow-lg border-0 bg-light">
@@ -447,10 +438,10 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
                 </select>
                 <button
                   className="btn btn-primary btn-sm me-2"
-                  onClick={handleStockSelection}
+                  onClick={handleSaveToTable}
                   disabled={!selectedStockName}
                 >
-                  Confirm Add to Table
+                  Confirm Save to Table
                 </button>
                 <button
                   className="btn btn-secondary btn-sm"
@@ -461,7 +452,8 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
               </div>
             )}
           </div>
-        </div>)}
+        </div>
+      )}
     </div>
   );
 }

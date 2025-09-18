@@ -20,6 +20,7 @@ class SellerFruitsTestCase(unittest.TestCase):
 
     def test_create_seller_fruit(self):
         data = {
+            'stock_name': 'TestStock',
             'fruit_name': 'Apple',
             'qty': 10.5,
             'unit_price': 50.0,
@@ -34,6 +35,7 @@ class SellerFruitsTestCase(unittest.TestCase):
     def test_get_seller_fruits(self):
         # Create a test fruit
         fruit = SellerFruit(
+            stock_name='TestStock',
             fruit_name='Banana',
             qty=5.0,
             unit_price=30.0,
@@ -53,6 +55,7 @@ class SellerFruitsTestCase(unittest.TestCase):
     def test_update_seller_fruit(self):
         # Create a test fruit
         fruit = SellerFruit(
+            stock_name='TestStock',
             fruit_name='Orange',
             qty=8.0,
             unit_price=40.0,
@@ -65,6 +68,7 @@ class SellerFruitsTestCase(unittest.TestCase):
             fruit_id = fruit.id
 
         update_data = {
+            'stock_name': 'TestStock',
             'fruit_name': 'Orange Updated',
             'qty': 10.0,
             'unit_price': 45.0,
@@ -79,6 +83,7 @@ class SellerFruitsTestCase(unittest.TestCase):
     def test_delete_seller_fruit(self):
         # Create a test fruit
         fruit = SellerFruit(
+            stock_name='TestStock',
             fruit_name='Grape',
             qty=12.0,
             unit_price=60.0,
