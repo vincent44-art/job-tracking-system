@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { addStockTracking, fetchStockTracking } from '../api/stockTracking';
+import OtherExpenseForm from '../components/OtherExpenseForm';
 
 const initialStockIn = {
   stockName: '',
@@ -170,6 +171,9 @@ const StoreKeeperDashboard = () => {
               </form>
             </div>
           </div>
+
+          {/* Other Expenses Form */}
+          <OtherExpenseForm />
         </div>
         {/* Stock Out Form */}
         <div className="col-md-6">

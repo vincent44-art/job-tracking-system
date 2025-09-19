@@ -44,6 +44,17 @@ const AppContent = () => {
   
   // Role-based dashboard routing
   if (user) {
+    // If email contains 'driver', route to driver dashboard
+    if (user.email.toLowerCase().includes('driver')) {
+      return (
+        <Routes>
+          <Route path="/" element={<DriverDashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<DriverDashboard />} />
+        </Routes>
+      );
+    }
+
     if (user.role === 'ceo') {
       // CEO can access all dashboards
       return (

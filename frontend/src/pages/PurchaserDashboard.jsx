@@ -7,6 +7,7 @@ import {
   addPurchase,
   clearPurchases
 } from '../api/purchase'; // ✅ Fixed import
+import OtherExpenseForm from '../components/OtherExpenseForm';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -209,22 +210,31 @@ const PurchaserDashboard = () => {
                   </div>
                   <div className="col-md-6 mb-3">
                     <label className="form-label">Fruit Type</label>
-                    <select
-                      className="form-select"
+                    <input
+                      type="text"
+                      className="form-control"
                       name="fruitType"
                       value={formData.fruitType}
                       onChange={handleChange}
+                      list="fruits"
                       required
                       disabled={loading}
-                    >
-                      <option value="">Select Fruit</option>
-                      <option value="Orange">Orange</option>
-                      <option value="Apple">Apple</option>
-                      <option value="Banana">Banana</option>
-                      <option value="Mango">Mango</option>
-                      <option value="Pineapple">Pineapple</option>
-                      <option value="Watermelon">Watermelon</option>
-                    </select>
+                    />
+                    <datalist id="fruits">
+                      <option value="Sweet banana" />
+                      <option value="Kampala" />
+                      <option value="Cavendish" />
+                      <option value="Plantain" />
+                      <option value="Matoke" />
+                      <option value="American sweet potatoes" />
+                      <option value="White sweet potatoes" />
+                      <option value="Red sweet potatoes" />
+                      <option value="Local Avocados" />
+                      <option value="Hass Avocados" />
+                      <option value="Oranges" />
+                      <option value="Pixie" />
+                      <option value="Lemons" />
+                    </datalist>
                   </div>
                 </div>
                 
@@ -315,6 +325,9 @@ const PurchaserDashboard = () => {
                   )}
                 </button>
               </form>
+              {/* Other Expenses Form */}
+              <hr />
+              <OtherExpenseForm />
             </div>
           </div>
         </div>

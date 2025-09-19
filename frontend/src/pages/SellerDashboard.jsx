@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 // CeoMessagesDisplay removed
-import SaleReceiptForm from '../components/SaleReceiptForm';
+import SaleInvoiceForm from '../components/SaleInvoiceForm';
 import SalesTableHeader from '../components/seller/SalesTableHeader';
 import SellerFruitsForm from '../components/seller/SellerFruitsForm';
+import OtherExpenseForm from '../components/OtherExpenseForm';
 import { fetchStockTracking } from '../api/stockTracking';
 import { fetchSellerFruits } from '../api/sellerFruits';
 import jsPDF from 'jspdf';
@@ -333,8 +334,12 @@ const SellerDashboard = () => {
 
       <div className="row">
         <div className="col-md-6">
-          {/* Sale Receipt Form below */}
-          <SaleReceiptForm onSellerFruitsAdded={refreshSellerFruits} />
+          {/* Sale Invoice Form below */}
+          <SaleInvoiceForm onSellerFruitsAdded={refreshSellerFruits} />
+          <hr />
+
+          {/* Other Expenses Form */}
+          <OtherExpenseForm />
           <hr />
           {/* SaleForm removed */}
         </div>

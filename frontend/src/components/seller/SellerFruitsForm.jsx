@@ -122,8 +122,24 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
                 name="fruit_name"
                 value={formData.fruit_name}
                 onChange={handleChange}
+                list="fruits"
                 required
               />
+              <datalist id="fruits">
+                <option value="Sweet banana" />
+                <option value="Kampala" />
+                <option value="Cavendish" />
+                <option value="Plantain" />
+                <option value="Matoke" />
+                <option value="American sweet potatoes" />
+                <option value="White sweet potatoes" />
+                <option value="Red sweet potatoes" />
+                <option value="Local Avocados" />
+                <option value="Hass Avocados" />
+                <option value="Oranges" />
+                <option value="Pixie" />
+                <option value="Lemons" />
+              </datalist>
             </div>
 
             <div className="col-md-6 mb-3">

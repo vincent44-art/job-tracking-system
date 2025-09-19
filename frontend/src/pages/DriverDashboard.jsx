@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 // CeoMessagesDisplay removed
-import { 
+import {
   fetchDriverExpenses,
-  addDriverExpense 
+  addDriverExpense
 } from '../api/driver';
+import OtherExpenseForm from '../components/OtherExpenseForm';
 
 const DriverDashboard = () => {
   const { user, logout } = useAuth();
@@ -142,6 +143,9 @@ const DriverDashboard = () => {
                 </form>
               </div>
             </div>
+
+            {/* Other Expenses Form */}
+            <OtherExpenseForm />
           </div>
           <div className="col-md-6 mb-4">
             <div className="card fruit-card shadow-lg fade-in">
