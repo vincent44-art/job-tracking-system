@@ -52,15 +52,25 @@ class PurchaseListResource(Resource):
     def get(self):
         current_user = get_current_user()
 
-        if current_user.role == UserRole.CEO:
-            purchases = Purchase.query.order_by(Purchase.purchase_date.desc()).all()
-        else:  # Purchaser
-            purchases = Purchase.query.filter_by(
-                purchaser_id=current_user.id
-            ).order_by(Purchase.purchase_date.desc()).all()
+        # Pagination parameters
+        from flask import request
+        page = request.args.get('page', default=1, type=int)
+        per_page = request.args.get('per_page', default=20, type=int)
+
+        # Both CEO and purchasers can see all purchases
+        pagination = Purchase.query.order_by(Purchase.purchase_date.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        purchases = pagination.items
 
         return make_response_data(
-            data=[p.to_dict() for p in purchases],
+            data={
+                "items": [p.to_dict() for p in purchases],
+                "meta": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": pagination.total,
+                    "pages": pagination.pages
+                }
+            },
             message="Purchases fetched."
         )
 

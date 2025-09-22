@@ -7,7 +7,9 @@ import {
   addPurchase,
   clearPurchases
 } from '../api/purchase'; // ✅ Fixed import
+import { fetchOtherExpenses } from '../api/otherExpenses';
 import OtherExpenseForm from '../components/OtherExpenseForm';
+import OtherExpensesTable from '../components/OtherExpensesTable';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -15,6 +17,7 @@ import autoTable from 'jspdf-autotable';
 const PurchaserDashboard = () => {
   const { user, logout } = useAuth();
   const [purchases, setPurchases] = useState([]);
+  const [otherExpenses, setOtherExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
@@ -50,25 +53,37 @@ const PurchaserDashboard = () => {
     }
   }, [formData.quantity, formData.amountPerKg]);
 
-  // Fetch purchases on component mount
+  // Fetch purchases and other expenses on component mount
   useEffect(() => {
-    const loadPurchases = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
-        const response = await fetchPurchases(user.email);
-        setPurchases(response.data);
+        const [purchasesResponse, otherExpensesResponse] = await Promise.all([
+          fetchPurchases(user.email),
+          fetchOtherExpenses()
+        ]);
+        setPurchases(purchasesResponse.data);
+        setOtherExpenses(otherExpensesResponse?.data || []);
       } catch (err) {
-        setError('Failed to load purchases. Please try again later.');
-        console.error('Error loading purchases:', err);
+        setError('Failed to load data. Please try again later.');
+        console.error('Error loading data:', err);
       } finally {
         setLoading(false);
       }
     };
 
     if (user?.email) {
-      loadPurchases();
+      loadData();
     }
   }, [user?.email]);
+
+  const handleOtherExpenseAdded = (newExpense) => {
+    setOtherExpenses(prev => [newExpense, ...prev]);
+  };
+
+  const handleOtherExpenseDeleted = (deletedId) => {
+    setOtherExpenses(prev => prev.filter(expense => expense.id !== deletedId));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -326,8 +341,8 @@ const PurchaserDashboard = () => {
                 </button>
               </form>
               {/* Other Expenses Form */}
-              <hr />
-              <OtherExpenseForm />
+              <OtherExpenseForm onExpenseAdded={handleOtherExpenseAdded} />
+              <OtherExpensesTable expenses={otherExpenses} onExpenseDeleted={handleOtherExpenseDeleted} />
             </div>
           </div>
         </div>

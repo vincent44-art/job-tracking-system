@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { addStockTracking, fetchStockTracking } from '../api/stockTracking';
+import { fetchOtherExpenses } from '../api/otherExpenses';
 import OtherExpenseForm from '../components/OtherExpenseForm';
+import OtherExpensesTable from '../components/OtherExpensesTable';
 
 const initialStockIn = {
   stockName: '',
@@ -29,15 +31,20 @@ const StoreKeeperDashboard = () => {
   const [stockIn, setStockIn] = useState(initialStockIn);
   const [stockOut, setStockOut] = useState(initialStockOut);
   const [records, setRecords] = useState([]);
+  const [otherExpenses, setOtherExpenses] = useState([]);
 
-  // Fetch all stock records on mount
+  // Fetch all stock records and other expenses on mount
   useEffect(() => {
     const load = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await fetchStockTracking(token);
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        setRecords(list);
+        const [stockRes, expensesRes] = await Promise.all([
+          fetchStockTracking(token),
+          fetchOtherExpenses()
+        ]);
+        const stockList = Array.isArray(stockRes?.data) ? stockRes.data : (Array.isArray(stockRes) ? stockRes : []);
+        setRecords(stockList);
+        setOtherExpenses(expensesRes?.data || []);
       } catch (e) {}
     };
     load();
@@ -80,6 +87,14 @@ const StoreKeeperDashboard = () => {
   const handleStockOutChange = (e) => {
     const { name, value } = e.target;
     setStockOut((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleOtherExpenseAdded = (newExpense) => {
+    setOtherExpenses(prev => [newExpense, ...prev]);
+  };
+
+  const handleOtherExpenseDeleted = (deletedId) => {
+    setOtherExpenses(prev => prev.filter(expense => expense.id !== deletedId));
   };
 
   // Submit Stock In
@@ -172,8 +187,17 @@ const StoreKeeperDashboard = () => {
             </div>
           </div>
 
-          {/* Other Expenses Form */}
-          <OtherExpenseForm />
+          {/* Other Expenses Form and Table */}
+          <div className="card">
+            <div className="card-header bg-warning text-dark">
+              <h5 className="mb-0">Other Expenses Management</h5>
+            </div>
+            <div className="card-body">
+              <OtherExpenseForm onExpenseAdded={handleOtherExpenseAdded} />
+              <hr />
+              <OtherExpensesTable expenses={otherExpenses} onExpenseDeleted={handleOtherExpenseDeleted} />
+            </div>
+          </div>
         </div>
         {/* Stock Out Form */}
         <div className="col-md-6">

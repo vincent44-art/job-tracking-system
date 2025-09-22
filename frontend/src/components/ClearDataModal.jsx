@@ -52,7 +52,7 @@ const ClearDataModal = ({ show, onClose }) => {
         case 'car-expenses':
           await clearCarExpensesDataAPI();
           break;
-        case 'other-expenses':
+  case 'other_expenses':
           await clearOtherExpensesDataAPI();
           break;
         case 'salaries':
@@ -144,7 +144,7 @@ const ClearDataModal = ({ show, onClose }) => {
               </button>
               <button 
                 className="btn btn-outline-secondary"
-                onClick={() => handleClearData('other-expenses')}
+                onClick={() => handleClearData('other_expenses')}
                 disabled={isClearing}
               >
                 {isClearing ? (

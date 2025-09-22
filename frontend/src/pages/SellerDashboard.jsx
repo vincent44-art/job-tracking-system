@@ -5,8 +5,10 @@ import SaleInvoiceForm from '../components/SaleInvoiceForm';
 import SalesTableHeader from '../components/seller/SalesTableHeader';
 import SellerFruitsForm from '../components/seller/SellerFruitsForm';
 import OtherExpenseForm from '../components/OtherExpenseForm';
+import OtherExpensesTable from '../components/OtherExpensesTable';
 import { fetchStockTracking } from '../api/stockTracking';
 import { fetchSellerFruits } from '../api/sellerFruits';
+import { fetchOtherExpenses } from '../api/otherExpenses';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 

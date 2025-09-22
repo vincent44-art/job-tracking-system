@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus, Download } from 'lucide-react';
-//import { fetchPurchases, deletePurchase } from 'http://127.0.0.1:5000/api';
-import { fetchPurchases, deletePurchase } from './apiHelpers'; // adjust path accordingly
+import { fetchPurchases, deletePurchase } from '../api/purchase';
+// import { deletePurchase } from './apiHelpers'; // If needed, implement deletePurchase in ../api/purchase.js
 
 import PurchaseFormModal from './PurchaseFormModal';
 
@@ -15,15 +15,17 @@ const PurchasesTab = (props) => {
 
   // Fetch purchases from API
   useEffect(() => {
-    // If data is passed as prop, use it, otherwise fetch
+    // If data is passed as prop, use it, otherwise fetch all purchases from DB
     if (Array.isArray(props.data)) {
       setPurchases(props.data);
       setLoading(false);
     } else {
       const loadPurchases = async () => {
         try {
+          // Fetch all purchases (no email filter)
           const response = await fetchPurchases();
-          setPurchases(Array.isArray(response.data) ? response.data : []);
+          // Use paginated response: response.data.data.items
+          setPurchases(Array.isArray(response.data?.data?.items) ? response.data.data.items : []);
         } catch (err) {
           console.error('Failed to fetch purchases:', err);
           setError('Failed to load purchases. Please try again.');

@@ -237,12 +237,13 @@ const CarExpensesTab = (props) => {
             <table className="table table-hover">
               <thead>
                 <tr>
+                  <th>Type</th>
+                  <th>Car Name</th>
+                  <th>Car Number Plate</th>
+                  <th>Stock Name</th>
+                  <th>Amount (KES)</th>
                   <th>Date</th>
                   <th>Driver</th>
-                  <th>Car Type</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                  <th>Amount</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -250,20 +251,13 @@ const CarExpensesTab = (props) => {
                 {filteredExpenses.length > 0 ? (
                   filteredExpenses.map(exp => (
                     <tr key={exp.id}>
-                      <td>{new Date(exp.date).toLocaleDateString()}</td>
-                      <td>{exp.driverEmail}</td>
-                      <td>{exp.carType || 'N/A'}</td>
-                      <td>
-                        <span className={`badge ${
-                          exp.type === 'fuel' ? 'bg-info' :
-                          exp.type === 'repair' ? 'bg-danger' :
-                          exp.type === 'maintenance' ? 'bg-warning' : 'bg-secondary'
-                        }`}>
-                          {exp.type}
-                        </span>
-                      </td>
-                      <td>{exp.description}</td>
+                      <td>{exp.type}</td>
+                      <td>{exp.car_name || exp.carType || '-'}</td>
+                      <td>{exp.car_number_plate || '-'}</td>
+                      <td>{exp.stock_name || '-'}</td>
                       <td>{formatCurrency(exp.amount)}</td>
+                      <td>{exp.date ? new Date(exp.date).toLocaleDateString() : '-'}</td>
+                      <td>{exp.driver_email || exp.driverEmail || '-'}</td>
                       <td>
                         <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(exp.id)}>
                           <Trash2 size={16} />
@@ -273,7 +267,7 @@ const CarExpensesTab = (props) => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="text-center py-4">
+                    <td colSpan="8" className="text-center py-4">
                       {expenses.length === 0 ? 'No car expenses found' : 'No matching expenses found'}
                     </td>
                   </tr>

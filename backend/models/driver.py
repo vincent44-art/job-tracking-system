@@ -13,6 +13,10 @@ class DriverExpense(db.Model):
     type = db.Column(db.String(80), nullable=True)
     description = db.Column(db.String(256), nullable=True)
     date = db.Column(db.Date, nullable=True)
+    # New fields for enhanced car expense tracking
+    car_number_plate = db.Column(db.String(20), nullable=True)
+    car_name = db.Column(db.String(100), nullable=True)
+    stock_name = db.Column(db.String(100), nullable=True)
 
     def to_dict(self):
         return {
@@ -22,7 +26,10 @@ class DriverExpense(db.Model):
             "category": self.category,
             "type": self.type,
             "description": self.description,
-            "date": self.date.isoformat() if self.date else None
+            "date": self.date.isoformat() if self.date else None,
+            "car_number_plate": self.car_number_plate,
+            "car_name": self.car_name,
+            "stock_name": self.stock_name
         }
 
 drivers_bp = Blueprint('drivers', __name__, url_prefix='/api/drivers')

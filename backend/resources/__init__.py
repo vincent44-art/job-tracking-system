@@ -65,8 +65,8 @@ api.add_resource(StockMovementListResource, '/stock-movements')
 api.add_resource(ClearStockMovementsResource, '/stock-movements/clear')
 
 # ----------- EXPENSES -----------
-api.add_resource(OtherExpensesResource, '/expenses/other')
-api.add_resource(OtherExpenseResource, '/expenses/other/<int:expense_id>')
+api.add_resource(OtherExpensesResource, '/other_expenses')
+api.add_resource(OtherExpenseResource, '/other_expenses/<int:expense_id>')
 api.add_resource(CarExpensesResource, '/car-expenses', endpoint='car_expenses')  # Added to fix frontend 404
 api.add_resource(CarExpensesResource, '/drivers/expenses', endpoint='driver_expenses')
 

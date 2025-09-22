@@ -3,13 +3,17 @@ import { useAuth } from '../contexts/AuthContext';
 // CeoMessagesDisplay removed
 import {
   fetchDriverExpenses,
-  addDriverExpense
+  addDriverExpense,
+  deleteDriverExpense
 } from '../api/driver';
+import { fetchOtherExpenses } from '../api/otherExpenses';
 import OtherExpenseForm from '../components/OtherExpenseForm';
+import OtherExpensesTable from '../components/OtherExpensesTable';
 
 const DriverDashboard = () => {
   const { user, logout } = useAuth();
   const [carExpenses, setCarExpenses] = useState([]);
+  const [otherExpenses, setOtherExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -17,15 +21,22 @@ const DriverDashboard = () => {
     type: 'fuel',
     description: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    car_name: '',
+    car_number_plate: '',
+    stock_name: ''
   });
 
   useEffect(() => {
     const loadExpenses = async () => {
       try {
         setLoading(true);
-        const expenses = await fetchDriverExpenses(user.email);
-        setCarExpenses(expenses);
+        const [carExpensesData, otherExpensesData] = await Promise.all([
+          fetchDriverExpenses(user.email),
+          fetchOtherExpenses()
+        ]);
+        setCarExpenses(carExpensesData);
+        setOtherExpenses(otherExpensesData?.data || []);
       } catch (err) {
         setError('Failed to load expenses. Please try again later.');
         console.error('Error loading expenses:', err);
@@ -39,6 +50,14 @@ const DriverDashboard = () => {
     }
   }, [user?.email]);
 
+  const handleOtherExpenseAdded = (newExpense) => {
+    setOtherExpenses(prev => [newExpense, ...prev]);
+  };
+
+  const handleOtherExpenseDeleted = (deletedId) => {
+    setOtherExpenses(prev => prev.filter(expense => expense.id !== deletedId));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -49,7 +68,10 @@ const DriverDashboard = () => {
         category: formData.type,
         type: formData.type,
         description: formData.description,
-        date: formData.date
+        date: formData.date,
+        car_name: formData.car_name,
+        car_number_plate: formData.car_number_plate,
+        stock_name: formData.stock_name
       };
       const addedExpense = await addDriverExpense(newExpense);
       setCarExpenses(prev => [...prev, addedExpense]);
@@ -58,11 +80,28 @@ const DriverDashboard = () => {
         type: 'fuel',
         description: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        car_name: '',
+        car_number_plate: '',
+        stock_name: ''
       });
     } catch (err) {
       setError('Failed to add expense. Please try again.');
       console.error('Error adding expense:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId) => {
+    if (!window.confirm('Are you sure you want to delete this expense?')) return;
+    try {
+      setLoading(true);
+      await deleteDriverExpense(expenseId);
+      setCarExpenses(prev => prev.filter(exp => exp.id !== expenseId));
+    } catch (err) {
+      setError('Failed to delete expense. Please try again.');
+      console.error('Error deleting expense:', err);
     } finally {
       setLoading(false);
     }
@@ -115,6 +154,39 @@ const DriverDashboard = () => {
                     />
                   </div>
                   <div className="mb-3">
+                    <label className="form-label">Car Name</label>
+                    <input
+                      type="text"
+                      placeholder="Car Name"
+                      value={formData.car_name}
+                      onChange={e => setFormData({ ...formData, car_name: e.target.value })}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Car Number Plate</label>
+                    <input
+                      type="text"
+                      placeholder="Car Number Plate"
+                      value={formData.car_number_plate}
+                      onChange={e => setFormData({ ...formData, car_number_plate: e.target.value })}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Stock Name (Carrying)</label>
+                    <input
+                      type="text"
+                      placeholder="Stock Name"
+                      value={formData.stock_name}
+                      onChange={e => setFormData({ ...formData, stock_name: e.target.value })}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
                     <label className="form-label">Amount (KES)</label>
                     <input
                       type="number"
@@ -145,30 +217,57 @@ const DriverDashboard = () => {
             </div>
 
             {/* Other Expenses Form */}
-            <OtherExpenseForm />
+            <OtherExpenseForm onExpenseAdded={handleOtherExpenseAdded} />
+            <OtherExpensesTable expenses={otherExpenses} onExpenseDeleted={handleOtherExpenseDeleted} />
           </div>
           <div className="col-md-6 mb-4">
             <div className="card fruit-card shadow-lg fade-in">
               <div className="card-header bg-gradient text-white">
-                <h5 className="mb-0"><i className="bi bi-list-ul me-2"></i>Your Expenses</h5>
+                <h5 className="mb-0"><i className="bi bi-table me-2"></i>Your Car Expenses</h5>
               </div>
               <div className="card-body">
                 {carExpenses.length === 0 ? (
                   <div className="text-muted text-center">No expenses recorded yet.</div>
                 ) : (
-                  <ul className="list-group">
-                    {carExpenses.map((expense, index) => (
-                      <li key={index} className="list-group-item d-flex justify-content-between align-items-center fade-in">
-                        <div>
-                          <span className="badge bg-primary me-2 text-uppercase">{expense.type}</span>
-                          <span className="fw-bold">{expense.description}</span>
-                          <br />
-                          <small className="text-muted">{new Date(expense.date).toLocaleDateString()}</small>
-                        </div>
-                        <span className="badge bg-success">KES {expense.amount}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="table-responsive">
+                    <table className="table table-striped table-bordered">
+                      <thead className="table-dark">
+                        <tr>
+                          <th>Type</th>
+                          <th>Description</th>
+                          <th>Car Name</th>
+                          <th>Car Number Plate</th>
+                          <th>Stock Name</th>
+                          <th>Amount (KES)</th>
+                          <th>Action</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {carExpenses.map((expense, index) => (
+                          <tr key={index} className="fade-in">
+                            <td>{expense.type}</td>
+                            <td>{expense.description}</td>
+                            <td>{expense.car_name || '-'}</td>
+                            <td>{expense.car_number_plate || '-'}</td>
+                            <td>{expense.stock_name || '-'}</td>
+                            <td>{expense.amount}</td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                title="Delete Expense"
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                disabled={loading}
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            </td>
+                            <td>{expense.date ? new Date(expense.date).toLocaleDateString() : '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </div>

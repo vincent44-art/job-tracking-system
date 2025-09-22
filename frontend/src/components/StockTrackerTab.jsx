@@ -41,12 +41,12 @@ const StockTrackerTab = () => {
         ]);
 
         setData({
-          inventory: inventoryRes.data || [],
-          stockMovements: movementsRes.data || [],
-          purchases: purchasesRes.data || [],
-          sales: salesRes.data || [],
-          otherExpenses: expensesRes.data || [],
-          stockTracking: stockTrackingRes.data || []
+          inventory: Array.isArray(inventoryRes.data.data) ? inventoryRes.data.data : inventoryRes.data || [],
+          stockMovements: Array.isArray(movementsRes.data.data) ? movementsRes.data.data : movementsRes.data || [],
+          purchases: Array.isArray(purchasesRes.data.data) ? purchasesRes.data.data : purchasesRes.data || [],
+          sales: Array.isArray(salesRes.data.data) ? salesRes.data.data : salesRes.data || [],
+          otherExpenses: Array.isArray(expensesRes.data.data) ? expensesRes.data.data : expensesRes.data || [],
+          stockTracking: Array.isArray(stockTrackingRes.data.data) ? stockTrackingRes.data.data : stockTrackingRes.data || []
         });
       } catch (err) {
         console.error('Failed to load stock tracker data:', err);

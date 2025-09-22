@@ -12,12 +12,12 @@ parser.add_argument('amount', type=float, required=True)
 parser.add_argument('date', type=str, required=True)
 
 class OtherExpensesResource(Resource):
-    @role_required('ceo', 'seller', 'driver')
+    @role_required('ceo', 'seller', 'driver', 'storekeeper', 'purchaser', 'admin', 'it')
     def get(self):
         expenses = OtherExpense.query.order_by(OtherExpense.date.desc()).all()
         return make_response_data(data=[e.to_dict() for e in expenses], message="Other expenses fetched successfully.")
 
-    @role_required('ceo', 'seller', 'driver')
+    @role_required('ceo', 'seller', 'driver', 'storekeeper', 'purchaser', 'admin', 'it')
     def post(self):
         data = parser.parse_args()
         current_user = get_current_user()
@@ -37,7 +37,7 @@ class OtherExpensesResource(Resource):
         return make_response_data(data=expense.to_dict(), message="Other expense added successfully.", status_code=201)
 
 class OtherExpenseResource(Resource):
-    @role_required('ceo', 'seller', 'driver')
+    @role_required('ceo', 'seller', 'driver', 'storekeeper', 'purchaser', 'admin', 'it')
     def delete(self, expense_id):
         expense = OtherExpense.query.get(expense_id)
         if not expense:

@@ -7,7 +7,9 @@ import {
   fetchOtherExpenses,
   fetchUsers
 } from './apiHelpers';
-// Removed unused imports
+import UserManagementTab from './UserManagementTab';
+import SalesTab from './SalesTab';
+import CarExpensesTab from './CarExpensesTab';
 import OtherExpensesTab from './OtherExpensesTab';
 import SalaryManagementTab from './SalaryManagementTab';
 import RoleSeparatedUsers from './RoleSeparatedUsers';
@@ -47,12 +49,12 @@ const ReportsTab = () => {
         ]);
 
         setData({
-          inventory: Array.isArray(inventoryRes.data.data) ? inventoryRes.data.data : inventoryRes.data || [],
-          stockMovements: Array.isArray(movementsRes.data.data) ? movementsRes.data.data : movementsRes.data || [],
-          purchases: Array.isArray(purchasesRes.data.data) ? purchasesRes.data.data : purchasesRes.data || [],
-          sales: Array.isArray(salesRes.data.data) ? salesRes.data.data : salesRes.data || [],
-          otherExpenses: Array.isArray(expensesRes.data.data) ? expensesRes.data.data : expensesRes.data || [],
-          users: Array.isArray(usersRes.data.data) ? usersRes.data.data : usersRes.data || []
+          inventory: inventoryRes.data || [],
+          stockMovements: movementsRes.data || [],
+          purchases: purchasesRes.data || [],
+          sales: salesRes.data || [],
+          otherExpenses: expensesRes.data || [],
+          users: usersRes.data || []
         });
       } catch (err) {
         console.error('Failed to load reports data:', err);

@@ -59,9 +59,9 @@ def create_app(config_class=Config):
                 "http://127.0.0.1:3000"
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }},
-        supports_credentials=True
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }}
     )
 
     migrate.init_app(app, db)
@@ -91,16 +91,17 @@ def create_app(config_class=Config):
     from backend.resources.drivers import drivers_bp
     app.register_blueprint(drivers_bp)
     from backend.resources.other_expenses import OtherExpensesResource, OtherExpenseResource
-    from backend.resources.salaries import SalariesResource, SalaryResource
+    from backend.resources.salaries import SalariesResource, SalaryResource, SalaryPaymentToggleStatusResource
     from backend.resources.expenses import CarExpensesResource
     api = Api(app)
     api.add_resource(CurrentStockResource, '/api/current-stock')
-    api.add_resource(OtherExpensesResource, '/api/expenses/other')
-    api.add_resource(OtherExpenseResource, '/api/expenses/other/<int:expense_id>')
+    api.add_resource(OtherExpensesResource, '/api/other_expenses', '/api/expenses/other')
+    api.add_resource(OtherExpenseResource, '/api/other_expenses/<int:expense_id>')
     api.add_resource(CEODashboardResource, '/ceo/dashboard')
     api.add_resource(SalariesResource, '/api/salaries')
     api.add_resource(SalaryResource, '/api/salaries/<int:salary_id>')
     api.add_resource(SalaryPaymentsResource, '/api/salary-payments')
+    api.add_resource(SalaryPaymentToggleStatusResource, '/api/salary-payments/<int:payment_id>/toggle-status')
     api.add_resource(CarExpensesResource, '/api/car-expenses', '/api/car-expenses/<int:expense_id>')
     from backend.resources.profile_image import ProfileImageUploadResource
     api.add_resource(ProfileImageUploadResource, '/api/profile-image')

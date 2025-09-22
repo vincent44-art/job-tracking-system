@@ -23,7 +23,12 @@ def get_driver_expenses(driver_email):
             "driver_email": e.driver_email,
             "amount": e.amount,
             "category": e.category,
-            "date": e.date.isoformat() if e.date else None
+            "type": e.type,
+            "description": e.description,
+            "date": e.date.isoformat() if e.date else None,
+            "car_name": e.car_name,
+            "car_number_plate": e.car_number_plate,
+            "stock_name": e.stock_name
         } for e in expenses
     ]
     return jsonify(result), 200
@@ -46,7 +51,10 @@ def add_driver_expense():
         category=data.get("category"),
         type=data.get("type"),
         description=data.get("description"),
-        date=date_obj
+        date=date_obj,
+        car_name=data.get("car_name"),
+        car_number_plate=data.get("car_number_plate"),
+        stock_name=data.get("stock_name")
     )
     db.session.add(expense)
     db.session.commit()
@@ -57,7 +65,10 @@ def add_driver_expense():
         "category": expense.category,
         "type": expense.type,
         "description": expense.description,
-        "date": expense.date.isoformat() if expense.date else None
+        "date": expense.date.isoformat() if expense.date else None,
+        "car_name": expense.car_name,
+        "car_number_plate": expense.car_number_plate,
+        "stock_name": expense.stock_name
     }), 201
 
 @drivers_bp.route('/expenses/<expense_id>', methods=['PATCH', 'DELETE'])
@@ -70,14 +81,24 @@ def handle_expense(expense_id):
         data = request.get_json()
         expense.amount = data.get("amount", expense.amount)
         expense.category = data.get("category", expense.category)
+        expense.type = data.get("type", expense.type)
+        expense.description = data.get("description", expense.description)
         expense.date = data.get("date", expense.date)
+        expense.car_name = data.get("car_name", expense.car_name)
+        expense.car_number_plate = data.get("car_number_plate", expense.car_number_plate)
+        expense.stock_name = data.get("stock_name", expense.stock_name)
         db.session.commit()
         return jsonify({
             "id": expense.id,
             "driver_email": expense.driver_email,
             "amount": expense.amount,
             "category": expense.category,
-            "date": expense.date.isoformat() if expense.date else None
+            "type": expense.type,
+            "description": expense.description,
+            "date": expense.date.isoformat() if expense.date else None,
+            "car_name": expense.car_name,
+            "car_number_plate": expense.car_number_plate,
+            "stock_name": expense.stock_name
         }), 200
     elif request.method == 'DELETE':
         db.session.delete(expense)

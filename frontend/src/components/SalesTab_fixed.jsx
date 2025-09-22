@@ -22,7 +22,7 @@ const SalesTab = () => {
     const loadSales = async () => {
       try {
         const response = await fetchSales();
-        
+
         // Check if response exists and has data
         if (!response || !response.data) {
           console.error('Invalid response structure:', response);

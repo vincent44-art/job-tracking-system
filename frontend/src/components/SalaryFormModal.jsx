@@ -37,37 +37,37 @@ const SalaryFormModal = ({ show, onClose, onSave, users }) => {
           <FloatingLabel controlId="userSelect" label="Employee" className="mb-3">
             <Form.Select name="user_id" value={form.user_id} onChange={handleChange} required>
               <option value="">Select Employee</option>
-              {users && users.map(u => (
+              {Array.isArray(users) && users.map(u => (
                 <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
               ))}
             </Form.Select>
           </FloatingLabel>
           <FloatingLabel controlId="description" label="Description" className="mb-3">
-            <Form.Control 
-              type="text" 
+            <Form.Control
+              type="text"
               name="description"
-              placeholder="Description (optional)" 
+              placeholder="Description (optional)"
               value={form.description}
               onChange={handleChange}
             />
           </FloatingLabel>
           <FloatingLabel controlId="amount" label="Salary Amount (KES)" className="mb-3">
-            <Form.Control 
-              type="number" 
+            <Form.Control
+              type="number"
               name="amount"
-              placeholder="Salary in KES" 
+              placeholder="Salary in KES"
               value={form.amount}
               onChange={handleChange}
-              required 
+              required
             />
           </FloatingLabel>
           <FloatingLabel controlId="date" label="Date" className="mb-3">
-            <Form.Control 
-              type="date" 
+            <Form.Control
+              type="date"
               name="date"
               value={form.date}
               onChange={handleChange}
-              required 
+              required
             />
           </FloatingLabel>
           <div className="d-flex justify-content-end">
