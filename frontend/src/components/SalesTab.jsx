@@ -1,79 +1,125 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Trash2, Plus, Download } from 'lucide-react';
-//import { fetchSales, createSale, deleteSale } from 'http://127.0.0.1:5000'; // Import your API functions
-import { fetchSales, createAssignment, createSaleForAssignment, deleteSale } from './apiHelpers';
 
+import { fetchStockTracking } from '../api/stockTracking';
+import { fetchSellerFruits } from '../api/sellerFruits';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// Helper functions for matching sales to stock records and formatting
+const parseDate = (value) => {
+  if (!value) return null;
+  try { return new Date(value); } catch { return null; }
+};
+
+const matchStockForSale = (sale, stockRecords = []) => {
+  const fruit = sale.fruitType || sale.fruit_type || '';
+  const saleDate = parseDate(sale.date || sale.sale_date);
+  const candidates = (stockRecords || []).filter((r) => (r.fruitType || '') === fruit);
+  if (candidates.length === 0) return null;
+  if (!saleDate) return candidates[candidates.length - 1];
+  const withOutBefore = candidates
+    .filter((r) => r.dateOut && parseDate(r.dateOut) && parseDate(r.dateOut) <= saleDate)
+    .sort((a, b) => parseDate(b.dateOut) - parseDate(a.dateOut));
+  if (withOutBefore.length > 0) return withOutBefore[0];
+  const withInBefore = candidates
+    .filter((r) => r.dateIn && parseDate(r.dateIn) && parseDate(r.dateIn) <= saleDate)
+    .sort((a, b) => parseDate(b.dateIn) - parseDate(a.dateIn));
+  if (withInBefore.length > 0) return withInBefore[0];
+  return candidates[candidates.length - 1];
+};
+
+const formatDateCell = (d) => (d ? new Date(d).toLocaleDateString() : '');
+
+const formatKenyanCurrency = (amount) => {
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+  }).format(amount || 0);
+};
 
 const SalesTab = () => {
-  const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    sellerName: '',
-    fruitType: '',
-    quantitySold: '',
-    revenue: '',
+    stockName: '',
+    fruitName: '',
+    qty: '',
+    unitPrice: '',
     date: new Date().toISOString().split('T')[0]
   });
+  const [stockRecords, setStockRecords] = useState([]);
+  const [sellerFruits, setSellerFruits] = useState([]);
+  const [pdfLoading, setPdfLoading] = useState(null);
 
-  // Fetch sales data from backend
+  // Build enriched sales data with stock tracking information from seller_fruits
+  const enrichedSales = useMemo(() => {
+    const rows = Array.isArray(sellerFruits) ? sellerFruits : [];
+    return rows.map((fruit) => {
+      const matchedStock = matchStockForSale(fruit, stockRecords);
+      const stockName = matchedStock?.stockName || fruit.stock_name || 'Unknown';
+      const unitPrice = fruit.unit_price || 0;
+      const qty = parseFloat(fruit.qty || 0);
+      const amount = fruit.amount || (unitPrice * qty);
+      const date = fruit.date;
+      const fruitName = fruit.fruit_name || '';
+      const sellerName = fruit.creator_email || 'N/A';
+      return { stockName, date, fruit: fruitName, qty, unitPrice, amount, sellerName };
+    });
+  }, [sellerFruits, stockRecords]);
+
+  const groupedByStock = useMemo(() => {
+    const map = new Map();
+    for (const r of enrichedSales) {
+      const key = r.stockName || 'Unknown';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    }
+    for (const arr of map.values()) {
+      arr.sort((a, b) => (parseDate(b.date) || 0) - (parseDate(a.date) || 0));
+    }
+    return map;
+  }, [enrichedSales]);
+
+  // Fetch seller fruits data from backend
   useEffect(() => {
-    const loadSales = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetchSales();
-        
-        // Check if response exists and has data
-        if (!response || !response.data) {
-          console.error('Invalid response structure:', response);
-          setSales([]);
-          return;
+        console.log('SalesTab: Starting to fetch seller fruits data...');
+        setLoading(true);
+
+        // Fetch seller fruits data for enhanced table
+        try {
+          const fruits = await fetchSellerFruits();
+          setSellerFruits(Array.isArray(fruits) ? fruits : []);
+          console.log('SalesTab: Seller fruits loaded:', fruits.length);
+        } catch (fruitsError) {
+          console.warn('SalesTab: Failed to fetch seller fruits data:', fruitsError);
+          setSellerFruits([]);
         }
 
-        // Handle different response structures
-        let salesData = [];
-
-        if (response.data.data && Array.isArray(response.data.data)) {
-          // Paginated response structure: response.data.data
-          salesData = response.data.data;
-        } else if (Array.isArray(response.data)) {
-          // Direct array response: response.data
-          salesData = response.data;
-        } else if (response.data && typeof response.data === 'object') {
-          // Object response: try to extract array from object
-          const possibleArrays = Object.values(response.data).filter(val => Array.isArray(val));
-          salesData = possibleArrays.length > 0 ? possibleArrays[0] : [];
-        } else {
-          // Fallback: empty array
-          salesData = [];
+        // Fetch stock tracking data for enrichment
+        try {
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            const stockRes = await fetchStockTracking(token);
+            const outRecords = (stockRes.data || []).filter(r => r.dateOut);
+            setStockRecords(outRecords);
+            console.log('SalesTab: Stock records loaded:', outRecords.length);
+          }
+        } catch (stockError) {
+          console.warn('SalesTab: Failed to fetch stock tracking data:', stockError);
         }
 
-        // Ensure salesData is an array before mapping
-        if (!Array.isArray(salesData)) {
-          console.error('Sales data is not an array:', salesData);
-          setSales([]);
-          return;
-        }
-
-        // Transform the sales data
-        const transformedSales = salesData.map(sale => ({
-          id: sale.id,
-          sellerName: sale.seller_name || sale.sellerName || 'Unknown',
-          fruitType: sale.fruit_type || sale.fruitType || 'Unknown',
-          quantitySold: sale.quantity || sale.quantitySold || 0,
-          revenue: sale.revenue || 0,
-          date: sale.sale_date || sale.date || new Date().toISOString().split('T')[0]
-        }));
-
-        setSales(transformedSales);
       } catch (error) {
-        console.error('Failed to fetch sales:', error);
-        setSales([]); // Set empty array on error to prevent map errors
+        console.error('SalesTab: Failed to fetch seller fruits data:', error);
+        setSellerFruits([]);
       } finally {
         setLoading(false);
       }
     };
-    loadSales();
+    loadData();
   }, []);
 
   const formatCurrency = (amount) => {
@@ -83,123 +129,182 @@ const SalesTab = () => {
     }).format(amount);
   };
 
-  const handleDelete = async (saleId) => {
-    if (window.confirm('Are you sure you want to delete this sale?')) {
-      try {
-        await deleteSale(saleId);
-        setSales(sales.filter(sale => sale.id !== saleId));
-      } catch (error) {
-        console.error('Failed to delete sale:', error);
-      }
-    }
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Ensure assignment exists for seller
-      const seller_id = formData.sellerId || formData.sellerName;
-      const seller_email = formData.sellerEmail || formData.sellerName;
-      const fruit_type = formData.fruitType;
-      const assignment_id = `assignment-${seller_id}`;
-      await createAssignment({ seller_id, seller_email, fruit_type, assignment_id });
-      // Post sale to assignment
-      const saleData = {
-        fruitType: fruit_type,
-        quantity: parseFloat(formData.quantitySold),
-        revenue: parseFloat(formData.revenue),
-        date: formData.date
+      console.log('SalesTab: Submitting form with data:', formData);
+
+      // Calculate amount from qty and unit price
+      const qty = parseFloat(formData.qty);
+      const unitPrice = parseFloat(formData.unitPrice);
+      const amount = qty * unitPrice;
+
+      // Create seller fruit data
+      const fruitData = {
+        stock_name: formData.stockName,
+        fruit_name: formData.fruitName,
+        qty: qty,
+        unit_price: unitPrice,
+        date: formData.date,
+        amount: amount
       };
-      const response = await createSaleForAssignment(assignment_id, saleData);
-      setSales([...sales, response]);
+
+      console.log('SalesTab: Sending seller fruit data to API:', fruitData);
+
+      // Use the fetch API directly to POST to /seller_fruits
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://127.0.0.1:5000/api/seller_fruits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(fruitData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create seller fruit record');
+      }
+
+      const newFruit = await response.json();
+      console.log('SalesTab: Seller fruit created successfully:', newFruit);
+
+      // Refresh the seller fruits data
+      const fruits = await fetchSellerFruits();
+      setSellerFruits(Array.isArray(fruits) ? fruits : []);
+
       setFormData({
-        sellerName: '',
-        fruitType: '',
-        quantitySold: '',
-        revenue: '',
+        stockName: '',
+        fruitName: '',
+        qty: '',
+        unitPrice: '',
         date: new Date().toISOString().split('T')[0]
       });
       setShowForm(false);
     } catch (error) {
-      console.error('Failed to create sale:', error);
+      console.error('SalesTab: Failed to create seller fruit:', error);
     }
   };
 
   const clearAllSales = async () => {
-    if (window.confirm('Are you sure you want to clear all sales data? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to clear all seller fruits data? This action cannot be undone.')) {
       try {
-        // Implement a bulk delete endpoint in your backend
-        await Promise.all(sales.map(sale => deleteSale(sale.id)));
-        setSales([]);
-      } catch (error) {
-        console.error('Failed to clear sales:', error);
-      }
-    }
-  };
+        // Use the fetch API to clear all seller fruits
+        const token = localStorage.getItem('access_token');
+        const response = await fetch('http://127.0.0.1:5000/api/seller_fruits/clear', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          }
+        });
 
-  const downloadDailyReport = async (dateStr) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/sales/report/${dateStr}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        if (!response.ok) {
+          throw new Error('Failed to clear seller fruits data');
         }
-      });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `sales_report_${dateStr}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        console.error('Failed to download report');
+        setSellerFruits([]);
+      } catch (error) {
+        console.error('Failed to clear seller fruits:', error);
       }
-    } catch (error) {
-      console.error('Error downloading report:', error);
     }
   };
 
-  const filteredSales = sales.filter(sale =>
-    sale.sellerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sale.fruitType?.toLowerCase().includes(searchTerm.toLowerCase())
+  // PDF generation function
+  const downloadSalesPDF = async (stockName, items) => {
+    setPdfLoading(stockName);
+    try {
+      const doc = new jsPDF();
+      // Always load logo as Base64
+      const logoUrl = '/logo.jpeg';
+      const getBase64FromUrl = async (url) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error('Logo not found');
+          const blob = await response.blob();
+          return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.warn('Logo could not be loaded:', err);
+          return null;
+        }
+      };
+      const logoBase64 = await getBase64FromUrl(logoUrl);
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'JPEG', 10, 10, 40, 20);
+      }
+      doc.setFontSize(18);
+      doc.text('Seller Fruits Report', 60, 18);
+      doc.setFontSize(12);
+      doc.text(`Stock: ${stockName}`, 60, 28);
+      // Table
+      autoTable(doc, {
+        head: [["Creator Email", "Stock Name", "Fruit Name", "Quantity", "Unit Price", "Date", "Amount"]],
+        body: items.map((r) => [
+          r.sellerName,
+          r.stockName,
+          r.fruit,
+          r.qty,
+          formatKenyanCurrency(r.unitPrice),
+          formatDateCell(r.date),
+          formatKenyanCurrency(r.amount),
+        ]),
+        startY: 35,
+        styles: { fontSize: 11 },
+      });
+      const totalAmount = items.reduce((s, r) => s + (r.amount || 0), 0);
+      autoTable(doc, {
+        head: [["", "", "", "Total", formatKenyanCurrency(totalAmount)]],
+        body: [],
+        startY: (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 5 : 50,
+        styles: { fontStyle: 'bold', fontSize: 12 },
+        theme: 'plain',
+      });
+      doc.save(`seller_fruits_report_${stockName.replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      alert('Failed to generate PDF. Please try again.');
+      console.error('PDF generation error:', err);
+    } finally {
+      setPdfLoading(null);
+    }
+  };
+
+
+
+  const filteredSales = enrichedSales.filter(sale =>
+    sale.fruit?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sale.stockName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sale.sellerName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Group sales by date
-  const groupedSales = filteredSales.reduce((groups, sale) => {
-    const date = sale.date;
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(sale);
-    return groups;
-  }, {});
+  if (loading) {
+    console.log('SalesTab: Loading state...');
+    return <div className="text-center py-5">Loading seller fruits data...</div>;
+  }
 
-  // Sort dates in descending order
-  const sortedDates = Object.keys(groupedSales).sort((a, b) => new Date(b) - new Date(a));
-
-  if (loading) return <div className="text-center py-5">Loading sales data...</div>;
+  console.log('SalesTab: Rendering with seller fruits data:', sellerFruits);
 
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Sales Management</h2>
+        <h2>Seller Fruits Management</h2>
         <div>
           <button
             className="btn btn-gradient me-2"
             onClick={() => setShowForm(!showForm)}
           >
             <Plus size={16} className="me-1" />
-            Add Sale
+            Add Seller Fruit
           </button>
           <button
             className="btn btn-outline-danger"
             onClick={clearAllSales}
-            disabled={sales.length === 0}
+            disabled={sellerFruits.length === 0}
           >
             <Trash2 size={16} className="me-1" />
             Clear All
@@ -210,26 +315,27 @@ const SalesTab = () => {
       {showForm && (
         <div className="card card-custom mb-4">
           <div className="card-body">
-            <h5 className="card-title text-gradient">Record New Sale</h5>
+            <h5 className="card-title text-gradient">Record New Seller Fruit</h5>
             <form onSubmit={handleSubmit}>
               <div className="row">
                 <div className="col-md-6 mb-3">
-                  <label className="form-label">Seller Name</label>
+                  <label className="form-label">Stock Name</label>
                   <input
                     type="text"
                     className="form-control"
-                    value={formData.sellerName}
-                    onChange={(e) => setFormData({...formData, sellerName: e.target.value})}
+                    value={formData.stockName}
+                    onChange={(e) => setFormData({...formData, stockName: e.target.value})}
+                    placeholder="e.g., Stock A, Stock B"
                     required
                   />
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label className="form-label">Fruit Type</label>
+                  <label className="form-label">Fruit Name</label>
                   <input
                     type="text"
                     className="form-control"
-                    value={formData.fruitType}
-                    onChange={(e) => setFormData({...formData, fruitType: e.target.value})}
+                    value={formData.fruitName}
+                    onChange={(e) => setFormData({...formData, fruitName: e.target.value})}
                     list="fruits"
                     required
                   />
@@ -250,25 +356,25 @@ const SalesTab = () => {
                   </datalist>
                 </div>
                 <div className="col-md-4 mb-3">
-                  <label className="form-label">Quantity Sold</label>
+                  <label className="form-label">Quantity</label>
                   <input
                     type="number"
                     className="form-control"
-                    value={formData.quantitySold}
-                    onChange={(e) => setFormData({...formData, quantitySold: e.target.value})}
+                    value={formData.qty}
+                    onChange={(e) => setFormData({...formData, qty: e.target.value})}
                     min="0"
                     step="0.01"
                     required
                   />
                 </div>
                 <div className="col-md-4 mb-3">
-                  <label className="form-label">Revenue (KES)</label>
+                  <label className="form-label">Unit Price (KES)</label>
                   <input
                     type="number"
                     step="0.01"
                     className="form-control"
-                    value={formData.revenue}
-                    onChange={(e) => setFormData({...formData, revenue: e.target.value})}
+                    value={formData.unitPrice}
+                    onChange={(e) => setFormData({...formData, unitPrice: e.target.value})}
                     min="0"
                     required
                   />
@@ -286,7 +392,7 @@ const SalesTab = () => {
               </div>
               <div className="d-flex gap-2">
                 <button type="submit" className="btn btn-gradient">
-                  Record Sale
+                  Record Seller Fruit
                 </button>
                 <button
                   type="button"
@@ -309,7 +415,7 @@ const SalesTab = () => {
               <input
                 type="text"
                 className="form-control ps-5"
-                placeholder="Search sales..."
+                placeholder="Search seller fruits..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -318,89 +424,132 @@ const SalesTab = () => {
         </div>
       </div>
 
-      <div className="card card-custom">
-        <div className="card-body">
-          {sortedDates.length > 0 ? (
-            sortedDates.map((date, index) => {
-              const daySales = groupedSales[date];
-              const totalRevenue = daySales.reduce((sum, sale) => sum + sale.revenue, 0);
-              const totalQuantity = daySales.reduce((sum, sale) => sum + parseFloat(sale.quantitySold || 0), 0);
-
-              return (
-                <div key={date}>
-                  {/* Black column separator */}
-                  {index > 0 && <div style={{height: '2px', backgroundColor: 'black', margin: '20px 0'}}></div>}
-
-                  {/* Day header with PDF download */}
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4 className="mb-0">
-                      {new Date(date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </h4>
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="text-muted">
-                        <small>
-                          {daySales.length} sale{daySales.length !== 1 ? 's' : ''} |
-                          Total: {formatCurrency(totalRevenue)} |
-                          Qty: {totalQuantity.toFixed(2)}
-                        </small>
-                      </div>
-                      <button
-                        className="btn btn-outline-primary btn-sm"
-                        onClick={() => downloadDailyReport(date)}
-                        title="Download PDF Report"
-                      >
-                        <Download size={16} className="me-1" />
-                        PDF
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Sales table for this day */}
-                  <div className="table-responsive mb-4">
-                    <table className="table table-hover">
-                      <thead>
-                        <tr>
-                          <th>Seller</th>
-                          <th>Fruit Type</th>
-                          <th>Quantity Sold</th>
-                          <th>Revenue</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {daySales.map(sale => (
-                          <tr key={sale.id}>
-                            <td>{sale.sellerName}</td>
-                            <td>{sale.fruitType}</td>
-                            <td>{sale.quantitySold}</td>
-                            <td>{formatCurrency(sale.revenue)}</td>
-                            <td>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDelete(sale.id)}
-                                title="Delete sale"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-4">
-              {sales.length === 0 ? 'No sales records found' : 'No matching sales found'}
-            </div>
-          )}
+      {/* Enhanced Sales Table */}
+      <div className="card card-custom mt-4 shadow-sm">
+        <div className="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+          <h5 className="mb-0">Enhanced Seller Fruits Table</h5>
+          <div>
+            <button
+              className="btn btn-light btn-sm me-2"
+              onClick={() => setShowForm(!showForm)}
+            >
+              <Plus size={16} className="me-1" />
+              Add Seller Fruit
+            </button>
+            <button
+              className="btn btn-outline-light btn-sm"
+              onClick={clearAllSales}
+              disabled={sellerFruits.length === 0}
+            >
+              <Trash2 size={16} className="me-1" />
+              Clear All
+            </button>
+          </div>
+        </div>
+        <div className="card-body table-responsive">
+          <table className="table table-striped table-hover align-middle">
+            <thead className="table-dark">
+              <tr>
+                <th>Seller Name</th>
+                <th>Stock Name</th>
+                <th>Fruit Name</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Download PDF</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSales.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="text-center text-muted py-4">
+                    No seller fruits data available
+                  </td>
+                </tr>
+              ) : (
+                Object.entries(groupedByStock).map(([stockName, items]) => (
+                  <React.Fragment key={stockName}>
+                    {items.map((sale, index) => (
+                      <tr key={`${stockName}-${index}`}>
+                        <td>{sale.sellerName}</td>
+                        <td>{sale.stockName}</td>
+                        <td>{sale.fruit}</td>
+                        <td>{sale.qty}</td>
+                        <td>{formatKenyanCurrency(sale.unitPrice)}</td>
+                        <td>{formatDateCell(sale.date)}</td>
+                        <td>{formatKenyanCurrency(sale.amount)}</td>
+                        <td>
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => downloadSalesPDF(sale.stockName, [sale])}
+                            disabled={pdfLoading === sale.stockName}
+                          >
+                            <Download size={14} />
+                            {pdfLoading === sale.stockName ? 'Generating...' : ' PDF'}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this seller fruit record?')) {
+                                // Find the original seller fruit to delete
+                                const originalFruit = sellerFruits.find(f => {
+                                  const matchedStock = matchStockForSale(f, stockRecords);
+                                  const stockName = matchedStock?.stockName || f.stock_name || 'Unknown';
+                                  const fruit = f.fruit_name || '';
+                                  const sellerName = f.creator_email || 'N/A';
+                                  return stockName === sale.stockName && fruit === sale.fruit && sellerName === sale.sellerName;
+                                });
+                                if (originalFruit) {
+                                  // Use fetch API to delete the seller fruit
+                                  fetch(`http://127.0.0.1:5000/api/seller_fruits/${originalFruit.id}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                                    }
+                                  }).then(response => {
+                                    if (response.ok) {
+                                      setSellerFruits(sellerFruits.filter(f => f.id !== originalFruit.id));
+                                    } else {
+                                      console.error('Failed to delete seller fruit');
+                                    }
+                                  }).catch(error => {
+                                    console.error('Failed to delete seller fruit:', error);
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Total row for each stock */}
+                    <tr className="table-info">
+                      <td colSpan="6" className="text-end fw-bold">Total for {stockName}:</td>
+                      <td className="fw-bold">{formatKenyanCurrency(items.reduce((sum, item) => sum + (item.amount || 0), 0))}</td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => downloadSalesPDF(stockName, items)}
+                          disabled={pdfLoading === stockName}
+                        >
+                          <Download size={14} />
+                          {pdfLoading === stockName ? 'Generating...' : ' PDF'}
+                        </button>
+                      </td>
+                      <td></td>
+                    </tr>
+                  </React.Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -1,8 +1,8 @@
 import api from './api';
 
 // Fetch all seller fruits
-export const fetchSellerFruits = async () => {
-  const response = await api.get('/seller-fruits');
+export const fetchSellerFruits = async (token = null) => {
+  const response = await api.get('/seller-fruits', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
   return response.data;
 };
 

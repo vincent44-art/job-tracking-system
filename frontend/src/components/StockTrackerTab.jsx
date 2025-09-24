@@ -23,7 +23,7 @@ const StockTrackerTab = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
         const [
           inventoryRes,
           movementsRes,

@@ -366,7 +366,7 @@ const SellerDashboard = () => {
                   {/* Seller Fruits Table */}
                   <div className="card mt-4 shadow-sm">
                     <div className="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                      <h5 className="mb-0">Seller Fruits Table</h5>
+                      <h5 className="mb-0">Seller Fruits Sales Table</h5>
                       <div>
                         <button
                           className="btn btn-light btn-sm me-2"
@@ -394,52 +394,36 @@ const SellerDashboard = () => {
                               <th>Unit Price</th>
                               <th>Date</th>
                               <th>Amount</th>
-                              <th>Total Sold</th>
                               <th>Download PDF</th>
                             </tr>
                           </thead>
                           <tbody>
                             {sellerFruits.length === 0 ? (
                               <tr>
-                                <td colSpan="8" className="text-center text-muted py-4">
+                                <td colSpan="7" className="text-center text-muted py-4">
                                   No seller fruits data available
                                 </td>
                               </tr>
                             ) : (
-                              Array.from(groupedSellerFruits.entries()).map(([stockName, items]) => {
-                                const totalSold = items.reduce((sum, item) => sum + (item.qty || 0), 0);
-                                // totalAmount is used below for display, so keep it
-                                return (
-                                  <React.Fragment key={stockName}>
-                                    {items.map((fruit, index) => (
-                                      <tr key={fruit.id || index}>
-                                        {index === 0 && (
-                                          <td rowSpan={items.length}>{stockName}</td>
-                                        )}
-                                        <td>{fruit.fruit_name}</td>
-                                        <td>{fruit.qty}</td>
-                                        <td>{formatKenyanCurrency(fruit.unit_price)}</td>
-                                        <td>{formatDateCell(fruit.date)}</td>
-                                        <td>{formatKenyanCurrency(fruit.amount)}</td>
-                                        {index === 0 && (
-                                          <>
-                                            <td rowSpan={items.length}>{totalSold}</td>
-                                            <td rowSpan={items.length}>
-                                              <button
-                                                className="btn btn-sm btn-outline-primary"
-                                                onClick={() => downloadSellerFruitsPDF(stockName, items)}
-                                                disabled={pdfLoading === stockName}
-                                              >
-                                                {pdfLoading === stockName ? 'Generating...' : 'Download PDF'}
-                                              </button>
-                                            </td>
-                                          </>
-                                        )}
-                                      </tr>
-                                    ))}
-                                  </React.Fragment>
-                                );
-                              })
+                              sellerFruits.map((fruit, index) => (
+                                <tr key={fruit.id || index}>
+                                  <td>{fruit.stock_name}</td>
+                                  <td>{fruit.fruit_name}</td>
+                                  <td>{fruit.qty}</td>
+                                  <td>{formatKenyanCurrency(fruit.unit_price)}</td>
+                                  <td>{formatDateCell(fruit.date)}</td>
+                                  <td>{formatKenyanCurrency(fruit.amount)}</td>
+                                  <td>
+                                    <button
+                                      className="btn btn-sm btn-outline-primary"
+                                      onClick={() => downloadSellerFruitsPDF(fruit.stock_name, [fruit])}
+                                      disabled={pdfLoading === fruit.stock_name}
+                                    >
+                                      {pdfLoading === fruit.stock_name ? 'Generating...' : 'Download PDF'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
                             )}
                           </tbody>
                       </table>

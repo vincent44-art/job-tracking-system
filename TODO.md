@@ -1,25 +1,23 @@
-# TODO: Allow Purchasers to See All Purchase Data
+# TODO: Sales Tab Enhancements
 
-## Plan Summary:
-The purchaser dashboard currently only shows purchases made by the logged-in purchaser user. We need to modify it so purchasers can see ALL purchases from the database.
+## Completed Tasks
+- [x] Replace "Creator Email" with "Seller Name" in the Enhanced Seller Fruits Table
+- [x] Add totals for each stock after each stock group
+- [x] Add PDF download column after each stock (integrated into total row)
+- [x] Ensure table fetches data from seller_fruit database table
+- [x] Display the email of the person who entered the data as the Seller Name
 
-## Steps to Complete:
+## Implementation Summary
+The Enhanced Seller Fruits Table in `frontend/src/components/SalesTab.jsx` now:
+- Fetches data from the `seller_fruit` table via the API
+- Displays the creator's email as "Seller Name" (as requested)
+- Groups entries by stock name
+- Shows individual rows for each fruit entry
+- Includes a total row after each stock group with:
+  - Sum of all amounts for that stock
+  - PDF download button for the entire stock
+- Maintains existing functionality for individual row PDF downloads and deletions
 
-### Backend Changes:
-1. [ ] Modify `PurchaseListResource.get()` in `backend/resources/purchases.py` to allow purchasers to see all purchases
-2. [ ] Update role permissions to allow purchasers to access all purchase data
-
-### Frontend Changes:
-3. [ ] Update `PurchaserDashboard.jsx` to fetch all purchases instead of user-specific ones
-4. [ ] Modify API call from `fetchPurchases(user.email)` to general purchases endpoint
-5. [ ] Update `frontend/src/api/purchase.js` to support fetching all purchases
-
-### Testing:
-6. [ ] Test that purchasers can see all purchases
-7. [ ] Verify new purchases are still associated with logged-in user
-8. [ ] Check CEO functionality remains unchanged
-
-## Current Status:
-- [ ] Backend changes completed
-- [ ] Frontend changes completed
-- [ ] Testing completed
+## Next Steps
+- [ ] User should refresh their browser to see the changes
+- [ ] Test the updated table functionality

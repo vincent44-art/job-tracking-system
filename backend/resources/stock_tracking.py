@@ -31,7 +31,7 @@ parser.add_argument('spoilage', type=float)
 parser.add_argument('totalStockCost', type=float)
 
 class StockTrackingListResource(Resource):
-    @role_required('storekeeper', 'ceo', 'seller')
+    @role_required('storekeeper', 'ceo', 'seller', 'purchaser', 'driver', 'admin', 'it')
     def get(self):
         records = StockTracking.query.order_by(StockTracking.date_in.desc()).all()
         return make_response_data(data=[r.to_dict() for r in records], message="Stock tracking records fetched.")
@@ -217,7 +217,7 @@ def generate_stock_pdf(stock_record):
 
 
 class StockTrackingPDFResource(Resource):
-    @role_required('storekeeper', 'ceo', 'seller')
+    @role_required('storekeeper', 'ceo', 'seller', 'purchaser', 'driver', 'admin', 'it')
     def get(self, record_id):
         try:
             record = StockTracking.query.get_or_404(record_id)

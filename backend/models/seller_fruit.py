@@ -11,6 +11,10 @@ class SellerFruit(db.Model):
     date = db.Column(db.Date, nullable=False)
     amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Track who created the record
+
+    # Relationship to User
+    creator = db.relationship('User', backref='seller_fruits', lazy=True)
 
     def to_dict(self):
         return {
@@ -21,5 +25,7 @@ class SellerFruit(db.Model):
             'unit_price': self.unit_price,
             'date': self.date.isoformat() if self.date else None,
             'amount': self.amount,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'created_by': self.created_by,
+            'creator_email': self.creator.email if self.creator else None
         }

@@ -1,8 +1,10 @@
 from flask_restful import Resource, reqparse
 from backend.models.seller_fruit import SellerFruit
+from backend.models.user import User
 from backend.extensions import db
 from flask import request
 from datetime import datetime
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 class SellerFruitListResource(Resource):
     def get(self):
@@ -14,6 +16,15 @@ class SellerFruitListResource(Resource):
 
         # Log incoming data for debugging
         print(f"Received POST data: {data}")
+
+        # Get current user from JWT token
+        current_user_id = get_jwt_identity()
+        if not current_user_id:
+            return {"message": "Authentication required"}, 401
+
+        user = User.query.get(current_user_id)
+        if not user:
+            return {"message": "User not found"}, 404
 
         # Extract fields
         stock_name = data.get('stock_name')
@@ -91,7 +102,8 @@ class SellerFruitListResource(Resource):
             qty=qty,
             unit_price=unit_price,
             date=date,
-            amount=amount
+            amount=amount,
+            created_by=current_user_id
         )
         db.session.add(new_fruit)
         db.session.commit()

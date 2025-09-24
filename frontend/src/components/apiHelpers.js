@@ -25,10 +25,10 @@ export const fetchStockMovements = async (token = null) => {
 };
 
 // Fetch purchases data
-export const fetchPurchases = async (userEmail = null) => {
+export const fetchPurchases = async (userEmail = null, token = null) => {
   try {
     const endpoint = userEmail ? `/purchases/${userEmail}` : '/purchases';
-    const response = await api.get(endpoint);
+    const response = await api.get(endpoint, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error fetching purchases:', error);
@@ -37,11 +37,11 @@ export const fetchPurchases = async (userEmail = null) => {
 };
 
 // Fetch sales data
-export const fetchSales = async (userEmail = null) => {
+export const fetchSales = async (userEmail = null, token = null) => {
   try {
     const endpoint = userEmail ? `/sales/${userEmail}` : '/sales';
-    const response = await api.get(endpoint);
-    return response;
+    const response = await api.get(endpoint, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+    return response.data || [];
   } catch (error) {
     console.error('Error fetching sales:', error);
     throw error;
@@ -49,9 +49,9 @@ export const fetchSales = async (userEmail = null) => {
 };
 
 // Fetch other expenses
-export const fetchOtherExpenses = async () => {
+export const fetchOtherExpenses = async (token = null) => {
   try {
-  const response = await api.get('/other_expenses');
+    const response = await api.get('/other_expenses', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error fetching other expenses:', error);
@@ -60,9 +60,9 @@ export const fetchOtherExpenses = async () => {
 };
 
 // Fetch users data
-export const fetchUsers = async () => {
+export const fetchUsers = async (token = null) => {
   try {
-    const response = await api.get('/users');
+    const response = await api.get('/users', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error fetching users:', error);

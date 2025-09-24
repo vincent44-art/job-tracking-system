@@ -8,13 +8,12 @@ import CarExpensesTab from '../components/CarExpensesTab';
 import OtherExpensesTab from '../components/OtherExpensesTab';
 import UserManagementTab from '../components/UserManagementTab';
 import SalaryManagementTab from '../components/SalaryManagementTab';
-
 import StockTrackerTab from '../components/StockTrackerTab';
 import ReportsTab from '../components/ReportsTab';
 import PerformanceOverview from '../components/PerformanceOverview';
 import AIAssistanceTab from '../components/AIAssistanceTab';
-// CeoMessagePanel removed
 import ClearDataModal from '../components/ClearDataModal';
+import SpoligeTab from '../components/SpoligeTab';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -66,7 +65,9 @@ const Dashboard = () => {
       );
     }
 
-    switch (activeTab) {
+  switch (activeTab) {
+      case 'spolige':
+        return <SpoligeTab data={data?.spolige} />;
       // Removed Overview tab content as requested
       // case 'overview':
       //   console.log('Dashboard overview data:', data);
@@ -131,6 +132,7 @@ const Dashboard = () => {
   }
 
   const tabs = [
+  { id: 'spolige', icon: 'bi-table', label: 'Spolige' },
     // Removed Overview tab as requested
     // { id: 'overview', icon: 'bi-graph-up', label: 'Overview' },
     { id: 'purchases', icon: 'bi-cart-plus', label: 'Purchases' },
