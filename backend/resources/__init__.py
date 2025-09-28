@@ -5,7 +5,7 @@ from flask_restful import Api, Resource
 from .auth import LoginResource, MeResource
 from .user import UserListResource, UserResource, UserSalaryResource, UserPaymentResource
 from .inventory import InventoryListResource, InventoryResource, ClearInventoryResource
-from .sales import SalesListResource, SalesResource, ClearSalesResource, SalesSummaryResource
+
 from .purchases import (
     purchases_bp,  # <-- Import blueprint with extra routes
     PurchaseListResource, PurchaseResource,
@@ -23,6 +23,7 @@ from .clear_all import ClearAllDataResource
 from .stock_tracking import StockTrackingListResource, ClearStockTrackingResource
 from .profile_image import ProfileImageUploadResource
 from .seller_fruits import SellerFruitListResource, SellerFruitResource
+from .sales import SaleListResource, SaleResource, ClearSalesResource, SaleSummaryResource
 
 class CurrentStockResource(Resource):
     def get(self):
@@ -74,11 +75,7 @@ api.add_resource(CarExpensesResource, '/drivers/expenses', endpoint='driver_expe
 api.add_resource(SalariesResource, '/api/salaries')
 api.add_resource(SalaryPaymentToggleStatusResource, '/api/salary-payments/<int:payment_id>/toggle-status')
 
-# ----------- SALES -----------
-api.add_resource(SalesListResource, '/sales')
-api.add_resource(SalesResource, '/sales/<int:sale_id>')
-api.add_resource(ClearSalesResource, '/sales/clear')
-api.add_resource(SalesSummaryResource, '/sales/summary')
+
 
 # ----------- PURCHASES -----------
 api.add_resource(PurchaseListResource, '/purchases')
@@ -111,6 +108,12 @@ api.add_resource(ClearStockTrackingResource, '/stock-tracking/clear')
 # ----------- SELLER FRUITS -----------
 api.add_resource(SellerFruitListResource, '/seller-fruits')
 api.add_resource(SellerFruitResource, '/seller-fruits/<int:fruit_id>')
+
+# ----------- SALES -----------
+api.add_resource(SaleListResource, '/sales')
+api.add_resource(SaleResource, '/sales/<int:sale_id>')
+api.add_resource(ClearSalesResource, '/sales/clear')
+api.add_resource(SaleSummaryResource, '/sales/summary')
 
 # ----------- EXTRA ROUTES (from purchases.py) -----------
 # This ensures /api/purchases/<email> and /api/ceo/messages work

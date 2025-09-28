@@ -28,7 +28,6 @@ const FruitProfitabilityTab = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-  // Removed unused token variable
         const [salesRes] = await Promise.all([
           fetchSales(),
           fetchPurchases()

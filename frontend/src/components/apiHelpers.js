@@ -302,9 +302,9 @@ export const clearSalariesDataAPI = async () => {
 };
 
 // Create other expense
-export const createOtherExpense = async (expenseData) => {
+export const createOtherExpense = async (expenseData, token = null) => {
   try {
-  const response = await api.post('/other_expenses', expenseData);
+  const response = await api.post('/other_expenses', expenseData, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error creating other expense:', error);
@@ -313,9 +313,9 @@ export const createOtherExpense = async (expenseData) => {
 };
 
 // Delete other expense
-export const deleteOtherExpense = async (expenseId) => {
+export const deleteOtherExpense = async (expenseId, token = null) => {
   try {
-  const response = await api.delete(`/other_expenses/${expenseId}`);
+  const response = await api.delete(`/other_expenses/${expenseId}`, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error deleting other expense:', error);

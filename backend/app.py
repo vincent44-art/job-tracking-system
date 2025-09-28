@@ -15,6 +15,7 @@ from backend.resources import api_bp  # Your API blueprints
 from backend.resources.dashboard import dashboard_bp
 from backend.resources.__init__ import CurrentStockResource
 from backend.resources.ceo_dashboard import CEODashboardResource
+from backend.resources.auth import LoginResource, RefreshResource, MeResource
 from flask_restful import Api
 
 # Load environment variables
@@ -51,6 +52,13 @@ def create_app(config_class=Config):
     # Initialize Extensions
     db.init_app(app)
     jwt.init_app(app)
+
+    # JWT user lookup loader
+    @jwt.user_lookup_loader
+    def user_lookup_callback(_jwt_header, jwt_data):
+        identity = jwt_data["sub"]
+        return User.query.get(identity)
+
     cors.init_app(
         app,
         resources={r"/*": {
@@ -94,6 +102,9 @@ def create_app(config_class=Config):
     from backend.resources.salaries import SalariesResource, SalaryResource, SalaryPaymentToggleStatusResource
     from backend.resources.expenses import CarExpensesResource
     api = Api(app)
+    api.add_resource(LoginResource, '/api/auth/login')
+    api.add_resource(RefreshResource, '/api/auth/refresh')
+    api.add_resource(MeResource, '/api/auth/me')
     api.add_resource(CurrentStockResource, '/api/current-stock')
     api.add_resource(OtherExpensesResource, '/api/other_expenses', '/api/expenses/other')
     api.add_resource(OtherExpenseResource, '/api/other_expenses/<int:expense_id>')
@@ -111,12 +122,18 @@ def create_app(config_class=Config):
     api.add_resource(ITAcknowledgeAlertsResource, '/api/it/alerts/acknowledge')
     from backend.resources.it_alerts import ITIncidentsResource
     api.add_resource(ITIncidentsResource, '/api/it/incidents')
-    from backend.resources.sales import DailySalesReportResource
+    from backend.resources.sales import SaleListResource, SaleResource, SaleSummaryResource, DailySalesReportResource, ClearSalesResource
     from backend.resources.purchases import DailyPurchasesReportResource
     from backend.resources.ai_assistance import AIAssistanceResource
     from backend.resources.receipts import ReceiptResource
     from backend.resources.seller_fruits import SellerFruitListResource, SellerFruitResource
+
+    api.add_resource(SaleListResource, '/api/sales')
+    api.add_resource(SaleResource, '/api/sales/<int:sale_id>')
+    api.add_resource(SaleSummaryResource, '/api/sales/summary')
+    api.add_resource(ClearSalesResource, '/api/sales/clear')
     from backend.resources.seller_fruits_bulk import SellerFruitBulkResource
+    from backend.resources.stock_tracking import StockTrackingAggregatedResource
     api.add_resource(DailySalesReportResource, '/api/sales/report/<string:date_str>')
     api.add_resource(DailyPurchasesReportResource, '/api/purchases/report/<string:date_str>')
     api.add_resource(AIAssistanceResource, '/api/ai-assistance')
@@ -124,6 +141,7 @@ def create_app(config_class=Config):
     api.add_resource(SellerFruitListResource, '/api/seller-fruits')
     api.add_resource(SellerFruitResource, '/api/seller-fruits/<int:fruit_id>')
     api.add_resource(SellerFruitBulkResource, '/api/seller-fruits/bulk')
+    api.add_resource(StockTrackingAggregatedResource, '/api/stock_tracking/aggregated')
 
     # Health Check
     @app.route('/api/health')

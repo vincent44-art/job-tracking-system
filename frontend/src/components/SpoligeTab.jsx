@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 
 const SpoligeTab = ({ data }) => {
-  const [spolige, setSpolige] = useState(Array.isArray(data) ? data : []);
+  const spolige = Array.isArray(data) ? data : [];
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filtered spolige data

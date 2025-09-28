@@ -114,10 +114,12 @@ def create_sample_data():
                     price_per_unit = 50 + (hash(fruit + str(i)) % 100)
                     
                     sale = Sale(
-                        fruit_type=fruit,
-                        quantity=quantity,
-                        revenue=quantity * price_per_unit,
-                        sale_date=month_date - timedelta(days=hash(fruit) % 20),
+                        stock_name=fruit,
+                        fruit_name=fruit,
+                        qty=quantity,
+                        unit_price=price_per_unit,
+                        amount=quantity * price_per_unit,
+                        date=month_date - timedelta(days=hash(fruit) % 20),
                         seller_id=seller.id
                     )
                     db.session.add(sale)

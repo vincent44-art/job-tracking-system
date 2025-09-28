@@ -6,7 +6,7 @@ import {
   fetchSales,
   fetchOtherExpenses
 } from './apiHelpers';
-import { fetchStockTracking } from '../api/stockTracking';
+import { fetchStockTracking, fetchStockTrackingAggregated } from '../api/stockTracking';
 
 const StockTrackerTab = () => {
   const [data, setData] = useState({
@@ -15,7 +15,9 @@ const StockTrackerTab = () => {
     purchases: [],
     sales: [],
     otherExpenses: [],
-    stockTracking: []
+    stockTracking: [],
+    stockExpenses: [],
+    fruitProfitability: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,14 +32,16 @@ const StockTrackerTab = () => {
           purchasesRes,
           salesRes,
           expensesRes,
-          stockTrackingRes
+          stockTrackingRes,
+          aggregatedRes
         ] = await Promise.all([
           fetchInventory(token),
           fetchStockMovements(token),
           fetchPurchases(),
           fetchSales(),
           fetchOtherExpenses(),
-          fetchStockTracking(token)
+          fetchStockTracking(token),
+          fetchStockTrackingAggregated(token)
         ]);
 
         setData({
@@ -46,7 +50,9 @@ const StockTrackerTab = () => {
           purchases: Array.isArray(purchasesRes.data.data) ? purchasesRes.data.data : purchasesRes.data || [],
           sales: Array.isArray(salesRes.data.data) ? salesRes.data.data : salesRes.data || [],
           otherExpenses: Array.isArray(expensesRes.data.data) ? expensesRes.data.data : expensesRes.data || [],
-          stockTracking: Array.isArray(stockTrackingRes.data.data) ? stockTrackingRes.data.data : stockTrackingRes.data || []
+          stockTracking: Array.isArray(stockTrackingRes.data.data) ? stockTrackingRes.data.data : stockTrackingRes.data || [],
+          stockExpenses: Array.isArray(aggregatedRes.data.stock_expenses) ? aggregatedRes.data.stock_expenses : [],
+          fruitProfitability: Array.isArray(aggregatedRes.data.fruit_profitability) ? aggregatedRes.data.fruit_profitability : []
         });
       } catch (err) {
         console.error('Failed to load stock tracker data:', err);
@@ -223,6 +229,100 @@ const StockTrackerTab = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stock Expenses Table */}
+      <div className="row mt-4">
+        <div className="col-12">
+          <div className="card shadow-lg border-0">
+            <div className="card-header bg-success text-white">
+              <h5><i className="bi bi-cash-coin me-2"></i>Stock Expenses & Profit Analysis</h5>
+            </div>
+            <div className="card-body table-responsive">
+              <table className="table table-bordered table-striped">
+                <thead className="table-dark">
+                  <tr>
+                    <th>Stock Name</th>
+                    <th>Fruit Type</th>
+                    <th>Purchase Cost</th>
+                    <th>Storage Usage</th>
+                    <th>Transport Costs</th>
+                    <th>Other Expenses</th>
+                    <th>Revenue</th>
+                    <th>Profit/Loss</th>
+                    <th>Date In</th>
+                    <th>Date Out</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.stockExpenses && data.stockExpenses.length > 0 ? (
+                    data.stockExpenses.map((stock, idx) => (
+                      <tr key={stock.stock_id || idx}>
+                        <td>{stock.stock_name}</td>
+                        <td>{stock.fruit_type}</td>
+                        <td>KES {stock.purchase_cost?.toLocaleString() || 0}</td>
+                        <td>{stock.storage_usage?.toLocaleString() || 0} units</td>
+                        <td>KES {stock.transport_costs?.toLocaleString() || 0}</td>
+                        <td>KES {stock.other_expenses?.toLocaleString() || 0}</td>
+                        <td>KES {stock.revenue?.toLocaleString() || 0}</td>
+                        <td className={stock.profit_loss >= 0 ? 'text-success' : 'text-danger'}>
+                          KES {stock.profit_loss?.toLocaleString() || 0}
+                        </td>
+                        <td>{stock.date_in || 'N/A'}</td>
+                        <td>{stock.date_out || 'N/A'}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="10" className="text-center text-muted">No stock expense data available</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fruit Profitability Table */}
+      <div className="row mt-4">
+        <div className="col-12">
+          <div className="card shadow-lg border-0">
+            <div className="card-header bg-info text-white">
+              <h5><i className="bi bi-graph-up me-2"></i>Fruit Profitability Summary</h5>
+            </div>
+            <div className="card-body table-responsive">
+              <table className="table table-bordered table-striped">
+                <thead className="table-dark">
+                  <tr>
+                    <th>Fruit Name</th>
+                    <th>Total Purchased</th>
+                    <th>Total Sold</th>
+                    <th>Total Revenue</th>
+                    <th>Total Costs</th>
+                    <th>Profit Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.fruitProfitability && data.fruitProfitability.length > 0 ? (
+                    data.fruitProfitability.map((fruit, idx) => (
+                      <tr key={fruit.fruit_name || idx}>
+                        <td>{fruit.fruit_name}</td>
+                        <td>{fruit.total_purchased?.toLocaleString() || 0} units</td>
+                        <td>{fruit.total_sold?.toLocaleString() || 0} units</td>
+                        <td>KES {fruit.total_revenue?.toLocaleString() || 0}</td>
+                        <td>KES {fruit.total_costs?.toLocaleString() || 0}</td>
+                        <td className={fruit.profit_margin >= 0 ? 'text-success' : 'text-danger'}>
+                          KES {fruit.profit_margin?.toLocaleString() || 0}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="6" className="text-center text-muted">No fruit profitability data available</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

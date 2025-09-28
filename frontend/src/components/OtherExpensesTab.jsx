@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, PlusCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 //import { fetchOtherExpenses, createOtherExpense, deleteOtherExpense } from 'http://127.0.0.1:5000/api';
-import { fetchOtherExpenses, createOtherExpense, deleteOtherExpense } from './apiHelpers'; // adjust path as needed
+import { fetchOtherExpenses, createOtherExpense, deleteOtherExpense } from './apiHelpers';
 
 
-const OtherExpensesTab = () => {
+const OtherExpensesTab = ({ token }) => {
+  const { token: authToken } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,8 +21,12 @@ const OtherExpensesTab = () => {
   // Fetch expenses on component mount
   useEffect(() => {
     const loadExpenses = async () => {
+      if (!authToken) {
+        setLoading(false);
+        return;
+      }
       try {
-        const response = await fetchOtherExpenses();
+        const response = await fetchOtherExpenses(authToken);
         setExpenses(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         console.error('Failed to fetch expenses:', err);
@@ -30,7 +36,7 @@ const OtherExpensesTab = () => {
       }
     };
     loadExpenses();
-  }, []);
+  }, [authToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,7 +48,7 @@ const OtherExpensesTab = () => {
         date: formData.date
       };
       
-      const response = await createOtherExpense(newExpense);
+      const response = await createOtherExpense(newExpense, authToken);
       setExpenses([...expenses, response.data]);
       
       // Reset form
@@ -67,9 +73,9 @@ const OtherExpensesTab = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this expense?')) return;
-    
+
     try {
-      await deleteOtherExpense(id);
+      await deleteOtherExpense(id, authToken);
       setExpenses(expenses.filter(expense => expense.id !== id));
     } catch (err) {
       console.error('Failed to delete expense:', err);

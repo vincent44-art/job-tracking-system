@@ -12,6 +12,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
+  refreshToken: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   addUser: (userData: Omit<User, 'id' | 'createdAt'>) => boolean;
@@ -32,12 +34,22 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for existing session
     const savedUser = localStorage.getItem('fruittrack_user');
+    const savedToken = localStorage.getItem('access_token');
+    const savedRefreshToken = localStorage.getItem('refresh_token');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
+    }
+    if (savedToken) {
+      setToken(savedToken);
+    }
+    if (savedRefreshToken) {
+      setRefreshToken(savedRefreshToken);
     }
 
     // Initialize CEO if no users exist
@@ -70,10 +82,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.ok && data.success) {
         const user = data.data.user;
         const token = data.data.access_token;
+        const refreshToken = data.data.refresh_token;
 
         setUser(user);
+        setToken(token);
+        setRefreshToken(refreshToken);
         localStorage.setItem('fruittrack_user', JSON.stringify(user));
         localStorage.setItem('access_token', token); // Store JWT token
+        localStorage.setItem('refresh_token', refreshToken); // Store refresh token
         toast.success(`Welcome back, ${user.name}!`);
         return true;
       } else {
@@ -89,8 +105,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
+    setToken(null);
+    setRefreshToken(null);
     localStorage.removeItem('fruittrack_user');
     localStorage.removeItem('access_token'); // Remove JWT token
+    localStorage.removeItem('refresh_token'); // Remove refresh token
     toast.success('Logged out successfully');
   };
 
@@ -155,6 +174,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <AuthContext.Provider value={{
       user,
+      token,
+      refreshToken,
       login,
       logout,
       addUser,

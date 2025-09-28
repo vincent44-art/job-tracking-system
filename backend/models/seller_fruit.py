@@ -13,8 +13,9 @@ class SellerFruit(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Track who created the record
 
-    # Relationship to User
+    # Relationships
     creator = db.relationship('User', backref='seller_fruits', lazy=True)
+    sales = db.relationship('Sale', back_populates='seller_fruit', lazy=True)
 
     def to_dict(self):
         return {

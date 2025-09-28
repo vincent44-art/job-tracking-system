@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 
 const OtherExpenseForm = ({ onExpenseAdded }) => {
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
     description: '',
     amount: '',

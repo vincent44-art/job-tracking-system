@@ -19,8 +19,8 @@ def stats():
     """Real stats from database"""
     total_users = User.query.count()
     total_sales = Sale.query.count()
-    total_revenue = db.session.query(func.sum(Sale.revenue)).scalar() or 0
-    
+    total_revenue = db.session.query(func.sum(Sale.amount)).scalar() or 0
+
     return jsonify({
         "users": total_users,
         "sales": total_sales,
@@ -32,8 +32,8 @@ def performance_stats():
     """Real performance stats from database"""
     current_month = datetime.now().strftime('%B')
     total_sales = Sale.query.count()
-    total_revenue = db.session.query(func.sum(Sale.revenue)).scalar() or 0
-    
+    total_revenue = db.session.query(func.sum(Sale.amount)).scalar() or 0
+
     return jsonify({
         "month": current_month,
         "total_sales": total_sales,
@@ -44,29 +44,29 @@ def performance_stats():
 def performance_fruit():
     """Real fruit performance from database"""
     fruit_performance = db.session.query(
-        Sale.fruit_type,
+        Sale.fruit_name,
         func.count(Sale.id).label('count'),
-        func.sum(Sale.revenue).label('total_revenue')
-    ).group_by(Sale.fruit_type).all()
-    
+        func.sum(Sale.amount).label('total_revenue')
+    ).group_by(Sale.fruit_name).all()
+
     result = {}
     for fruit, count, revenue in fruit_performance:
         result[fruit] = {
             "count": count,
             "revenue": revenue or 0
         }
-    
+
     return jsonify(result)
 
 @dashboard_bp.route('/api/performance/monthly')
 def performance_monthly():
     """Real monthly performance from database"""
     monthly_data = db.session.query(
-        func.strftime('%Y-%m', Sale.sale_date).label('month'),
+        func.strftime('%Y-%m', Sale.date).label('month'),
         func.count(Sale.id).label('sales'),
-        func.sum(Sale.revenue).label('revenue')
-    ).group_by(func.strftime('%Y-%m', Sale.sale_date)).all()
-    
+        func.sum(Sale.amount).label('revenue')
+    ).group_by(func.strftime('%Y-%m', Sale.date)).all()
+
     result = []
     for month, sales, revenue in monthly_data:
         result.append({
@@ -74,7 +74,7 @@ def performance_monthly():
             "sales": sales,
             "revenue": revenue or 0
         })
-    
+
     return jsonify(result)
 
 # class DashboardResource(Resource):
@@ -105,7 +105,7 @@ class DashboardResource(Resource):
             # CEO data
             total_users = User.query.count()
             total_inventory_items = Inventory.query.count()
-            total_revenue = db.session.query(func.sum(Sale.revenue)).scalar() or 0
+            total_revenue = db.session.query(func.sum(Sale.amount)).scalar() or 0
             total_cost = db.session.query(func.sum(Purchase.cost)).scalar() or 0
             data = {
                 "total_users": total_users,
@@ -118,7 +118,7 @@ class DashboardResource(Resource):
 
         elif user.role == UserRole.SELLER:
             total_sales = Sale.query.filter_by(seller_id=user.id).count()
-            total_revenue = db.session.query(func.sum(Sale.revenue)).filter(Sale.seller_id == user.id).scalar() or 0
+            total_revenue = db.session.query(func.sum(Sale.amount)).filter(Sale.seller_id == user.id).scalar() or 0
             data = {
                 "my_total_sales_records": total_sales,
                 "my_total_revenue": f"{total_revenue:,.2f} KES"
@@ -135,9 +135,9 @@ class CEODashboardResource(Resource):
     def get(self):
         total_users = User.query.count()
         total_inventory_items = Inventory.query.count()
-        total_revenue = db.session.query(func.sum(Sale.revenue)).scalar() or 0
+        total_revenue = db.session.query(func.sum(Sale.amount)).scalar() or 0
         total_cost = db.session.query(func.sum(Purchase.cost)).scalar() or 0
-        
+
         data = {
             "total_users": total_users,
             "total_inventory_items": total_inventory_items,
@@ -152,7 +152,7 @@ class SellerDashboardResource(Resource):
     def get(self):
         current_user = get_current_user()
         total_sales = Sale.query.filter_by(seller_id=current_user.id).count()
-        total_revenue = db.session.query(func.sum(Sale.revenue)).filter(Sale.seller_id == current_user.id).scalar() or 0
+        total_revenue = db.session.query(func.sum(Sale.amount)).filter(Sale.seller_id == current_user.id).scalar() or 0
 
         data = {
             "my_total_sales_records": total_sales,

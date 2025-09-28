@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -14,9 +12,7 @@ import {
   Legend,
   ResponsiveContainer,
   AreaChart,
-  Area,
-  ScatterChart,
-  Scatter
+  Area
 } from 'recharts';
 import {
   Chart as ChartJS,
@@ -30,18 +26,13 @@ import {
   Legend as ChartLegend,
   ArcElement,
 } from 'chart.js';
-import { Bar as ChartBar, Line as ChartLine, Doughnut as ChartDoughnut } from 'react-chartjs-2';
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
   Package,
   Users,
-  ShoppingCart,
-  AlertTriangle,
-  Award,
-  Target,
   Activity
 } from 'lucide-react';
 import {
@@ -108,7 +99,7 @@ const ReportsTabAnalytics = () => {
             fetchInventory(token),
             fetchStockMovements(token),
             fetchPurchases(token),
-            fetchSales(token),
+            fetchSales(null, token),
             fetchOtherExpenses(token),
             fetchUsers(token),
             fetchStockTracking(token),
@@ -119,11 +110,11 @@ const ReportsTabAnalytics = () => {
           inventory: Array.isArray(inventoryRes.data?.data) ? inventoryRes.data.data : inventoryRes.data || [],
           stockMovements: Array.isArray(movementsRes.data?.data) ? movementsRes.data.data : movementsRes.data || [],
           purchases: Array.isArray(purchasesRes.data?.data) ? purchasesRes.data.data : purchasesRes.data || [],
-          sales: Array.isArray(salesRes.data?.data) ? salesRes.data.data : salesRes.data || [],
+          sales: Array.isArray(salesRes) ? salesRes : [],
           otherExpenses: Array.isArray(expensesRes.data?.data) ? expensesRes.data.data : expensesRes.data || [],
           users: Array.isArray(usersRes.data?.data) ? usersRes.data.data : usersRes.data || [],
           stockTracking: Array.isArray(stockTrackingRes.data?.data) ? stockTrackingRes.data.data : stockTrackingRes.data || [],
-          sellerFruits: Array.isArray(sellerFruitsRes.data?.data) ? sellerFruitsRes.data.data : sellerFruitsRes.data || []
+          sellerFruits: Array.isArray(sellerFruitsRes) ? sellerFruitsRes : []
         });
       } catch (err) {
         console.error('Failed to load analytics data:', err);

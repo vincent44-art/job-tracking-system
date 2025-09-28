@@ -1,9 +1,14 @@
 from flask_restful import Resource, reqparse
 from backend.extensions import db
 from backend.models.stock_tracking import StockTracking
+from backend.models.sales import Sale
+from backend.models.other_expense import OtherExpense
+from backend.models.driver import DriverExpense
+from backend.models.stock_movement import StockMovement
+from backend.models.inventory import Inventory
 from ..utils.helpers import make_response_data
 from ..utils.decorators import role_required
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import send_file, make_response
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -11,6 +16,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 import io
+import logging
 
 parser = reqparse.RequestParser()
 parser.add_argument('stockName', type=str, required=True)
@@ -230,3 +236,148 @@ class StockTrackingPDFResource(Resource):
             return response
         except Exception as e:
             return make_response_data(success=False, message=f"Error generating PDF: {str(e)}", status_code=500)
+
+
+class StockTrackingAggregatedResource(Resource):
+    @role_required('storekeeper', 'ceo', 'seller', 'purchaser', 'driver', 'admin', 'it')
+    def get(self):
+        try:
+            # Set up logging
+            logger = logging.getLogger('stock_tracking')
+            logger.info("Fetching aggregated stock tracking data")
+
+            # Get all stock tracking records
+            stocks = StockTracking.query.all()
+            logger.info(f"Found {len(stocks)} stock tracking records")
+
+            aggregated_data = []
+
+            for stock in stocks:
+                try:
+                    # Calculate storage usage from stock movements
+                    storage_usage = 0
+                    try:
+                        storage_result = StockMovement.query.join(Inventory).filter(
+                            Inventory.name == stock.stock_name,
+                            StockMovement.movement_type == 'out'
+                        ).with_entities(db.func.sum(StockMovement.quantity)).scalar()
+                        storage_usage = float(storage_result) if storage_result else 0
+                    except Exception as e:
+                        logger.warning(f"Error calculating storage usage for stock {stock.stock_name}: {str(e)}")
+                        storage_usage = 0
+
+                    # Calculate transport costs from driver expenses
+                    transport_costs = 0
+                    try:
+                        transport_result = DriverExpense.query.filter(
+                            DriverExpense.stock_name == stock.stock_name
+                        ).with_entities(db.func.sum(DriverExpense.amount)).scalar()
+                        transport_costs = float(transport_result) if transport_result else 0
+                    except Exception as e:
+                        logger.warning(f"Error calculating transport costs for stock {stock.stock_name}: {str(e)}")
+                        transport_costs = 0
+
+                    # Calculate other expenses (link by date range - 7 days before/after stock date)
+                    other_expenses = 0
+                    try:
+                        stock_date = stock.date_in or stock.date_out or datetime.now().date()
+                        date_start = stock_date - timedelta(days=7)
+                        date_end = stock_date + timedelta(days=7)
+
+                        expense_result = OtherExpense.query.filter(
+                            OtherExpense.date >= date_start,
+                            OtherExpense.date <= date_end
+                        ).with_entities(db.func.sum(OtherExpense.amount)).scalar()
+                        other_expenses = float(expense_result) if expense_result else 0
+                    except Exception as e:
+                        logger.warning(f"Error calculating other expenses for stock {stock.stock_name}: {str(e)}")
+                        other_expenses = 0
+
+                    # Calculate revenue from sales
+                    revenue = 0
+                    try:
+                        revenue_result = Sale.query.filter(
+                            Sale.fruit_name == stock.fruit_type,
+                            Sale.date >= stock.date_in,
+                            Sale.date <= (stock.date_out or datetime.now().date())
+                        ).with_entities(db.func.sum(Sale.amount)).scalar()
+                        revenue = float(revenue_result) if revenue_result else 0
+                    except Exception as e:
+                        logger.warning(f"Error calculating revenue for stock {stock.stock_name}: {str(e)}")
+                        revenue = 0
+
+                    # Calculate profit/loss
+                    total_costs = stock.total_amount + transport_costs + other_expenses
+                    profit_loss = revenue - total_costs
+
+                    aggregated_data.append({
+                        'stock_id': stock.id,
+                        'stock_name': stock.stock_name,
+                        'fruit_type': stock.fruit_type,
+                        'purchase_cost': stock.total_amount,
+                        'storage_usage': storage_usage,
+                        'transport_costs': transport_costs,
+                        'other_expenses': other_expenses,
+                        'revenue': revenue,
+                        'profit_loss': profit_loss,
+                        'date_in': stock.date_in.isoformat() if stock.date_in else None,
+                        'date_out': stock.date_out.isoformat() if stock.date_out else None
+                    })
+
+                except Exception as e:
+                    logger.error(f"Error processing stock {stock.stock_name}: {str(e)}")
+                    continue
+
+            # Also calculate fruit profitability summary
+            fruit_profitability = {}
+            for stock in stocks:
+                try:
+                    fruit = stock.fruit_type
+                    if fruit not in fruit_profitability:
+                        fruit_profitability[fruit] = {
+                            'fruit_name': fruit,
+                            'total_purchased': 0,
+                            'total_sold': 0,
+                            'total_revenue': 0,
+                            'total_costs': 0
+                        }
+
+                    fruit_profitability[fruit]['total_purchased'] += stock.quantity_in
+                    fruit_profitability[fruit]['total_costs'] += stock.total_amount
+
+                    # Get sales for this fruit
+                    try:
+                        sales = Sale.query.filter(
+                            Sale.fruit_name == fruit,
+                            Sale.date >= stock.date_in,
+                            Sale.date <= (stock.date_out or datetime.now().date())
+                        ).all()
+
+                        for sale in sales:
+                            fruit_profitability[fruit]['total_sold'] += float(sale.qty)
+                            fruit_profitability[fruit]['total_revenue'] += sale.amount
+                    except Exception as e:
+                        logger.warning(f"Error fetching sales for fruit {fruit}: {str(e)}")
+
+                except Exception as e:
+                    logger.error(f"Error processing fruit profitability for {stock.fruit_type}: {str(e)}")
+                    continue
+
+            # Calculate profit margin for each fruit
+            for fruit_data in fruit_profitability.values():
+                fruit_data['profit_margin'] = fruit_data['total_revenue'] - fruit_data['total_costs']
+
+            logger.info(f"Successfully processed {len(aggregated_data)} stock records and {len(fruit_profitability)} fruit types")
+
+            return make_response_data(
+                data={
+                    'stock_expenses': aggregated_data,
+                    'fruit_profitability': list(fruit_profitability.values())
+                },
+                message="Aggregated stock tracking data fetched successfully."
+            )
+
+        except Exception as e:
+            logger = logging.getLogger('stock_tracking')
+            logger.error(f"Error fetching aggregated data: {str(e)}")
+            return make_response_data(success=False, message=f"Error fetching aggregated data: {str(e)}", status_code=500)

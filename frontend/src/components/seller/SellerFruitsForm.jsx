@@ -78,8 +78,8 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
 
       onSave();
     } catch (err) {
-      setError('Failed to save seller fruit. Please try again.');
-      console.error('Error saving seller fruit:', err);
+      setError('Failed to save sale. Please try again.');
+      console.error('Error saving sale:', err);
     } finally {
       setLoading(false);
     }
@@ -88,7 +88,7 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
   return (
     <div className="card shadow-sm">
       <div className="card-header bg-primary text-white">
-        <h5 className="mb-0">{fruit ? 'Edit Seller Fruit' : 'Add New Seller Fruit'}</h5>
+        <h5 className="mb-0">{fruit ? 'Edit Sale' : 'Add New Sale'}</h5>
       </div>
       <div className="card-body">
         {error && (

@@ -1,27 +1,37 @@
-from datetime import datetime
 from backend.extensions import db
+from backend.models.user import User
+from datetime import datetime
 
 class Sale(db.Model):
+    __tablename__ = 'sale'
+
     id = db.Column(db.Integer, primary_key=True)
     seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    assignment = db.Column(db.String(100))  # Deprecated, use assignment_id
-    assignment_id = db.Column(db.Integer, db.ForeignKey('assignments.id'), nullable=True)
-    fruit_type = db.Column(db.String(50), nullable=False)
-    quantity = db.Column(db.String(50), nullable=False)
-    revenue = db.Column(db.Float, nullable=False)
-    sale_date = db.Column(db.Date, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    seller_fruit_id = db.Column(db.Integer, db.ForeignKey('seller_fruits.id'), nullable=True)
+    stock_name = db.Column(db.String(100), nullable=False)
+    fruit_name = db.Column(db.String(50), nullable=False)
+    qty = db.Column(db.Float, nullable=False, default=0.0)
+    unit_price = db.Column(db.Float, nullable=False, default=0.0)
+    amount = db.Column(db.Float, nullable=False, default=0.0)
+    date = db.Column(db.Date, default=datetime.utcnow)
+
+    # Relationships
+    seller = db.relationship('User', back_populates='sales', lazy=True)
+    seller_fruit = db.relationship('SellerFruit', back_populates='sales', lazy=True)
+
+    def __repr__(self):
+        return f'<Sale {self.id}: {self.qty} units of {self.fruit_name}>'
 
     def to_dict(self):
         return {
             'id': self.id,
             'seller_id': self.seller_id,
-            'seller_name': getattr(self, 'seller', None).name if hasattr(self, 'seller') and self.seller else None,
-            'assignment': self.assignment,
-            'assignment_id': self.assignment_id,
-            'fruit_type': self.fruit_type,
-            'quantity': self.quantity,
-            'revenue': self.revenue,
-            'sale_date': self.sale_date.isoformat() if self.sale_date else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'seller_fruit_id': self.seller_fruit_id,
+            'stock_name': self.stock_name,
+            'fruit_name': self.fruit_name,
+            'qty': self.qty,
+            'unit_price': self.unit_price,
+            'amount': self.amount,
+            'date': self.date.isoformat() if self.date else None,
+            'seller_email': self.seller.email if self.seller else None
         }

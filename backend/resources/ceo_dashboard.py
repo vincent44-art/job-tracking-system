@@ -8,6 +8,7 @@ from backend.models.sales import Sale
 from backend.models.purchases import Purchase
 from ..models.driver import DriverExpense
 from ..models.other_expense import OtherExpense
+from ..models.seller_fruit import SellerFruit
 from ..utils.helpers import make_response_data
 
 class CEODashboardResource(Resource):
@@ -16,7 +17,7 @@ class CEODashboardResource(Resource):
         # Aggregate stats for CEO overview
         total_users = User.query.count()
         total_inventory_items = Inventory.query.count()
-        total_sales = db.session.query(func.sum(Sale.revenue)).scalar() or 0
+        total_sales = db.session.query(func.sum(Sale.amount)).scalar() or 0
         total_purchases = db.session.query(func.sum(Purchase.cost)).scalar() or 0
         total_car_expenses = db.session.query(func.sum(DriverExpense.amount)).scalar() or 0
         total_other_expenses = db.session.query(func.sum(OtherExpense.amount)).scalar() or 0
@@ -29,13 +30,13 @@ class CEODashboardResource(Resource):
 
         # Fruit performance: aggregate for all fruits, including losses
         fruit_performance = []
-        fruit_types = db.session.query(Sale.fruit_type).distinct().all()
+        fruit_types = db.session.query(Sale.fruit_name).distinct().all()
         total_fruit_profit = 0
         total_fruit_loss = 0
         for fruit_row in fruit_types:
             fruit_type = fruit_row[0]
             purchases = db.session.query(func.sum(Purchase.cost)).filter(Purchase.fruit_type == fruit_type).scalar() or 0
-            sales = db.session.query(func.sum(Sale.revenue)).filter(Sale.fruit_type == fruit_type).scalar() or 0
+            sales = db.session.query(func.sum(Sale.amount)).filter(Sale.fruit_name == fruit_type).scalar() or 0
             profit = sales - purchases
             profit_margin = (profit / purchases * 100) if purchases else 0
             is_loss = profit < 0
@@ -71,14 +72,14 @@ class CEODashboardResource(Resource):
         for week in range(1, weeks_in_year + 1):
             week_start = datetime.strptime(f'{year}-W{week - 1}-1', "%Y-W%W-%w")
             week_end = week_start + timedelta(days=6)
-            fruits = db.session.query(Sale.fruit_type).distinct().all()
+            fruits = db.session.query(Sale.fruit_name).distinct().all()
             fruit_performance_week = []
             for fruit_row in fruits:
                 fruit_type = fruit_row[0]
-                sales = db.session.query(func.sum(Sale.revenue)).filter(
-                    Sale.fruit_type == fruit_type,
-                    Sale.sale_date >= week_start,
-                    Sale.sale_date <= week_end
+                sales = db.session.query(func.sum(Sale.amount)).filter(
+                    Sale.fruit_name == fruit_type,
+                    Sale.date >= week_start,
+                    Sale.date <= week_end
                 ).scalar() or 0
                 purchases = db.session.query(func.sum(Purchase.cost)).filter(
                     Purchase.fruit_type == fruit_type,
@@ -122,7 +123,7 @@ class CEODashboardResource(Resource):
         month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         monthly_data = []
         for i, month in enumerate(range(1, 13)):
-            sales = db.session.query(func.sum(Sale.revenue)).filter(func.extract('month', Sale.sale_date) == month).scalar()
+            sales = db.session.query(func.sum(Sale.amount)).filter(func.extract('month', Sale.date) == month).scalar()
             purchases = db.session.query(func.sum(Purchase.cost)).filter(func.extract('month', Purchase.purchase_date) == month).scalar()
             car_expenses = db.session.query(func.sum(DriverExpense.amount)).filter(func.extract('month', DriverExpense.date) == month).scalar()
             other_expenses = db.session.query(func.sum(OtherExpense.amount)).filter(func.extract('month', OtherExpense.date) == month).scalar()
@@ -136,6 +137,10 @@ class CEODashboardResource(Resource):
                 'salaries': float(salaries) if salaries is not None else 0.0,
                 'profitOrLoss': profit
             })
+
+        # Fetch all seller fruits for CEO view
+        seller_fruits = SellerFruit.query.all()
+        seller_fruits_data = [fruit.to_dict() for fruit in seller_fruits]
 
         stats = {
             'totalUsers': total_users,
@@ -154,5 +159,6 @@ class CEODashboardResource(Resource):
             'fruitPerformance': fruit_performance,
             'monthlyData': monthly_data,
             'weeklyData': week_data,
-            'companyPerformance': company_performance
+            'companyPerformance': company_performance,
+            'sellerFruits': seller_fruits_data
         }, message='CEO dashboard overview fetched.')

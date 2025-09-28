@@ -94,7 +94,8 @@ const loadData = async () => {
           fruitPerformance: (d.fruitPerformance && d.fruitPerformance.length > 0) ? d.fruitPerformance : demoFruitPerformance,
           monthlyData: (d.monthlyData && d.monthlyData.length > 0) ? d.monthlyData : demoMonthlyData,
           weeklyData: (d.weeklyData && d.weeklyData.length > 0) ? d.weeklyData : demoWeeklyData,
-          companyPerformance: d.companyPerformance || {}
+          companyPerformance: d.companyPerformance || {},
+          sellerFruits: d.sellerFruits || []
         };
       }
       setData(transformed);

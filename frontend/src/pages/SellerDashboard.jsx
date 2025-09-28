@@ -4,11 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import SaleInvoiceForm from '../components/SaleInvoiceForm';
 import SalesTableHeader from '../components/seller/SalesTableHeader';
 import SellerFruitsForm from '../components/seller/SellerFruitsForm';
+import SellerFruitsTable from '../components/seller/SellerFruitsTable';
 import OtherExpenseForm from '../components/OtherExpenseForm';
-import OtherExpensesTable from '../components/OtherExpensesTable';
 import { fetchStockTracking } from '../api/stockTracking';
 import { fetchSellerFruits } from '../api/sellerFruits';
-import { fetchOtherExpenses } from '../api/otherExpenses';
+import { fetchSales } from '../components/apiHelpers';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -75,8 +75,6 @@ const SellerDashboard = () => {
   const [showStockSelector, setShowStockSelector] = useState(false);
   const [selectedStockData, setSelectedStockData] = useState(null);
 
-  const [pdfLoading, setPdfLoading] = useState(null); // Track which stock is generating PDF
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -102,9 +100,9 @@ const SellerDashboard = () => {
             setSellerSales([]);
           }
 
-          // Load seller fruits for table display
-          const fruits = await fetchSellerFruits();
-          setSellerFruits(Array.isArray(fruits) ? fruits : []);
+          // Load sales data for table display (replacing seller fruits)
+          const salesData = await fetchSales(user?.email, token);
+          setSellerFruits(Array.isArray(salesData) ? salesData : []);
         } else {
           console.warn('Missing access_token; skipping stock-tracking and sales fetch');
         }
@@ -163,23 +161,9 @@ const SellerDashboard = () => {
     return map;
   }, [enrichedSales]);
 
-  const groupedSellerFruits = useMemo(() => {
-    const map = new Map();
-    for (const fruit of sellerFruits) {
-      const key = fruit.stock_name || 'Unknown';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(fruit);
-    }
-    for (const arr of map.values()) {
-      arr.sort((a, b) => (parseDate(b.date) || 0) - (parseDate(a.date) || 0));
-    }
-    return map;
-  }, [sellerFruits]);
-
   // Removed unused downloadPDF function
 
   const downloadSellerFruitsPDF = async (stockName, items) => {
-    setPdfLoading(stockName);
     try {
       const doc = new jsPDF();
       // Always load logo as Base64
@@ -204,16 +188,16 @@ const SellerDashboard = () => {
         doc.addImage(logoBase64, 'JPEG', 10, 10, 40, 20);
       }
       doc.setFontSize(18);
-      doc.text('Seller Fruits Report', 60, 18);
+      doc.text('Sales Report', 60, 18);
       doc.setFontSize(12);
       doc.text(`Stock: ${stockName}`, 60, 28);
       // Table
       autoTable(doc, {
         head: [["Fruit Name", "Quantity", "Unit Price", "Date", "Amount"]],
         body: items.map((r) => [
-          r.fruit,
+          r.fruit_name,
           r.qty,
-          formatKenyanCurrency(r.unitPrice),
+          formatKenyanCurrency(r.unit_price),
           formatDateCell(r.date),
           formatKenyanCurrency(r.amount),
         ]),
@@ -228,12 +212,10 @@ const SellerDashboard = () => {
         styles: { fontStyle: 'bold', fontSize: 12 },
         theme: 'plain',
       });
-      doc.save(`seller_fruits_${stockName.replace(/\s+/g, '_')}.pdf`);
+      doc.save(`sales_${stockName.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       alert('Failed to generate PDF. Please try again.');
       console.error('PDF generation error:', err);
-    } finally {
-      setPdfLoading(null);
     }
   };
 
@@ -257,12 +239,6 @@ const SellerDashboard = () => {
         setLoading(false);
       }
     }
-  };
-
-  const handleAddSellerFruit = () => {
-    setEditingFruit(null);
-    setSelectedStockData(null);
-    setShowSellerFruitsForm(true);
   };
 
   const handleSelectStockForFruit = (stockName, items) => {
@@ -309,14 +285,15 @@ const SellerDashboard = () => {
     setEditingFruit(null);
   };
 
-  // Function to refresh seller fruits table
+  // Function to refresh sales table (formerly seller fruits)
   const refreshSellerFruits = async () => {
     try {
-      const fruits = await fetchSellerFruits();
-      setSellerFruits(Array.isArray(fruits) ? fruits : []);
+      const token = localStorage.getItem('access_token');
+      const salesData = await fetchSales(user?.email, token);
+      setSellerFruits(Array.isArray(salesData) ? salesData : []);
     } catch (err) {
-      setError('Failed to refresh seller fruits data.');
-      console.error('Error refreshing seller fruits:', err);
+      setError('Failed to refresh sales data.');
+      console.error('Error refreshing sales data:', err);
     }
   };
 
@@ -363,71 +340,20 @@ const SellerDashboard = () => {
               ) : (
                 <>
 
-                  {/* Seller Fruits Table */}
-                  <div className="card mt-4 shadow-sm">
-                    <div className="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                      <h5 className="mb-0">Seller Fruits Sales Table</h5>
-                      <div>
-                        <button
-                          className="btn btn-light btn-sm me-2"
-                          onClick={() => setShowStockSelector(true)}
-                        >
-                          <i className="bi bi-list-ul me-1"></i>
-                          Select Stock
-                        </button>
-                        <button
-                          className="btn btn-light btn-sm"
-                          onClick={handleAddSellerFruit}
-                        >
-                          <i className="bi bi-plus-circle me-1"></i>
-                          Add Fruit
-                        </button>
-                      </div>
-                    </div>
-                    <div className="card-body table-responsive">
-                      <table className="table table-striped table-hover align-middle">
-                          <thead className="table-dark">
-                            <tr>
-                              <th>Stock Name</th>
-                              <th>Fruit Name</th>
-                              <th>Quantity</th>
-                              <th>Unit Price</th>
-                              <th>Date</th>
-                              <th>Amount</th>
-                              <th>Download PDF</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sellerFruits.length === 0 ? (
-                              <tr>
-                                <td colSpan="7" className="text-center text-muted py-4">
-                                  No seller fruits data available
-                                </td>
-                              </tr>
-                            ) : (
-                              sellerFruits.map((fruit, index) => (
-                                <tr key={fruit.id || index}>
-                                  <td>{fruit.stock_name}</td>
-                                  <td>{fruit.fruit_name}</td>
-                                  <td>{fruit.qty}</td>
-                                  <td>{formatKenyanCurrency(fruit.unit_price)}</td>
-                                  <td>{formatDateCell(fruit.date)}</td>
-                                  <td>{formatKenyanCurrency(fruit.amount)}</td>
-                                  <td>
-                                    <button
-                                      className="btn btn-sm btn-outline-primary"
-                                      onClick={() => downloadSellerFruitsPDF(fruit.stock_name, [fruit])}
-                                      disabled={pdfLoading === fruit.stock_name}
-                                    >
-                                      {pdfLoading === fruit.stock_name ? 'Generating...' : 'Download PDF'}
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                      </table>
-                    </div>
+                  {/* Enhanced Seller Fruits Table */}
+                  <div className="mt-4">
+                    <SellerFruitsTable
+                      sellerFruits={sellerFruits}
+                      onEdit={(fruit) => {
+                        setEditingFruit(fruit);
+                        setSelectedStockData(null);
+                        setShowSellerFruitsForm(true);
+                      }}
+                      onRefresh={refreshSellerFruits}
+                      formatKenyanCurrency={formatKenyanCurrency}
+                      formatDateCell={formatDateCell}
+                      downloadSellerFruitsPDF={downloadSellerFruitsPDF}
+                    />
                   </div>
 
                   {/* Stock Selector Modal */}

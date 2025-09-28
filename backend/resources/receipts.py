@@ -12,7 +12,7 @@ class ReceiptResource(Resource):
     def post(self):
         data = request.get_json()
         receipt = Receipt(
-            receipt_num=data['receiptNum'],
+            receipt_num=data['invoiceNum'],
             seller_name=data['seller']['name'],
             seller_address=data['seller']['address'],
             seller_phone=data['seller']['phone'],

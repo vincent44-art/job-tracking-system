@@ -29,8 +29,10 @@ class LoginResource(Resource):
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             access_token = create_access_token(identity=user.id, additional_claims={"role": user.role.value})
+            refresh_token = create_refresh_token(identity=user.id)
             return make_response_data(data={
                 'access_token': access_token,
+                'refresh_token': refresh_token,
                 'user': user.to_dict()
             }, message="Login successful")
         return make_response_data(success=False, message="Invalid credentials", status_code=401)
@@ -42,3 +44,21 @@ class MeResource(Resource):
         if user:
             return make_response_data(data=user.to_dict(), message="Current user data fetched.")
         return make_response_data(success=False, message="User not found.", status_code=404)
+
+
+class RefreshResource(Resource):
+    def post(self):
+        data = request.get_json()
+        refresh_token = data.get('refresh_token')
+        if not refresh_token:
+            return make_response_data(success=False, message="Refresh token required", status_code=400)
+
+        try:
+            # Decode the refresh token to get identity
+            from flask_jwt_extended import decode_token
+            decoded = decode_token(refresh_token, allow_expired=False)
+            identity = decoded['sub']
+            access_token = create_access_token(identity=identity)
+            return make_response_data(data={'access_token': access_token}, message="Token refreshed successfully")
+        except Exception as e:
+            return make_response_data(success=False, message="Invalid refresh token", status_code=401)

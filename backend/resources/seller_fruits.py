@@ -7,10 +7,38 @@ from datetime import datetime
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 class SellerFruitListResource(Resource):
+    @jwt_required()
     def get(self):
-        fruits = SellerFruit.query.all()
+        # Get current user from JWT token
+        current_user_id = get_jwt_identity()
+        if not current_user_id:
+            return {"message": "Authentication required"}, 401
+
+        # Get current user role
+        user = User.query.get(current_user_id)
+        if not user:
+            return {"message": "User not found"}, 404
+
+        # If CEO, return all seller fruits; otherwise, filter by user
+        if getattr(user, 'role', None) == 'ceo':
+            fruits = SellerFruit.query.all()
+        else:
+            fruits = SellerFruit.query.filter_by(created_by=current_user_id).all()
         return [fruit.to_dict() for fruit in fruits], 200
 
+    @jwt_required()
+    def delete(self):
+        # Get current user from JWT token
+        current_user_id = get_jwt_identity()
+        if not current_user_id:
+            return {"message": "Authentication required"}, 401
+
+        # Delete all fruits for the current user
+        deleted_count = SellerFruit.query.filter_by(created_by=current_user_id).delete()
+        db.session.commit()
+        return {"message": f"Deleted {deleted_count} seller fruits successfully"}, 200
+
+    @jwt_required()
     def post(self):
         data = request.get_json()
 

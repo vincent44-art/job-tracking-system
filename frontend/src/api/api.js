@@ -51,8 +51,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       try {
         refreshTokenRequest = refreshTokenRequest ||
-          api.post('/auth/refresh', {}, {
-            withCredentials: true,
+          api.post('/auth/refresh', {
+            refresh_token: localStorage.getItem('refresh_token')
+          }, {
             skipAuthRefresh: true,
           });
 

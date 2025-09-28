@@ -1,36 +1,208 @@
 from flask_restful import Resource, reqparse
+from flask import request
+from flask_jwt_extended import jwt_required, get_current_user
 from datetime import datetime
 from sqlalchemy import func
-from backend.extensions import db
-from backend.models.sales import Sale
-from backend.models.user import UserRole
-from ..utils.helpers import make_response_data, get_current_user
-from ..utils.decorators import role_required
-from flask import send_file
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-import io
+from io import BytesIO
+from flask import send_file
 
+from backend.extensions import db
+from backend.models.sales import Sale
+from backend.utils.decorators import role_required
+from backend.utils.helpers import make_response_data
+
+# Parser for POST/PUT requests
 parser = reqparse.RequestParser()
-parser.add_argument('assignment', type=str, required=True)
-parser.add_argument('fruit_type', type=str, required=True)
-parser.add_argument('quantity', type=str, required=True)
-parser.add_argument('revenue', type=float, required=True)
-parser.add_argument('sale_date', type=str, required=True)
+parser.add_argument('stock_name', type=str, required=True)
+parser.add_argument('fruit_name', type=str, required=True)
+parser.add_argument('qty', type=float, required=True)
+parser.add_argument('unit_price', type=float, required=True)
+parser.add_argument('date', type=str, required=True)
 
-class SalesListResource(Resource):
+class SaleListResource(Resource):
+    def get(self):
+        # Pagination parameters
+        page = request.args.get('page', default=1, type=int)
+        per_page = request.args.get('per_page', default=20, type=int)
+
+        # Query all sales (no authentication for debug)
+        query = Sale.query
+
+        # Total count
+        total = query.count()
+
+        # Paginate
+        sales = query.offset((page - 1) * per_page).limit(per_page).all()
+
+        # Serialize
+        sales_data = [{
+            'id': sale.id,
+            'stock_name': sale.stock_name,
+            'fruit_name': sale.fruit_name,
+            'qty': sale.qty,
+            'unit_price': sale.unit_price,
+            'amount': sale.amount,
+            'date': sale.date.strftime('%Y-%m-%d'),
+            'seller_email': sale.seller.email if hasattr(sale, 'seller') and sale.seller else None
+        } for sale in sales]
+
+        return make_response_data(True, 200, 'Sales fetched successfully', {
+            'sales': sales_data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': (total + per_page - 1) // per_page
+            }
+        })
+
+    @role_required('ceo', 'seller')
+    def post(self):
+        current_user = get_current_user()
+        args = parser.parse_args()
+
+        # Create new sale
+        sale = Sale(
+            seller_id=current_user.id,
+            stock_name=args['stock_name'],
+            fruit_name=args['fruit_name'],
+            qty=args['qty'],
+            unit_price=args['unit_price'],
+            amount=args['qty'] * args['unit_price'],
+            date=datetime.strptime(args['date'], '%Y-%m-%d').date()
+        )
+
+        db.session.add(sale)
+        db.session.commit()
+
+        # Serialize response
+        sale_data = {
+            'id': sale.id,
+            'stock_name': sale.stock_name,
+            'fruit_name': sale.fruit_name,
+            'qty': sale.qty,
+            'unit_price': sale.unit_price,
+            'amount': sale.amount,
+            'date': sale.date.strftime('%Y-%m-%d')
+        }
+
+        return make_response_data(True, 201, 'Sale created successfully', sale_data)
+
+
+class SaleResource(Resource):
+    @role_required('ceo', 'seller')
+    def get(self, sale_id):
+        current_user = get_current_user()
+        sale = Sale.query.filter_by(id=sale_id, seller_id=current_user.id if current_user.role == 'seller' else None).first_or_404()
+
+        sale_data = {
+            'id': sale.id,
+            'stock_name': sale.stock_name,
+            'fruit_name': sale.fruit_name,
+            'qty': sale.qty,
+            'unit_price': sale.unit_price,
+            'amount': sale.amount,
+            'date': sale.date.strftime('%Y-%m-%d'),
+            'created_at': sale.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+        return make_response_data(True, 200, 'Sale fetched successfully', sale_data)
+
+    @role_required('ceo', 'seller')
+    def put(self, sale_id):
+        current_user = get_current_user()
+        sale = Sale.query.filter_by(id=sale_id, seller_id=current_user.id if current_user.role == 'seller' else None).first_or_404()
+        args = parser.parse_args()
+
+        # Update sale
+        sale.stock_name = args['stock_name']
+        sale.fruit_name = args['fruit_name']
+        sale.qty = args['qty']
+        sale.unit_price = args['unit_price']
+        sale.amount = args['qty'] * args['unit_price']
+        sale.date = datetime.strptime(args['date'], '%Y-%m-%d').date()
+
+        db.session.commit()
+
+        sale_data = {
+            'id': sale.id,
+            'stock_name': sale.stock_name,
+            'fruit_name': sale.fruit_name,
+            'qty': sale.qty,
+            'unit_price': sale.unit_price,
+            'amount': sale.amount,
+            'date': sale.date.strftime('%Y-%m-%d'),
+            'created_at': sale.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+        return make_response_data(True, 200, 'Sale updated successfully', sale_data)
+
+    @role_required('ceo', 'seller')
+    def delete(self, sale_id):
+        current_user = get_current_user()
+        sale = Sale.query.filter_by(id=sale_id, seller_id=current_user.id if current_user.role == 'seller' else None).first_or_404()
+
+        db.session.delete(sale)
+        db.session.commit()
+
+        return make_response_data(True, 200, 'Sale deleted successfully', {'id': sale_id})
+
+
+class SaleSummaryResource(Resource):
     @role_required('ceo', 'seller')
     def get(self):
         current_user = get_current_user()
 
-        if current_user.role == UserRole.CEO:
-            sales = Sale.query.order_by(Sale.sale_date.desc()).all()
-        else: # Seller
-            sales = Sale.query.filter_by(seller_id=current_user.id).order_by(Sale.sale_date.desc()).all()
+        if current_user.role == 'seller':
+            query = Sale.query.filter_by(seller_id=current_user.id)
+            total_amount = db.session.query(func.sum(Sale.amount)).filter_by(seller_id=current_user.id).scalar() or 0
+            avg_unit_price = db.session.query(func.avg(Sale.unit_price)).filter_by(seller_id=current_user.id).scalar() or 0
+        else:
+            query = Sale.query
+            total_amount = db.session.query(func.sum(Sale.amount)).scalar() or 0
+            avg_unit_price = db.session.query(func.avg(Sale.unit_price)).scalar() or 0
 
-        return make_response_data(data=[sale.to_dict() for sale in sales], message="Sales fetched successfully.")
+        total_sales = query.count()
+
+        return make_response_data(True, 200, 'Sales summary fetched successfully', {
+            'total_sales': total_sales,
+            'total_amount': float(total_amount),
+            'avg_unit_price': float(avg_unit_price)
+        })
+
+
+class ClearSalesResource(Resource):
+    @role_required('ceo')
+    def delete(self):
+        current_user = get_current_user()
+        if current_user.role != 'ceo':
+            return make_response_data(False, 403, 'Only CEO can clear all sales'), 403
+
+        num_deleted = Sale.query.delete()
+        db.session.commit()
+
+        return make_response_data(True, 200, f'{num_deleted} sales cleared successfully', {'deleted_count': num_deleted})
+
+        # Both CEO and sellers can see all sales
+        pagination = Sale.query.order_by(Sale.date.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        sales = pagination.items
+
+        return make_response_data(
+            data={
+                "items": [s.to_dict() for s in sales],
+                "meta": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": pagination.total,
+                    "pages": pagination.pages
+                }
+            },
+            message="Sales fetched."
+        )
 
     @role_required('seller')
     def post(self):
@@ -38,36 +210,54 @@ class SalesListResource(Resource):
         current_user = get_current_user()
 
         try:
-            sale_date = datetime.strptime(data['sale_date'], '%Y-%m-%d').date()
+            sale_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
         except ValueError:
-            return make_response_data(success=False, message="Invalid date format for sale_date. Use YYYY-MM-DD.", status_code=400)
+            return make_response_data(
+                success=False,
+                message="Invalid date format for date. Use YYYY-MM-DD.",
+                status_code=400
+            )
+
+        # Calculate amount
+        amount = data['qty'] * data['unit_price']
 
         new_sale = Sale(
             seller_id=current_user.id,
-            assignment=data['assignment'],
-            fruit_type=data['fruit_type'],
-            quantity=data['quantity'],
-            revenue=data['revenue'],
-            sale_date=sale_date
+            stock_name=data['stock_name'],
+            fruit_name=data['fruit_name'],
+            qty=data['qty'],
+            unit_price=data['unit_price'],
+            amount=amount,
+            date=sale_date
         )
+
         db.session.add(new_sale)
         db.session.commit()
-        return make_response_data(data=new_sale.to_dict(), message="Sale recorded successfully.", status_code=201)
+        return make_response_data(
+            data=new_sale.to_dict(),
+            message="Sale recorded.",
+            status_code=201
+        )
 
-class SalesResource(Resource):
-    @role_required('ceo') # Only CEO can edit/delete sales records
+
+class SaleResource(Resource):
+    @role_required('ceo')
     def put(self, sale_id):
         sale = Sale.query.get_or_404(sale_id)
         data = parser.parse_args()
 
-        sale.assignment = data['assignment']
-        sale.fruit_type = data['fruit_type']
-        sale.quantity = data['quantity']
-        sale.revenue = data['revenue']
-        sale.sale_date = datetime.strptime(data['sale_date'], '%Y-%m-%d').date()
+        sale.qty = data['qty']
+        sale.unit_price = data['unit_price']
+        sale.amount = data['qty'] * data['unit_price']
+        sale.date = datetime.strptime(
+            data['date'], '%Y-%m-%d'
+        ).date()
 
         db.session.commit()
-        return make_response_data(data=sale.to_dict(), message="Sale record updated.")
+        return make_response_data(
+            data=sale.to_dict(),
+            message="Sale record updated."
+        )
 
     @role_required('ceo')
     def delete(self, sale_id):
@@ -76,24 +266,35 @@ class SalesResource(Resource):
         db.session.commit()
         return make_response_data(message="Sale record deleted.")
 
+
 class ClearSalesResource(Resource):
     @role_required('ceo')
     def delete(self):
         num_deleted = Sale.query.delete()
         db.session.commit()
-        return make_response_data(message=f"Successfully cleared {num_deleted} sales records.")
+        return make_response_data(
+            message=f"Successfully cleared {num_deleted} sale records."
+        )
 
-class SalesSummaryResource(Resource):
+
+class SaleSummaryResource(Resource):
     @role_required('ceo')
     def get(self):
-        total_revenue = db.session.query(func.sum(Sale.revenue)).scalar() or 0
-        sales_by_fruit = db.session.query(Sale.fruit_type, func.sum(Sale.revenue)).group_by(Sale.fruit_type).all()
+        total_amount = db.session.query(func.sum(Sale.amount)).scalar() or 0
+        amount_by_fruit = db.session.query(
+            Sale.fruit_name,
+            func.sum(Sale.amount)
+        ).group_by(Sale.fruit_name).all()
 
         summary = {
-            'total_revenue': total_revenue,
-            'revenue_by_fruit': [{'fruit_type': fruit, 'total_revenue': revenue} for fruit, revenue in sales_by_fruit]
+            'total_amount': total_amount,
+            'amount_by_fruit': [
+                {'fruit_name': fruit, 'total_amount': amount}
+                for fruit, amount in amount_by_fruit
+            ]
         }
-        return make_response_data(data=summary, message="Sales summary fetched.")
+        return make_response_data(data=summary, message="Sale summary fetched.")
+
 
 class DailySalesReportResource(Resource):
     @role_required('ceo')
@@ -104,7 +305,7 @@ class DailySalesReportResource(Resource):
             return make_response_data(success=False, message="Invalid date format. Use YYYY-MM-DD.", status_code=400)
 
         # Get all sales for the specified date
-        sales = Sale.query.filter_by(sale_date=report_date).all()
+        sales = Sale.query.filter_by(date=report_date).all()
 
         if not sales:
             return make_response_data(success=False, message=f"No sales found for {date_str}.", status_code=404)
@@ -121,22 +322,24 @@ class DailySalesReportResource(Resource):
         elements.append(Spacer(1, 12))
 
         # Summary
-        total_revenue = sum(sale.revenue for sale in sales)
-        total_quantity = sum(float(sale.quantity) for sale in sales)
-        summary_text = f"Total Sales: {len(sales)} | Total Quantity: {total_quantity:.2f} | Total Revenue: KES {total_revenue:,.2f}"
+        total_amount = sum(sale.amount for sale in sales)
+        total_qty = sum(sale.qty for sale in sales)
+        summary_text = f"Total Sales: {len(sales)} | Total Qty: {total_qty} | Total Amount: KES {total_amount:,.2f}"
         summary = Paragraph(summary_text, styles['Normal'])
         elements.append(summary)
         elements.append(Spacer(1, 12))
 
         # Table data
-        data = [['Date', 'Seller', 'Fruit Type', 'Quantity', 'Revenue']]
+        data = [['Date', 'Seller', 'Stock Name', 'Fruit Name', 'Qty', 'Unit Price', 'Amount']]
         for sale in sales:
             data.append([
-                sale.sale_date.strftime('%Y-%m-%d'),
-                sale.seller_name or 'N/A',
-                sale.fruit_type,
-                sale.quantity,
-                f'KES {sale.revenue:,.2f}'
+                sale.date.strftime('%Y-%m-%d'),
+                sale.seller.email if sale.seller else 'N/A',
+                sale.stock_name,
+                sale.fruit_name,
+                sale.qty,
+                f'KES {sale.unit_price:,.2f}',
+                f'KES {sale.amount:,.2f}'
             ])
 
         # Create table

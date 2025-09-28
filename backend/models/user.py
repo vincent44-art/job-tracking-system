@@ -26,7 +26,7 @@ class User(db.Model):
     profile_image = db.Column(db.String(256), nullable=True)  # Path or URL to profile image
 
     # Relationships
-    sales = db.relationship('Sale', backref='seller', lazy=True, cascade="all, delete-orphan")
+    sales = db.relationship('Sale', back_populates='seller', lazy=True, cascade="all, delete-orphan")
     purchases = db.relationship('Purchase', backref='purchaser', lazy=True, cascade="all, delete-orphan")
     inventory_items = db.relationship('Inventory', backref='added_by_user', lazy=True)
     sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True)

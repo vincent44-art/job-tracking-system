@@ -14,9 +14,10 @@ import PerformanceOverview from '../components/PerformanceOverview';
 import AIAssistanceTab from '../components/AIAssistanceTab';
 import ClearDataModal from '../components/ClearDataModal';
 import SpoligeTab from '../components/SpoligeTab';
+import SellersTab from '../components/SellersTab';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const { data, error, loading, refetch } = useDashboardData(); // Added refetch for refresh
   const [activeTab, setActiveTab] = useState('purchases');
   const [showClearModal, setShowClearModal] = useState(false);
@@ -93,11 +94,13 @@ const Dashboard = () => {
       case 'car-expenses':
         return <CarExpensesTab data={data?.carExpenses} />;
       case 'other-expenses':
-        return <OtherExpensesTab data={data?.otherExpenses} />;
+        return <OtherExpensesTab data={data?.otherExpenses} token={token} />;
       case 'users':
         return <UserManagementTab data={data?.users} />;
       case 'ai-assistance':
         return <AIAssistanceTab />;
+      case 'sellers':
+        return <SellersTab />;
       default:
         return (
           <>
@@ -145,6 +148,7 @@ const Dashboard = () => {
     { id: 'car-expenses', icon: 'bi-car-front', label: 'Car Expenses' },
     { id: 'other-expenses', icon: 'bi-receipt', label: 'Other Expenses' },
     { id: 'users', icon: 'bi-people', label: 'Users' },
+    { id: 'sellers', icon: 'bi-shop', label: 'Sellers' },
     { id: 'ai-assistance', icon: 'bi-robot', label: 'AI Assistance' }
   ];
 

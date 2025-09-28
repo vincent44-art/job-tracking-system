@@ -62,7 +62,17 @@ const PurchaserDashboard = () => {
           fetchPurchases(user.email),
           fetchOtherExpenses()
         ]);
-        setPurchases(purchasesResponse.data);
+        // Ensure purchases is always an array (handle paginated response)
+        let purchasesData = purchasesResponse?.data;
+        if (Array.isArray(purchasesData)) {
+          setPurchases(purchasesData);
+        } else if (purchasesData?.items && Array.isArray(purchasesData.items)) {
+          setPurchases(purchasesData.items);
+        } else if (Array.isArray(purchasesData?.data)) {
+          setPurchases(purchasesData.data);
+        } else {
+          setPurchases([]);
+        }
         setOtherExpenses(otherExpensesResponse?.data || []);
       } catch (err) {
         setError('Failed to load data. Please try again later.');
@@ -147,7 +157,7 @@ const PurchaserDashboard = () => {
   };
 
   // Group purchases by date
-  const groupedPurchases = purchases.reduce((acc, purchase) => {
+  const groupedPurchases = (purchases || []).reduce((acc, purchase) => {
     const date = purchase.date;
     if (!acc[date]) acc[date] = [];
     acc[date].push(purchase);
@@ -155,8 +165,8 @@ const PurchaserDashboard = () => {
   }, {});
   const filteredGroupedPurchases = Object.entries(groupedPurchases).filter(([date, items]) =>
     items.some(purchase =>
-      purchase.fruitType.toLowerCase().includes(search.toLowerCase()) ||
-      purchase.buyerName.toLowerCase().includes(search.toLowerCase())
+      (purchase.fruitType ? purchase.fruitType.toLowerCase() : '').includes(search.toLowerCase()) ||
+      (purchase.buyerName ? purchase.buyerName.toLowerCase() : '').includes(search.toLowerCase())
     )
   );
 
@@ -409,8 +419,8 @@ const PurchaserDashboard = () => {
                         );
                         rows.push(...items
                           .filter(purchase =>
-                            purchase.fruitType.toLowerCase().includes(search.toLowerCase()) ||
-                            purchase.buyerName.toLowerCase().includes(search.toLowerCase())
+                            (purchase.fruitType ? purchase.fruitType.toLowerCase() : '').includes(search.toLowerCase()) ||
+                            (purchase.buyerName ? purchase.buyerName.toLowerCase() : '').includes(search.toLowerCase())
                           )
                           .map((purchase, idx) => (
                             <tr key={purchase.id || purchase._id} className="bg-light">

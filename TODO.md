@@ -1,23 +1,21 @@
-# TODO: Sales Tab Enhancements
+# TODO: Make Seller Tab Fetch from Seller_Fruit Table
 
-## Completed Tasks
-- [x] Replace "Creator Email" with "Seller Name" in the Enhanced Seller Fruits Table
-- [x] Add totals for each stock after each stock group
-- [x] Add PDF download column after each stock (integrated into total row)
-- [x] Ensure table fetches data from seller_fruit database table
-- [x] Display the email of the person who entered the data as the Seller Name
+## Steps to Complete
 
-## Implementation Summary
-The Enhanced Seller Fruits Table in `frontend/src/components/SalesTab.jsx` now:
-- Fetches data from the `seller_fruit` table via the API
-- Displays the creator's email as "Seller Name" (as requested)
-- Groups entries by stock name
-- Shows individual rows for each fruit entry
-- Includes a total row after each stock group with:
-  - Sum of all amounts for that stock
-  - PDF download button for the entire stock
-- Maintains existing functionality for individual row PDF downloads and deletions
+- [x] Fix frontend/src/api/sellerFruits.js to call /seller-fruits instead of /sales
+- [x] Modify frontend/src/components/SellersTab.jsx to fetch its own data using the corrected API, similar to SalesTab
+- [x] Update Dashboard.jsx to not pass data prop to SellersTab
+- [x] Test the changes to ensure data is displayed correctly
 
-## Next Steps
-- [ ] User should refresh their browser to see the changes
-- [ ] Test the updated table functionality
+## Information Gathered
+
+- SellersTab currently receives data from ceo_dashboard API, which fetches from SellerFruit table.
+- Frontend API sellerFruits.js incorrectly calls /sales instead of /seller-fruits.
+- SellersTab displays data in a table matching SellerFruit model fields.
+- To make seller tab fetch directly from seller_fruit table, fix API and modify SellersTab to fetch independently.
+
+## Dependent Files
+
+- frontend/src/api/sellerFruits.js
+- frontend/src/components/SellersTab.jsx
+- frontend/src/pages/Dashboard.jsx

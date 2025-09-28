@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
-import { createSellerFruit } from '../api/sellerFruits';
+import { createSale } from './apiHelpers';
 import { fetchStockTracking } from '../api/stockTracking';
 
 function generateReceiptNumber() {
@@ -27,7 +27,6 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
   const [payment, setPayment] = useState(paymentMethods[0]);
   const [paymentDetails, setPaymentDetails] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('Due within 14 days');
-  // const [notes, setNotes] = useState(''); // Removed unused variable
   const [items, setItems] = useState([{ ...initialItem }]);
   const [discount, setDiscount] = useState('');
   const [tax, setTax] = useState('');
@@ -278,9 +277,8 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
       });
   }
 
-  // Removed unused showSelectStockButton, handleAddToTableAndShowSelectStock, and handleStockSelection
 
-  // Save to seller fruits table only after stock name is selected
+  // Save to sales table only after stock name is selected
   const handleSaveToTable = async () => {
     if (!selectedStockName) {
       alert('Please select a stock name before saving to table.');
@@ -293,16 +291,15 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
     }
     try {
       for (const item of submittedData.items.filter(i => i.fruit && i.quantity && i.unitPrice)) {
-        await createSellerFruit({
+        await createSale({
           stock_name: selectedStockName,
           fruit_name: item.fruit,
           qty: parseFloat(item.quantity),
           unit_price: parseFloat(item.unitPrice),
-          date: submittedData.date,
-          amount: parseFloat(item.total)
+          date: submittedData.date
         });
       }
-      alert('Items added to seller fruits table successfully!');
+      alert('Items added to sales table successfully!');
       setShowStockSelection(false);
       setSelectedStockName('');
       // Call parent callback to refresh table
@@ -310,7 +307,7 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
         onSellerFruitsAdded();
       }
     } catch (err) {
-      console.error('Error adding to seller fruits table:', err);
+      console.error('Error adding to sales table:', err);
       alert('Failed to add items to table. Please try again.');
     }
   };
