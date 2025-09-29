@@ -3,6 +3,7 @@ from flask import request
 from flask_jwt_extended import jwt_required, get_current_user
 from datetime import datetime
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -30,7 +31,7 @@ class SaleListResource(Resource):
         per_page = request.args.get('per_page', default=20, type=int)
 
         # Query all sales (no authentication for debug)
-        query = Sale.query
+        query = Sale.query.options(joinedload(Sale.seller))
 
         # Total count
         total = query.count()
@@ -50,7 +51,7 @@ class SaleListResource(Resource):
             'seller_email': sale.seller.email if hasattr(sale, 'seller') and sale.seller else None
         } for sale in sales]
 
-        return make_response_data(True, 200, 'Sales fetched successfully', {
+        return make_response_data(data={
             'sales': sales_data,
             'pagination': {
                 'page': page,
@@ -58,7 +59,7 @@ class SaleListResource(Resource):
                 'total': total,
                 'pages': (total + per_page - 1) // per_page
             }
-        })
+        }, success=True, message='Sales fetched successfully', status_code=200)
 
     @role_required('ceo', 'seller')
     def post(self):

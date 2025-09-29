@@ -20,7 +20,7 @@ from .messages import MessageListResource, MessageResource, ClearMessagesResourc
 from .dashboard import CEODashboardResource, SellerDashboardResource, PurchaserDashboardResource, StorekeeperDashboardResource
 from flask_restful import Resource
 from .clear_all import ClearAllDataResource
-from .stock_tracking import StockTrackingListResource, ClearStockTrackingResource
+from .stock_tracking import StockTrackingListResource, ClearStockTrackingResource, StockTrackingAggregatedResource
 from .profile_image import ProfileImageUploadResource
 from .seller_fruits import SellerFruitListResource, SellerFruitResource
 from .sales import SaleListResource, SaleResource, ClearSalesResource, SaleSummaryResource
@@ -104,6 +104,7 @@ api.add_resource(ClearAllDataResource, '/clear-all')
 # ----------- STOCK TRACKING -----------
 api.add_resource(StockTrackingListResource, '/stock-tracking')
 api.add_resource(ClearStockTrackingResource, '/stock-tracking/clear')
+api.add_resource(StockTrackingAggregatedResource, '/stock-tracking/aggregated')
 
 # ----------- SELLER FRUITS -----------
 api.add_resource(SellerFruitListResource, '/seller-fruits')
