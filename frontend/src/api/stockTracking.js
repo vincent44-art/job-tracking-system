@@ -2,8 +2,8 @@ const BASE_URL = 'http://127.0.0.1:5000/api';
 
 export async function fetchStockTracking(token) {
   try {
-    console.log('fetchStockTracking: Making API call to /stock-tracking');
-    const res = await fetch(`${BASE_URL}/stock-tracking`, {
+  console.log('fetchStockTracking: Making API call to /api/stock-tracking');
+  const res = await fetch(`${BASE_URL}/stock-tracking`, {
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -50,7 +50,7 @@ export async function clearStockTracking(token) {
 }
 
 export async function fetchStockTrackingAggregated(token) {
-  const res = await fetch(`${BASE_URL}/stock_tracking/aggregated`, {
+  const res = await fetch(`${BASE_URL}/stock-tracking/aggregated`, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})

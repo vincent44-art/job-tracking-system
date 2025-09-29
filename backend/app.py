@@ -31,6 +31,7 @@ migrate = Migrate()
 socketio = SocketIO()
 
 def create_app(config_class=Config):
+    from backend.resources.user import UserListResource
     from backend.resources.salaries import SalaryPaymentsResource
     app = Flask(__name__, static_folder=FRONTEND_BUILD_DIR, static_url_path='/')
     app.config.from_object(config_class)
@@ -114,6 +115,7 @@ def create_app(config_class=Config):
     api.add_resource(SalaryPaymentsResource, '/api/salary-payments')
     api.add_resource(SalaryPaymentToggleStatusResource, '/api/salary-payments/<int:payment_id>/toggle-status')
     api.add_resource(CarExpensesResource, '/api/car-expenses', '/api/car-expenses/<int:expense_id>')
+    api.add_resource(UserListResource, '/api/users')
     from backend.resources.profile_image import ProfileImageUploadResource
     api.add_resource(ProfileImageUploadResource, '/api/profile-image')
     from backend.resources.it_events import ITEventsResource, ITEventResource, ITAcknowledgeAlertsResource

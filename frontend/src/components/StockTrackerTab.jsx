@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchInventory,
   fetchStockMovements,
@@ -22,10 +23,23 @@ const StockTrackerTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const navigate = useNavigate();
+  const goToStockTrackingRecords = () => {
+    navigate('/stock-tracking-records');
+  } 
+
   useEffect(() => {
+    const toCamel = s => s.replace(/([-_][a-z])/g, g => g.toUpperCase().replace('-', '').replace('_', ''));
+    const normalizeKeys = obj => {
+      if (Array.isArray(obj)) return obj.map(normalizeKeys);
+      if (obj && typeof obj === 'object') {
+        return Object.fromEntries(Object.entries(obj).map(([k, v]) => [toCamel(k), normalizeKeys(v)]));
+      }
+      return obj;
+    };
     const loadData = async () => {
       try {
-  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
         const [
           inventoryRes,
           movementsRes,
@@ -45,14 +59,15 @@ const StockTrackerTab = () => {
         ]);
 
         setData({
-          inventory: Array.isArray(inventoryRes.data.data) ? inventoryRes.data.data : inventoryRes.data || [],
-          stockMovements: Array.isArray(movementsRes.data.data) ? movementsRes.data.data : movementsRes.data || [],
-          purchases: Array.isArray(purchasesRes.data.data) ? purchasesRes.data.data : purchasesRes.data || [],
-          sales: Array.isArray(salesRes.data.data) ? salesRes.data.data : salesRes.data || [],
-          otherExpenses: Array.isArray(expensesRes.data.data) ? expensesRes.data.data : expensesRes.data || [],
-          stockTracking: Array.isArray(stockTrackingRes.data.data) ? stockTrackingRes.data.data : stockTrackingRes.data || [],
-          stockExpenses: Array.isArray(aggregatedRes.data.stock_expenses) ? aggregatedRes.data.stock_expenses : [],
-          fruitProfitability: Array.isArray(aggregatedRes.data.fruit_profitability) ? aggregatedRes.data.fruit_profitability : []
+          inventory: normalizeKeys(Array.isArray(inventoryRes.data?.data) ? inventoryRes.data.data : inventoryRes.data || []),
+          stockMovements: normalizeKeys(Array.isArray(movementsRes.data?.data) ? movementsRes.data.data : movementsRes.data || []),
+          purchases: normalizeKeys(Array.isArray(purchasesRes.data?.data) ? purchasesRes.data.data : purchasesRes.data || []),
+          sales: normalizeKeys(Array.isArray(salesRes.data?.data) ? salesRes.data.data : salesRes.data || []),
+          otherExpenses: normalizeKeys(Array.isArray(expensesRes.data?.data) ? expensesRes.data.data : expensesRes.data || []),
+          // Use backend data directly for stockTracking, fallback to []
+          stockTracking: Array.isArray(stockTrackingRes.data?.data) ? stockTrackingRes.data.data : (Array.isArray(stockTrackingRes.data) ? stockTrackingRes.data : []),
+          stockExpenses: normalizeKeys(Array.isArray(aggregatedRes.data?.stock_expenses) ? aggregatedRes.data.stock_expenses : []),
+          fruitProfitability: normalizeKeys(Array.isArray(aggregatedRes.data?.fruit_profitability) ? aggregatedRes.data.fruit_profitability : [])
         });
       } catch (err) {
         console.error('Failed to load stock tracker data:', err);
@@ -135,6 +150,11 @@ const StockTrackerTab = () => {
 
   return (
     <div className="tab-content">
+      <div className="d-flex justify-content-end mb-3">
+        <button className="btn btn-outline-primary" onClick={goToStockTrackingRecords}>
+          Go to Stock Tracking Records
+        </button>
+      </div>
       {/* Summary Cards */}
       <div className="row mb-4">
         <div className="col-md-3">
@@ -259,22 +279,35 @@ const StockTrackerTab = () => {
                 </thead>
                 <tbody>
                   {data.stockExpenses && data.stockExpenses.length > 0 ? (
-                    data.stockExpenses.map((stock, idx) => (
-                      <tr key={stock.stock_id || idx}>
-                        <td>{stock.stock_name}</td>
-                        <td>{stock.fruit_type}</td>
-                        <td>KES {stock.purchase_cost?.toLocaleString() || 0}</td>
-                        <td>{stock.storage_usage?.toLocaleString() || 0} units</td>
-                        <td>KES {stock.transport_costs?.toLocaleString() || 0}</td>
-                        <td>KES {stock.other_expenses?.toLocaleString() || 0}</td>
-                        <td>KES {stock.revenue?.toLocaleString() || 0}</td>
-                        <td className={stock.profit_loss >= 0 ? 'text-success' : 'text-danger'}>
-                          KES {stock.profit_loss?.toLocaleString() || 0}
+                    <>
+                      {data.stockExpenses.map((stock, idx) => (
+                        <tr key={stock.stockId || stock.stock_id || idx}>
+                          <td>{stock.stockName || stock.stock_name}</td>
+                          <td>{stock.fruitType || stock.fruit_type}</td>
+                          <td>KES {stock.purchaseCost?.toLocaleString() || stock.purchase_cost?.toLocaleString() || 0}</td>
+                          <td>{stock.storageUsage?.toLocaleString() || stock.storage_usage?.toLocaleString() || 0} units</td>
+                          <td>KES {stock.transportCosts?.toLocaleString() || stock.transport_costs?.toLocaleString() || 0}</td>
+                          <td>KES {stock.otherExpenses?.toLocaleString() || stock.other_expenses?.toLocaleString() || 0}</td>
+                          <td>KES {stock.revenue?.toLocaleString() || 0}</td>
+                          <td className={(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'text-success' : 'text-danger'}>
+                            KES {(stock.profitLoss ?? stock.profit_loss ?? 0).toLocaleString()}
+                          </td>
+                          <td>{stock.dateIn || stock.date_in || 'N/A'}</td>
+                          <td>{stock.dateOut || stock.date_out || 'N/A'}</td>
+                        </tr>
+                      ))}
+                      {/* Grand total row */}
+                      <tr className="table-info fw-bold">
+                        <td colSpan="6" className="text-end">Grand Total:</td>
+                        <td>
+                          KES {data.stockExpenses.reduce((sum, s) => sum + (s.revenue || 0), 0).toLocaleString()}
                         </td>
-                        <td>{stock.date_in || 'N/A'}</td>
-                        <td>{stock.date_out || 'N/A'}</td>
+                        <td>
+                          KES {data.stockExpenses.reduce((sum, s) => sum + (s.profit_loss || 0), 0).toLocaleString()}
+                        </td>
+                        <td colSpan="2"></td>
                       </tr>
-                    ))
+                    </>
                   ) : (
                     <tr><td colSpan="10" className="text-center text-muted">No stock expense data available</td></tr>
                   )}
@@ -328,66 +361,7 @@ const StockTrackerTab = () => {
         </div>
       </div>
 
-      {/* Stock Tracking Table (new persistent records) */}
-      <div className="row mt-4">
-        <div className="col-12">
-          <div className="card shadow-lg border-0">
-            <div className="card-header bg-primary text-white">
-              <h5><i className="bi bi-table me-2"></i>Stock Tracking Records</h5>
-            </div>
-            <div className="card-body table-responsive">
-              <table className="table table-bordered table-striped">
-                <thead>
-                  <tr>
-                    <th>Stock Name</th>
-                    <th>Date In</th>
-                    <th>Fruit Type</th>
-                    <th>Quantity In</th>
-                    <th>Amount per Kg</th>
-                    <th>Total Amount</th>
-                    <th>Other Charges</th>
-                    <th>Duration</th>
-                    <th>Gradient Used</th>
-                    <th>Gradient Amount Used</th>
-                    <th>Gradient Cost per Unit</th>
-                    <th>Total Gradient Cost</th>
-                    <th>Date Out</th>
-                    <th>Quantity Out</th>
-                    <th>Spoilage</th>
-                    <th>Total Stock Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.stockTracking && data.stockTracking.length > 0 ? (
-                    data.stockTracking.map((rec, idx) => (
-                      <tr key={rec.id || idx}>
-                        <td>{rec.stockName}</td>
-                        <td>{rec.dateIn}</td>
-                        <td>{rec.fruitType}</td>
-                        <td>{rec.quantityIn}</td>
-                        <td>{rec.amountPerKg}</td>
-                        <td>{rec.totalAmount}</td>
-                        <td>{rec.otherCharges}</td>
-                        <td>{rec.duration}</td>
-                        <td>{rec.gradientUsed}</td>
-                        <td>{rec.gradientAmountUsed}</td>
-                        <td>{rec.gradientCostPerUnit}</td>
-                        <td>{rec.totalGradientCost}</td>
-                        <td>{rec.dateOut}</td>
-                        <td>{rec.quantityOut}</td>
-                        <td>{rec.spoilage}</td>
-                        <td>{rec.totalStockCost}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr><td colSpan="16" className="text-center text-muted">No stock tracking records yet</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
+  {/* Stock Tracking Table removed: now on its own page */}
     </div>
   );
 };

@@ -27,7 +27,18 @@ const OtherExpensesTab = ({ token }) => {
       }
       try {
         const response = await fetchOtherExpenses(authToken);
-        setExpenses(Array.isArray(response.data) ? response.data : []);
+        // Support both axios and fetch API response shapes
+        let expensesData = [];
+        console.log('fetchOtherExpenses response:', response);
+        if (Array.isArray(response)) {
+          expensesData = response;
+        } else if (Array.isArray(response?.data)) {
+          expensesData = response.data;
+        } else if (Array.isArray(response?.data?.data)) {
+          expensesData = response.data.data;
+        }
+        console.log('Parsed expensesData:', expensesData);
+        setExpenses(expensesData);
       } catch (err) {
         console.error('Failed to fetch expenses:', err);
         setError('Failed to load expenses. Please try again.');
@@ -49,7 +60,13 @@ const OtherExpensesTab = ({ token }) => {
       };
       
       const response = await createOtherExpense(newExpense, authToken);
-      setExpenses([...expenses, response.data]);
+      // Support both axios and fetch API response shapes for create
+      let createdExpense = response?.data;
+      if (!createdExpense && response?.data?.data) {
+        createdExpense = response.data.data;
+      }
+      // Defensive: filter out undefined/null
+      setExpenses([...expenses.filter(e => e), createdExpense].filter(e => e));
       
       // Reset form
       setFormData({
@@ -197,8 +214,10 @@ const OtherExpensesTab = ({ token }) => {
                   <thead className="table-light">
                     <tr>
                       <th>Date</th>
+                      <th>Type</th>
                       <th>Description</th>
                       <th>Amount</th>
+                      <th>User ID</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -207,22 +226,28 @@ const OtherExpensesTab = ({ token }) => {
                       filteredExpenses.map(expense => (
                         <tr key={expense.id}>
                           <td>{new Date(expense.date).toLocaleDateString()}</td>
+                          <td>{expense.expense_type}</td>
                           <td>{expense.description}</td>
                           <td className="fw-bold">{formatCurrency(expense.amount)}</td>
+                          <td>{expense.user_id}</td>
                           <td>
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleDelete(expense.id)}
-                              title="Delete expense"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {expense.id ? (
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDelete(expense.id)}
+                                title="Delete expense"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            ) : (
+                              <span className="text-muted">N/A</span>
+                            )}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" className="text-center py-4">
+                        <td colSpan="6" className="text-center py-4">
                           {expenses.length === 0 
                             ? 'No expenses recorded yet' 
                             : 'No matching expenses found'}

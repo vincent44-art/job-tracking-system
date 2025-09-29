@@ -200,9 +200,10 @@ class DailyPurchasesReportResource(Resource):
         # Table data
         data = [['Date', 'Purchaser', 'Employee', 'Fruit Type', 'Quantity', 'Buyer', 'Amount']]
         for purchase in purchases:
+            purchaser_email = purchase.purchaser.email if purchase.purchaser and hasattr(purchase.purchaser, 'email') else 'N/A'
             data.append([
                 purchase.purchase_date.strftime('%Y-%m-%d'),
-                purchase.purchaser_email or 'N/A',
+                purchaser_email,
                 purchase.employee_name,
                 purchase.fruit_type,
                 f"{purchase.quantity} {purchase.unit}",

@@ -165,6 +165,8 @@ const login = async (email, password) => {
     }
   };
 
+  // Add token to context value
+  const token = localStorage.getItem('access_token');
   const value = {
     user,
     users,
@@ -174,7 +176,8 @@ const login = async (email, password) => {
     getAllUsers,
     addUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    token
   };
 
   return (

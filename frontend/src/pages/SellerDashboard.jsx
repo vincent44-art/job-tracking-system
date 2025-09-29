@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 // CeoMessagesDisplay removed
 import SaleInvoiceForm from '../components/SaleInvoiceForm';
@@ -6,6 +6,7 @@ import SalesTableHeader from '../components/seller/SalesTableHeader';
 import SellerFruitsForm from '../components/seller/SellerFruitsForm';
 import SellerFruitsTable from '../components/seller/SellerFruitsTable';
 import OtherExpenseForm from '../components/OtherExpenseForm';
+import OtherExpensesTable from '../components/OtherExpensesTable';
 import { fetchStockTracking } from '../api/stockTracking';
 import { fetchSellerFruits } from '../api/sellerFruits';
 import { fetchSales } from '../components/apiHelpers';
@@ -70,10 +71,33 @@ const SellerDashboard = () => {
   const [stockRecords, setStockRecords] = useState([]);
   const [sellerSales, setSellerSales] = useState([]);
   const [sellerFruits, setSellerFruits] = useState([]);
+  const [sellerSalesHistory, setSellerSalesHistory] = useState([]);
   const [showSellerFruitsForm, setShowSellerFruitsForm] = useState(false);
   const [editingFruit, setEditingFruit] = useState(null);
   const [showStockSelector, setShowStockSelector] = useState(false);
   const [selectedStockData, setSelectedStockData] = useState(null);
+  const [sellerExpenses, setSellerExpenses] = useState([]);
+  // Fetch seller's other expenses
+  const fetchSellerExpenses = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch('http://localhost:5000/api/other_expenses', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        // Show all expenses for this seller, sorted by most recent
+        const sellerHistory = data.data
+          .filter(e => e.user_id === user?.id)
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+        setSellerExpenses(sellerHistory);
+      } else {
+        setSellerExpenses([]);
+      }
+    } catch (err) {
+      setSellerExpenses([]);
+    }
+  }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -89,25 +113,53 @@ const SellerDashboard = () => {
           setStockRecords(outRecords);
 
           // Load seller sales directly for table display
+          // Fetch all sales and filter for this seller's email
           const salesRes = await fetch(`${BASE_URL}/sales`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
           });
           if (salesRes.ok) {
             const body = await salesRes.json();
-            setSellerSales(Array.isArray(body?.data) ? body.data : []);
+            let allSales = [];
+            if (Array.isArray(body?.data?.sales)) {
+              allSales = body.data.sales;
+            } else if (Array.isArray(body?.data)) {
+              allSales = body.data;
+            } else if (Array.isArray(body?.sales)) {
+              allSales = body.sales;
+            }
+            // Filter for this seller's email
+            const sellerEmail = user?.email;
+            const mySales = allSales.filter(sale => sale.seller_email === sellerEmail);
+            setSellerSales(mySales);
+            setSellerSalesHistory(mySales);
           } else {
             setSellerSales([]);
+            setSellerSalesHistory([]);
           }
 
           // Load sales data for table display (replacing seller fruits)
-          const salesData = await fetchSales(user?.email, token);
-          setSellerFruits(Array.isArray(salesData) ? salesData : []);
+          let salesData = await fetchSales(user?.email, token);
+          // Normalize: if salesData is not an array, try to extract array from known response shapes
+          if (!Array.isArray(salesData)) {
+            if (salesData && Array.isArray(salesData.data)) {
+              salesData = salesData.data;
+            } else if (salesData && Array.isArray(salesData.sales)) {
+              salesData = salesData.sales;
+            } else {
+              salesData = [];
+            }
+          }
+          setSellerFruits(salesData);
         } else {
           console.warn('Missing access_token; skipping stock-tracking and sales fetch');
         }
       } catch (err) {
-        setError('Failed to load sales data. Please try again later.');
+        let message = 'Failed to load sales data. Please try again later.';
+        if (err && err.message) {
+          message += `\nDetails: ${err.message}`;
+        }
+        setError(message);
         console.error('Error loading seller data:', err);
       } finally {
         setLoading(false);
@@ -116,8 +168,31 @@ const SellerDashboard = () => {
 
     if (user?.email || user?.name) {
       loadData();
+      fetchSellerExpenses();
     }
-  }, [user?.email, user?.name]);
+  }, [user?.email, user?.name, fetchSellerExpenses]);
+
+  // Function to refresh sales table
+  const refreshSellerSales = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      let salesData = await fetchSales(user?.email, token);
+      // Normalize: if salesData is not an array, try to extract array from known response shapes
+      if (!Array.isArray(salesData)) {
+        if (salesData && Array.isArray(salesData.data)) {
+          salesData = salesData.data;
+        } else if (salesData && Array.isArray(salesData.sales)) {
+          salesData = salesData.sales;
+        } else {
+          salesData = [];
+        }
+      }
+      setSellerSales(salesData);
+      setSellerSalesHistory(salesData);
+    } catch (err) {
+      console.error('Error refreshing sales data:', err);
+    }
+  };
 
   // Sales are fetched directly from backend for the seller
   // Removed unused userAssignments variable
@@ -128,6 +203,46 @@ const SellerDashboard = () => {
       currency: 'KES',
     }).format(amount || 0);
   };
+
+  // Seller's sales history table as a component
+  function SellerSalesHistoryTable() {
+    if (!Array.isArray(sellerSalesHistory) || sellerSalesHistory.length === 0) {
+      return <div className="alert alert-info mt-3">No sales history found for this seller.</div>;
+    }
+    return (
+      <div className="card shadow-sm mt-4">
+        <div className="card-header bg-success text-white">
+          <h5 className="mb-0">My Sales History</h5>
+        </div>
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-hover mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Date</th>
+                  <th>Fruit</th>
+                  <th>Qty</th>
+                  <th>Unit Price</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sellerSalesHistory.map(sale => (
+                  <tr key={sale.id}>
+                    <td>{sale.date ? new Date(sale.date).toLocaleDateString() : ''}</td>
+                    <td>{sale.fruit_name || sale.fruitType || ''}</td>
+                    <td>{sale.qty || sale.quantitySold || sale.quantity || ''}</td>
+                    <td>{sale.unit_price ? formatKenyanCurrency(sale.unit_price) : ''}</td>
+                    <td>{sale.amount ? formatKenyanCurrency(sale.amount) : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Build new grouped table data inside SellerDashboard
   const enrichedSales = useMemo(() => {
@@ -289,12 +404,27 @@ const SellerDashboard = () => {
   const refreshSellerFruits = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const salesData = await fetchSales(user?.email, token);
-      setSellerFruits(Array.isArray(salesData) ? salesData : []);
+      let salesData = await fetchSales(user?.email, token);
+      // Normalize: if salesData is not an array, try to extract array from known response shapes
+      if (!Array.isArray(salesData)) {
+        if (salesData && Array.isArray(salesData.data)) {
+          salesData = salesData.data;
+        } else if (salesData && Array.isArray(salesData.sales)) {
+          salesData = salesData.sales;
+        } else {
+          salesData = [];
+        }
+      }
+      setSellerFruits(salesData);
     } catch (err) {
       setError('Failed to refresh sales data.');
       console.error('Error refreshing sales data:', err);
     }
+  };
+
+  // When a new expense is added, refresh seller expenses
+  const handleExpenseAdded = () => {
+    fetchSellerExpenses();
   };
 
   return (
@@ -310,15 +440,19 @@ const SellerDashboard = () => {
           {error}
         </div>
       )}
-
+  {/* Seller's sales history table (outside row) */}
+  <SellerSalesHistoryTable />
       <div className="row">
         <div className="col-md-6">
           {/* Sale Invoice Form below */}
-          <SaleInvoiceForm onSellerFruitsAdded={refreshSellerFruits} />
+          <SaleInvoiceForm onSellerFruitsAdded={refreshSellerSales} />
           <hr />
 
           {/* Other Expenses Form */}
-          <OtherExpenseForm />
+          <OtherExpenseForm onExpenseAdded={handleExpenseAdded} />
+          <div className="mt-3">
+            <OtherExpensesTable expenses={sellerExpenses} onExpenseDeleted={fetchSellerExpenses} />
+          </div>
           <hr />
           {/* SaleForm removed */}
         </div>

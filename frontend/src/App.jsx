@@ -11,6 +11,7 @@ import StoreKeeperDashboard from './pages/StoreKeeperDashboard';
 import ITActivityDashboard from './pages/ITActivityDashboard';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import StockTrackingRecords from './pages/StockTrackingRecords';
 import './index.css';
 
 // const ProtectedRoute = ({ children, requiredRoles = [] }) => {
@@ -65,6 +66,7 @@ const AppContent = () => {
           <Route path="/purchaser" element={<PurchaserDashboard />} />
           <Route path="/storekeeper" element={<StoreKeeperDashboard />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/stock-tracking-records" element={<StockTrackingRecords />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       );

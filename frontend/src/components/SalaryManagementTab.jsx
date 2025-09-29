@@ -17,6 +17,8 @@ const SalaryManagementTab = () => {
           fetchSalaries(),
           fetchUsers()
         ]);
+        console.log('Loaded users:', usersRes.data);
+        console.log('Loaded salaries:', salariesRes.data);
         setSalaries(salariesRes.data || []);
         setUsers(usersRes.data || []);
       } catch (err) {
@@ -50,7 +52,13 @@ const SalaryManagementTab = () => {
     <div className="container-fluid py-3">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Salary Payment History</h2>
-        <button className="btn btn-primary" onClick={() => setShowSalaryModal(true)}>
+        <button
+          type="button"
+          className="btn btn-primary shadow-sm px-4 py-2 fw-bold"
+          style={{ borderRadius: '8px', fontSize: '1rem', letterSpacing: '0.5px' }}
+          onClick={() => setShowSalaryModal(true)}
+        >
+          <i className="bi bi-plus-circle me-2"></i>
           Add Salary Record
         </button>
       </div>
@@ -66,7 +74,7 @@ const SalaryManagementTab = () => {
       )}
       <div className="card shadow-sm">
         <div className="card-header bg-light">
-          <h5 className="mb-0">Payment History</h5>
+          <h5 className="mb-0">Employee Salary Overview</h5>
         </div>
         <div className="card-body">
           <div className="table-responsive">
@@ -82,43 +90,58 @@ const SalaryManagementTab = () => {
                 </tr>
               </thead>
               <tbody>
-                {salaries.length > 0 ? (
-                  salaries.map(salary => {
-                    const user = users.find(u => u.id === salary.user_id);
+                {users.length > 0 ? (
+                  users.map(user => {
+                    // Find the latest salary for this user
+                    const userSalaries = salaries.filter(s => s.user_id === user.id);
+                    const latestSalary = userSalaries.length > 0 ? userSalaries.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b) : null;
                     return (
-                      <tr key={salary.id}>
-                        <td>{user ? user.name : salary.user_name || '-'}</td>
-                        <td>{formatCurrency(salary.amount)}</td>
-                        <td>{new Date(salary.date).toLocaleDateString()}</td>
-                        <td>{salary.description || '-'}</td>
+                      <tr key={user.id}>
+                        <td>{user.name} ({user.email})</td>
+                        <td>{latestSalary ? formatCurrency(latestSalary.amount) : '-'}</td>
+                        <td>{latestSalary ? new Date(latestSalary.date).toLocaleDateString() : '-'}</td>
+                        <td>{latestSalary ? latestSalary.description || '-' : '-'}</td>
                         <td>
-                          <span className={`badge ${salary.is_paid ? 'bg-success' : 'bg-warning'}`}>
-                            {salary.is_paid ? 'PAID' : 'PENDING'}
-                          </span>
+                          {latestSalary ? (
+                            <span className={`badge ${latestSalary.is_paid ? 'bg-success' : 'bg-warning'}`}>
+                              {latestSalary.is_paid ? 'PAID' : 'PENDING'}
+                            </span>
+                          ) : '-'}
                         </td>
                         <td>
-                          <button className={`btn btn-sm ${salary.is_paid ? 'btn-warning' : 'btn-success'}`}
-                            onClick={async () => {
-                              await fetch('/api/salary-payments/' + salary.id + '/toggle-status', {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                              });
-                              // Refresh salaries
-                              const salariesRes = await fetchSalaries();
-                              setSalaries(salariesRes.data || []);
-                            }}>
-                            {salary.is_paid ? 'Mark Pending' : 'Mark Paid'}
-                          </button>
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={async () => {
-                              await deleteSalary(salary.id);
-                              const salariesRes = await fetchSalaries();
-                              setSalaries(salariesRes.data || []);
-                            }}
-                          >
-                            Delete
-                          </button>
+                          {latestSalary ? (
+                            <>
+                              <button className={`btn btn-sm ${latestSalary.is_paid ? 'btn-warning' : 'btn-success'} me-2`}
+                                onClick={async () => {
+                                  await fetch('/api/salary-payments/' + latestSalary.id + '/toggle-status', {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                                  });
+                                  // Refresh salaries
+                                  const salariesRes = await fetchSalaries();
+                                  setSalaries(salariesRes.data || []);
+                                }}>
+                                {latestSalary.is_paid ? 'Mark Pending' : 'Mark Paid'}
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={async () => {
+                                  await deleteSalary(latestSalary.id);
+                                  const salariesRes = await fetchSalaries();
+                                  setSalaries(salariesRes.data || []);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={() => setShowSalaryModal(true)}
+                            >
+                              Add Salary
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -126,7 +149,7 @@ const SalaryManagementTab = () => {
                 ) : (
                   <tr>
                     <td colSpan="6" className="text-center py-4">
-                      No salary payment history found
+                      No employees found
                     </td>
                   </tr>
                 )}

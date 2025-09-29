@@ -7,7 +7,6 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
     fruit_name: '',
     qty: '',
     unit_price: '',
-    date: new Date().toISOString().split('T')[0],
     amount: ''
   });
   const [loading, setLoading] = useState(false);
@@ -20,7 +19,6 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
         fruit_name: fruit.fruit_name || '',
         qty: fruit.qty || '',
         unit_price: fruit.unit_price || '',
-        date: fruit.date ? new Date(fruit.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         amount: fruit.amount || ''
       });
     } else if (initialData) {
@@ -29,7 +27,6 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
         fruit_name: initialData.fruit_name || '',
         qty: initialData.qty || '',
         unit_price: initialData.unit_price || '',
-        date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         amount: initialData.amount || ''
       });
     }
@@ -61,12 +58,17 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
     setError(null);
 
     try {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
       const data = {
         stock_name: formData.stock_name,
         fruit_name: formData.fruit_name,
         qty: parseFloat(formData.qty),
         unit_price: parseFloat(formData.unit_price),
-        date: formData.date,
+        date: dateStr,
         amount: parseFloat(formData.amount)
       };
 
@@ -170,18 +172,6 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
               />
             </div>
 
-            <div className="col-md-6 mb-3">
-              <label htmlFor="date" className="form-label">Date</label>
-              <input
-                type="date"
-                className="form-control"
-                id="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-              />
-            </div>
 
             <div className="col-md-6 mb-3">
               <label htmlFor="amount" className="form-label">Amount</label>

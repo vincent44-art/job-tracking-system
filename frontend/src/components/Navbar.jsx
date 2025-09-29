@@ -54,6 +54,14 @@ const Navbar = () => {
           </a>
           <div className="d-flex align-items-center">
             <button
+              className="btn btn-outline-info me-3"
+              onClick={() => window.location.reload()}
+              title="Refresh Page"
+              aria-label="Refresh page"
+            >
+              <i className="bi bi-arrow-clockwise fs-5"></i>
+            </button>
+            <button
               className="btn btn-outline-light me-3"
               onClick={() => setShowCalculator(true)}
               title="Calculator"

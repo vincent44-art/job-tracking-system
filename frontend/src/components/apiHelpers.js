@@ -5,7 +5,7 @@ import api from '../api/api';
 // Fetch inventory data
 export const fetchInventory = async (token = null) => {
   try {
-    const response = await api.get('/inventory');
+  const response = await api.get('/inventory');
     return response;
   } catch (error) {
     console.error('Error fetching inventory:', error);
@@ -16,7 +16,7 @@ export const fetchInventory = async (token = null) => {
 // Fetch stock movements
 export const fetchStockMovements = async (token = null) => {
   try {
-    const response = await api.get('/stock-movements');
+  const response = await api.get('/stock-movements');
     return response;
   } catch (error) {
     console.error('Error fetching stock movements:', error);
@@ -27,7 +27,7 @@ export const fetchStockMovements = async (token = null) => {
 // Fetch purchases data
 export const fetchPurchases = async (userEmail = null, token = null) => {
   try {
-    const endpoint = userEmail ? `/purchases/${userEmail}` : '/purchases';
+  const endpoint = userEmail ? `/purchases/${userEmail}` : '/purchases';
     const response = await api.get(endpoint, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
@@ -39,19 +39,33 @@ export const fetchPurchases = async (userEmail = null, token = null) => {
 // Fetch sales data
 export const fetchSales = async (userEmail = null, token = null) => {
   try {
-    const endpoint = userEmail ? `/sales/${userEmail}` : '/sales';
-    const response = await api.get(endpoint, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
-    return response.data || [];
+    // Always fetch all sales, then filter client-side if userEmail is provided
+    const response = await api.get('/sales', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+    let sales = [];
+    // Prefer response.data.data.sales (backend shape)
+    if (Array.isArray(response.data?.data?.sales)) {
+      sales = response.data.data.sales;
+    } else if (Array.isArray(response.data?.sales)) {
+      sales = response.data.sales;
+    } else if (Array.isArray(response.data?.data)) {
+      sales = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      sales = response.data;
+    }
+    if (userEmail) {
+      sales = sales.filter(sale => sale.seller_email === userEmail);
+    }
+    return sales;
   } catch (error) {
     console.error('Error fetching sales:', error);
-    throw error;
+    return [];
   }
 };
 
 // Fetch other expenses
 export const fetchOtherExpenses = async (token = null) => {
   try {
-    const response = await api.get('/other_expenses', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+  const response = await api.get('/other_expenses', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error fetching other expenses:', error);

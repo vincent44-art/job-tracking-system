@@ -5,8 +5,7 @@ const SalaryFormModal = ({ show, onClose, onSave, users }) => {
   const [form, setForm] = useState({
     user_id: '',
     description: '',
-    amount: '',
-    date: ''
+    amount: ''
   });
 
   const handleChange = (e) => {
@@ -16,15 +15,20 @@ const SalaryFormModal = ({ show, onClose, onSave, users }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.user_id || !form.amount || !form.date) return;
+    if (!form.user_id || !form.amount) return;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
     onSave({
       user_id: parseInt(form.user_id, 10),
       description: form.description,
       amount: parseFloat(form.amount),
-      date: form.date
+      date: dateStr
     });
     onClose();
-    setForm({ user_id: '', description: '', amount: '', date: '' });
+    setForm({ user_id: '', description: '', amount: '' });
   };
 
   return (
@@ -57,15 +61,6 @@ const SalaryFormModal = ({ show, onClose, onSave, users }) => {
               name="amount"
               placeholder="Salary in KES"
               value={form.amount}
-              onChange={handleChange}
-              required
-            />
-          </FloatingLabel>
-          <FloatingLabel controlId="date" label="Date" className="mb-3">
-            <Form.Control
-              type="date"
-              name="date"
-              value={form.date}
               onChange={handleChange}
               required
             />
