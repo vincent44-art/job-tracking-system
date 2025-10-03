@@ -13,8 +13,7 @@ import ReportsTab from '../components/ReportsTab';
 import PerformanceOverview from '../components/PerformanceOverview';
 import AIAssistanceTab from '../components/AIAssistanceTab';
 import ClearDataModal from '../components/ClearDataModal';
-import SpoligeTab from '../components/SpoligeTab';
-import SellersTab from '../components/SellersTab';
+import AccountTab from '../components/AccountTab'; // Import AccountTab component
 
 const Dashboard = () => {
   const { user, token, logout } = useAuth();
@@ -23,23 +22,12 @@ const Dashboard = () => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch dashboard data
-  // useEffect(() => {
-  //   if (user?.role !== 'ceo') return;
-  //   if (data) {
-  //     setNotifications(data.notifications || []);
-  //     setUnreadCount(data.unreadNotifications || 0);
-  //   }
-  // }, [data, user?.role]);
   useEffect(() => {
     if (user?.role === 'ceo' && data) {
       setUnreadCount(data.unreadNotifications || 0);
     }
   }, [data, user?.role]);
-// Ensure no setNotifications reference remains
 
-
-  
   const renderTabContent = () => {
     if (loading) {
       return (
@@ -66,25 +54,13 @@ const Dashboard = () => {
       );
     }
 
-  switch (activeTab) {
-      case 'spolige':
-        return <SpoligeTab data={data?.spolige} />;
-      // Removed Overview tab content as requested
-      // case 'overview':
-      //   console.log('Dashboard overview data:', data);
-      //   return (
-      //     <>
-      //       {data && <StatsCards stats={data.stats} />}
-      //       <PerformanceOverview data={data} />
-      //     </>
-      //   );
+    switch (activeTab) {
+      case 'account':
+        return <AccountTab />;
       case 'purchases':
         return <PurchasesTab data={data?.purchases} />;
       case 'sales':
         return <SalesTab data={data?.sales} />;
-      // Removed Inventory tab content as requested
-      // case 'inventory':
-      //   return <InventoryTab data={data?.inventory} />;
       case 'stock-tracker':
         return <StockTrackerTab />;
       case 'reports':
@@ -99,8 +75,6 @@ const Dashboard = () => {
         return <UserManagementTab data={data?.users} />;
       case 'ai-assistance':
         return <AIAssistanceTab />;
-      case 'sellers':
-        return <SellersTab />;
       default:
         return (
           <>
@@ -110,7 +84,6 @@ const Dashboard = () => {
         );
     }
   };
-
 
   if (!user) {
     return (
@@ -135,20 +108,15 @@ const Dashboard = () => {
   }
 
   const tabs = [
-  { id: 'spolige', icon: 'bi-table', label: 'Spolige' },
-    // Removed Overview tab as requested
-    // { id: 'overview', icon: 'bi-graph-up', label: 'Overview' },
+    { id: 'account', icon: 'bi-wallet2', label: 'Account' },
     { id: 'purchases', icon: 'bi-cart-plus', label: 'Purchases' },
     { id: 'sales', icon: 'bi-currency-dollar', label: 'Sales' },
-    // Removed Inventory tab as requested
-    // { id: 'inventory', icon: 'bi-boxes', label: 'Inventory' },
     { id: 'stock-tracker', icon: 'bi-bar-chart-line', label: 'Stock Tracker' },
     { id: 'reports', icon: 'bi-file-earmark-text', label: 'Reports' },
     { id: 'salaries', icon: 'bi-cash', label: 'Salaries' },
     { id: 'car-expenses', icon: 'bi-car-front', label: 'Car Expenses' },
     { id: 'other-expenses', icon: 'bi-receipt', label: 'Other Expenses' },
     { id: 'users', icon: 'bi-people', label: 'Users' },
-    { id: 'sellers', icon: 'bi-shop', label: 'Sellers' },
     { id: 'ai-assistance', icon: 'bi-robot', label: 'AI Assistance' }
   ];
 

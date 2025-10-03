@@ -61,6 +61,19 @@ const StoreKeeperDashboard = () => {
     setStockOut((prev) => ({ ...prev, totalGradientCost: totalGradientCost ? totalGradientCost.toFixed(2) : '' }));
   }, [stockOut.gradientAmountUsed, stockOut.gradientCostPerUnit]);
 
+  // Auto-calculate spoilage: spoilage = quantityIn - quantityOut
+  useEffect(() => {
+    if (stockOut.stockInId && stockOut.quantityOut !== '') {
+      const stockInRecord = records.find(r => r.id === parseInt(stockOut.stockInId));
+      const quantityIn = parseFloat(stockInRecord?.quantityIn || 0);
+      const quantityOut = parseFloat(stockOut.quantityOut || 0);
+      const spoilage = quantityIn - quantityOut;
+      setStockOut((prev) => ({ ...prev, spoilage: spoilage >= 0 ? spoilage.toFixed(2) : '' }));
+    } else {
+      setStockOut((prev) => ({ ...prev, spoilage: '' }));
+    }
+  }, [stockOut.quantityOut, stockOut.stockInId, records]);
+
   // Auto-calculate duration
   const getDuration = (dateIn, dateOut) => {
     if (dateIn && dateOut) {

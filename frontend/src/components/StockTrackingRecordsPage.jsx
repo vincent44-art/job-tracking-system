@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchStockTracking } from '../api/stockTracking';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,11 +8,12 @@ const StockTrackingRecordsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { token } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchStockTracking(token)
       .then((data) => {
-        setRecords(data.stockTracking || []);
+        setRecords(data.data || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -22,6 +24,13 @@ const StockTrackingRecordsPage = () => {
 
   return (
     <div className="container py-4">
+      <div className="row mb-3">
+        <div className="col-12 d-flex justify-content-start">
+          <button className="btn btn-secondary" onClick={() => navigate('/ceo/dashboard')}>
+            &larr; Back to CEO Dashboard
+          </button>
+        </div>
+      </div>
       <div className="row mb-4">
         <div className="col-12">
           <h2 className="text-center">Stock Tracking Records</h2>

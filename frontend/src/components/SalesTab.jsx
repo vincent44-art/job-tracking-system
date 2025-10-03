@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 
@@ -130,6 +129,7 @@ const SalesTab = () => {
                             <th>Quantity</th>
                             <th>Unit Price</th>
                             <th>Amount</th>
+                            <th>Customer Name</th>
                             <th>Seller Email</th>
                           </tr>
                         </thead>
@@ -141,6 +141,7 @@ const SalesTab = () => {
                               <td>{sale.qty}</td>
                               <td>{formatKenyanCurrency(sale.unit_price)}</td>
                               <td className="fw-bold">{formatKenyanCurrency(sale.amount)}</td>
+                              <td>{sale.customer_name || 'N/A'}</td>
                               <td>{sale.seller_email || 'N/A'}</td>
                             </tr>
                           ))}

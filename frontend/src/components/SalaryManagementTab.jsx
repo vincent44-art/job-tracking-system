@@ -8,6 +8,7 @@ const SalaryManagementTab = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedUsers, setExpandedUsers] = useState(new Set());
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -19,8 +20,10 @@ const SalaryManagementTab = () => {
         ]);
         console.log('Loaded users:', usersRes.data);
         console.log('Loaded salaries:', salariesRes.data);
+        const usersData = usersRes.data || [];
         setSalaries(salariesRes.data || []);
-        setUsers(usersRes.data || []);
+        setUsers(usersData);
+        setExpandedUsers(new Set(usersData.map(u => u.id)));
       } catch (err) {
         console.error('Failed to load data:', err);
         setError('Failed to load data. Please try again.');
@@ -36,6 +39,16 @@ const SalaryManagementTab = () => {
       style: 'currency',
       currency: 'KES'
     }).format(amount);
+  };
+
+  const toggleUserExpansion = (userId) => {
+    const newExpanded = new Set(expandedUsers);
+    if (newExpanded.has(userId)) {
+      newExpanded.delete(userId);
+    } else {
+      newExpanded.add(userId);
+    }
+    setExpandedUsers(newExpanded);
   };
 
   if (loading) {
@@ -81,7 +94,7 @@ const SalaryManagementTab = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Employee</th>
+                  <th>Employee Name</th>
                   <th>Amount</th>
                   <th>Date</th>
                   <th>Description</th>
@@ -90,58 +103,43 @@ const SalaryManagementTab = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.length > 0 ? (
-                  users.map(user => {
-                    // Find the latest salary for this user
-                    const userSalaries = salaries.filter(s => s.user_id === user.id);
-                    const latestSalary = userSalaries.length > 0 ? userSalaries.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b) : null;
+                {salaries.length > 0 ? (
+                  salaries.sort((a, b) => new Date(b.date) - new Date(a.date)).map(salary => {
+                    const user = users.find(u => u.id === salary.user_id);
                     return (
-                      <tr key={user.id}>
-                        <td>{user.name} ({user.email})</td>
-                        <td>{latestSalary ? formatCurrency(latestSalary.amount) : '-'}</td>
-                        <td>{latestSalary ? new Date(latestSalary.date).toLocaleDateString() : '-'}</td>
-                        <td>{latestSalary ? latestSalary.description || '-' : '-'}</td>
+                      <tr key={salary.id}>
+                        <td>{user ? user.name : 'Unknown'}</td>
+                        <td>{formatCurrency(salary.amount)}</td>
+                        <td>{new Date(salary.date).toLocaleDateString()}</td>
+                        <td>{salary.description || '-'}</td>
                         <td>
-                          {latestSalary ? (
-                            <span className={`badge ${latestSalary.is_paid ? 'bg-success' : 'bg-warning'}`}>
-                              {latestSalary.is_paid ? 'PAID' : 'PENDING'}
-                            </span>
-                          ) : '-'}
+                          <span className={`badge ${salary.is_paid ? 'bg-success' : 'bg-warning'}`}>
+                            {salary.is_paid ? 'PAID' : 'PENDING'}
+                          </span>
                         </td>
                         <td>
-                          {latestSalary ? (
-                            <>
-                              <button className={`btn btn-sm ${latestSalary.is_paid ? 'btn-warning' : 'btn-success'} me-2`}
-                                onClick={async () => {
-                                  await fetch('/api/salary-payments/' + latestSalary.id + '/toggle-status', {
-                                    method: 'POST',
-                                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                                  });
-                                  // Refresh salaries
-                                  const salariesRes = await fetchSalaries();
-                                  setSalaries(salariesRes.data || []);
-                                }}>
-                                {latestSalary.is_paid ? 'Mark Pending' : 'Mark Paid'}
-                              </button>
-                              <button
-                                className="btn btn-sm btn-danger"
-                                onClick={async () => {
-                                  await deleteSalary(latestSalary.id);
-                                  const salariesRes = await fetchSalaries();
-                                  setSalaries(salariesRes.data || []);
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              className="btn btn-sm btn-primary"
-                              onClick={() => setShowSalaryModal(true)}
-                            >
-                              Add Salary
-                            </button>
-                          )}
+                          <button className={`btn btn-sm ${salary.is_paid ? 'btn-warning' : 'btn-success'} me-2`}
+                            onClick={async () => {
+                              await fetch('/api/salary-payments/' + salary.id + '/toggle-status', {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                              });
+                              // Refresh salaries
+                              const salariesRes = await fetchSalaries();
+                              setSalaries(salariesRes.data || []);
+                            }}>
+                            {salary.is_paid ? 'Mark Pending' : 'Mark Paid'}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-danger"
+                            onClick={async () => {
+                              await deleteSalary(salary.id);
+                              const salariesRes = await fetchSalaries();
+                              setSalaries(salariesRes.data || []);
+                            }}
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     );
@@ -149,7 +147,7 @@ const SalaryManagementTab = () => {
                 ) : (
                   <tr>
                     <td colSpan="6" className="text-center py-4">
-                      No employees found
+                      No salary records found
                     </td>
                   </tr>
                 )}
@@ -171,17 +169,10 @@ const SalaryManagementTab = () => {
             body: JSON.stringify(salaryData)
           });
           setShowSalaryModal(false);
-
-
-
-
-
-
-
-
-
-
-}}
+          // Refresh salaries
+          const salariesRes = await fetchSalaries();
+          setSalaries(salariesRes.data || []);
+        }}
         users={users}
       />
     </div>

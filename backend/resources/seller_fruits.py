@@ -61,6 +61,7 @@ class SellerFruitListResource(Resource):
         unit_price = data.get('unit_price')
         date_str = data.get('date')
         amount = data.get('amount')
+        customer_name = data.get('customer_name')
 
         # Check for missing fields
         missing_fields = []
@@ -77,6 +78,7 @@ class SellerFruitListResource(Resource):
         if amount is None:
             missing_fields.append('amount')
 
+        # customer_name is optional, do not require
         if missing_fields:
             error_message = f"Missing required fields: {', '.join(missing_fields)}"
             print(error_message)
@@ -131,6 +133,7 @@ class SellerFruitListResource(Resource):
             unit_price=unit_price,
             date=date,
             amount=amount,
+            customer_name=customer_name,
             created_by=current_user_id
         )
         db.session.add(new_fruit)
@@ -151,6 +154,7 @@ class SellerFruitResource(Resource):
         fruit.qty = data.get('qty', fruit.qty)
         fruit.unit_price = data.get('unit_price', fruit.unit_price)
         fruit.amount = data.get('amount', fruit.amount)
+        fruit.customer_name = data.get('customer_name', fruit.customer_name)
 
         # Handle date conversion if provided
         if 'date' in data:

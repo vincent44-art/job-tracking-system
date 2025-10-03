@@ -35,6 +35,7 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
   const [stockRecords, setStockRecords] = useState([]);
   const [selectedStockName, setSelectedStockName] = useState('');
   const [showStockSelection, setShowStockSelection] = useState(false);
+  const [customerName, setCustomerName] = useState('');
 
   useEffect(() => {
     const loadStockRecords = async () => {
@@ -51,6 +52,13 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
     };
     loadStockRecords();
   }, []);
+
+  // Automatically set customer name from buyer name
+  useEffect(() => {
+    if (buyer.name && !customerName) {
+      setCustomerName(buyer.name);
+    }
+  }, [buyer.name, customerName]);
 
   function handleItemChange(idx, field, value) {
     const newItems = items.map((item, i) =>
@@ -285,6 +293,10 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
       setShowStockSelection(true);
       return;
     }
+    if (!customerName) {
+      alert('Please enter a customer name.');
+      return;
+    }
     if (!submittedData) {
       alert('Please preview the receipt first.');
       return;
@@ -296,12 +308,14 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
           fruit_name: item.fruit,
           qty: parseFloat(item.quantity),
           unit_price: parseFloat(item.unitPrice),
-          date: submittedData.date
+          date: submittedData.date,
+          customer_name: customerName
         });
       }
       alert('Items added to sales table successfully!');
       setShowStockSelection(false);
       setSelectedStockName('');
+      setCustomerName('');
       // Call parent callback to refresh table
       if (typeof onSellerFruitsAdded === 'function') {
         onSellerFruitsAdded();
@@ -329,7 +343,7 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
             </div>
           <div className="row mb-2">
             <div className="col-md-4"><label className="form-label">Buyer Name</label>
-              <input className="form-control" required value={buyer.name} onChange={e => setBuyer({ ...buyer, name: e.target.value })} /></div>
+              <input className="form-control" value={buyer.name} onChange={e => setBuyer({ ...buyer, name: e.target.value })} /></div>
             <div className="col-md-4"><label className="form-label">Buyer Contact</label>
               <input className="form-control" value={buyer.contact} onChange={e => setBuyer({ ...buyer, contact: e.target.value })} /></div>
             <div className="col-md-4"><label className="form-label">Buyer Address</label>
@@ -468,26 +482,33 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
                 >
                   <option value="">Choose a stock name...</option>
                   {stockRecords.map((stock) => (
-                    <option key={stock.id} value={stock.stockName || stock.fruitType}>
-                      {stock.stockName || stock.fruitType}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="btn btn-primary btn-sm me-2"
-                  onClick={handleSaveToTable}
-                  disabled={!selectedStockName}
-                >
-                  Confirm Save to Table
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setShowStockSelection(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+          <option key={stock.id} value={stock.stockName || stock.fruitType}>
+            {stock.stockName || stock.fruitType}
+          </option>
+        ))}
+      </select>
+      <input
+        type="text"
+        className="form-control mb-2"
+        placeholder="Enter Customer Name"
+        value={customerName}
+        onChange={(e) => setCustomerName(e.target.value)}
+      />
+      <button
+        className="btn btn-primary btn-sm me-2"
+        onClick={handleSaveToTable}
+        disabled={!selectedStockName || !customerName}
+      >
+        Confirm Save to Table
+      </button>
+      <button
+        className="btn btn-secondary btn-sm"
+        onClick={() => setShowStockSelection(false)}
+      >
+        Cancel
+      </button>
+    </div>
+  )}
           </div>
         </div>
       )}

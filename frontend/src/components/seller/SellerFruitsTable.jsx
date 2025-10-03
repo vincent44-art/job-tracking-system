@@ -24,7 +24,7 @@ const SellerFruitsTable = ({
     unit_price: true,
     date: true,
     amount: true,
-    actions: true
+    customer_name: true
   });
 
   // Get unique fruit types for filter dropdown
@@ -141,6 +141,17 @@ const SellerFruitsTable = ({
     a.click();
     window.URL.revokeObjectURL(url);
   };
+
+  // Group data by stock_name
+  const groupedByStock = useMemo(() => {
+    const map = new Map();
+    for (const fruit of paginatedData) {
+      const key = fruit.stock_name || 'Unknown';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(fruit);
+    }
+    return map;
+  }, [paginatedData]);
 
   return (
     <div className="card shadow-sm">
@@ -275,58 +286,67 @@ const SellerFruitsTable = ({
                     Amount {sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                 )}
-                {visibleColumns.actions && <th>Actions</th>}
+                {visibleColumns.customer_name && (
+                  <th onClick={() => handleSort('customer_name')} style={{ cursor: 'pointer' }}>
+                    Customer Name {sortConfig.key === 'customer_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="text-center text-muted py-4">
+                  <td colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center text-muted py-4">
                     No data matches the current filters
                   </td>
                 </tr>
               ) : (
-                paginatedData.map((fruit, index) => (
-                  <tr key={fruit.id || index}>
-                    {visibleColumns.stock_name && <td>{fruit.stock_name}</td>}
-                    {visibleColumns.fruit_name && <td>{fruit.fruit_name}</td>}
-                    {visibleColumns.qty && <td>{fruit.qty}</td>}
-                    {visibleColumns.unit_price && <td>{formatKenyanCurrency(fruit.unit_price)}</td>}
-                    {visibleColumns.date && <td>{formatDateCell(fruit.date)}</td>}
-                    {visibleColumns.amount && <td>{formatKenyanCurrency(fruit.amount)}</td>}
-                    {visibleColumns.actions && (
-                      <td>
-                        <div className="btn-group btn-group-sm">
-                          <button 
-                            className="btn btn-outline-primary" 
-                            onClick={() => onEdit(fruit)}
-                            title="Edit"
-                          >
-                            <i className="bi bi-pencil"></i>
-                          </button>
-                          <button 
-                            className="btn btn-outline-danger" 
-                            onClick={() => handleDelete(fruit.id)}
-                            title="Delete"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                          <button 
-                            className="btn btn-outline-success" 
-                            onClick={() => downloadSellerFruitsPDF(fruit.stock_name, [fruit])}
-                            title="Download PDF"
-                          >
-                            <i className="bi bi-download"></i>
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
+                // Render rows grouped by stock_name, with PDF button row above each group
+                Array.from(groupedByStock.entries()).flatMap(([stockName, group], groupIdx) => [
+                  // PDF download row for this group
+                  <tr key={`pdf-row-${stockName}`} className="table-success">
+                    <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="py-2">
+                      <span className="fw-bold me-2">{stockName} PDF:</span>
+                      <button
+                        className="btn btn-outline-success btn-sm"
+                        onClick={() => downloadSellerFruitsPDF(stockName, group)}
+                        title={`Download PDF for ${stockName}`}
+                      >
+                        <i className="bi bi-download"></i> Download PDF
+                      </button>
+                    </td>
+                  </tr>,
+                  // Sales rows for this group
+                  ...group.map((fruit, idx) => (
+                    <tr key={fruit.id || `${groupIdx}-${idx}`}>
+                      {visibleColumns.stock_name && <td>{fruit.stock_name}</td>}
+                      {visibleColumns.fruit_name && <td>{fruit.fruit_name}</td>}
+                      {visibleColumns.qty && <td>{fruit.qty}</td>}
+                      {visibleColumns.unit_price && <td>{formatKenyanCurrency(fruit.unit_price)}</td>}
+                      {visibleColumns.date && <td>{formatDateCell(fruit.date)}</td>}
+                      {visibleColumns.amount && <td>{formatKenyanCurrency(fruit.amount)}</td>}
+                      {visibleColumns.customer_name && <td>{fruit.customer_name}</td>}
+                    </tr>
+                  ))
+                ])
               )}
             </tbody>
           </table>
         </div>
+
+        {/* PDF Download Row for each stock group */}
+        {Array.from(groupedByStock.entries()).map(([stockName, group], idx) => (
+          <div key={stockName} className="my-2 d-flex align-items-center">
+            <span className="me-2 fw-bold">{stockName} PDF:</span>
+            <button
+              className="btn btn-outline-success btn-sm"
+              onClick={() => downloadSellerFruitsPDF(stockName, group)}
+              title={`Download PDF for ${stockName}`}
+            >
+              <i className="bi bi-download"></i> Download PDF
+            </button>
+          </div>
+        ))}
 
         {/* Summary Statistics */}
         {filteredAndSortedData.length > 0 && (

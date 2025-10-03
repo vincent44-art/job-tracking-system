@@ -23,6 +23,8 @@ parser.add_argument('stock_name', type=str, required=True)
 parser.add_argument('fruit_name', type=str, required=True)
 parser.add_argument('qty', type=float, required=True)
 parser.add_argument('unit_price', type=float, required=True)
+parser.add_argument('paid_amount', type=float, required=False, default=0.0)
+parser.add_argument('customer_name', type=str, required=False)
 parser.add_argument('date', type=str, required=True)
 
 class SaleListResource(Resource):
@@ -48,6 +50,9 @@ class SaleListResource(Resource):
             'qty': sale.qty,
             'unit_price': sale.unit_price,
             'amount': sale.amount,
+            'paid_amount': sale.paid_amount,
+            'remaining_amount': sale.remaining_amount,
+            'customer_name': sale.customer_name,
             'date': sale.date.strftime('%Y-%m-%d'),
             'seller_email': sale.seller.email if hasattr(sale, 'seller') and sale.seller else None
         } for sale in sales]
@@ -74,7 +79,10 @@ class SaleListResource(Resource):
             fruit_name=args['fruit_name'],
             qty=args['qty'],
             unit_price=args['unit_price'],
+            paid_amount=args.get('paid_amount', 0.0),
             amount=args['qty'] * args['unit_price'],
+            remaining_amount=(args['qty'] * args['unit_price']) - args.get('paid_amount', 0.0),
+            customer_name=args.get('customer_name'),
             date=datetime.strptime(args['date'], '%Y-%m-%d').date()
         )
 
@@ -125,7 +133,11 @@ class SaleResource(Resource):
         sale.fruit_name = args['fruit_name']
         sale.qty = args['qty']
         sale.unit_price = args['unit_price']
+        sale.paid_amount = args.get('paid_amount', 0.0)
         sale.amount = args['qty'] * args['unit_price']
+        sale.remaining_amount = sale.amount - sale.paid_amount
+        if 'customer_name' in args:
+            sale.customer_name = args['customer_name']
         sale.date = datetime.strptime(args['date'], '%Y-%m-%d').date()
 
         db.session.commit()
@@ -298,6 +310,26 @@ class SaleSummaryResource(Resource):
         return make_response_data(data=summary, message="Sale summary fetched.")
 
 
+class CustomerDebtResource(Resource):
+    def get(self):
+        # Aggregate remaining_amount by customer_name from sales
+        from sqlalchemy import func
+        debt_query = db.session.query(
+            Sale.customer_name.label('customer_name'),
+            func.sum(Sale.remaining_amount).label('total_debt')
+        ).filter(Sale.customer_name.isnot(None)).group_by(Sale.customer_name).all()
+
+        debt_data = [
+            {
+                'customer_name': row.customer_name,
+                'total_debt': float(row.total_debt)
+            }
+            for row in debt_query
+        ]
+
+        return make_response_data(data={'debts': debt_data}, success=True, message='Customer debts fetched successfully', status_code=200)
+
+
 class DailySalesReportResource(Resource):
     @role_required('ceo')
     def get(self, date_str):
@@ -367,5 +399,78 @@ class DailySalesReportResource(Resource):
             buffer,
             as_attachment=True,
             download_name=f"sales_report_{date_str}.pdf",
+            mimetype='application/pdf'
+        )
+
+
+class CustomerDebtReportResource(Resource):
+    @role_required('ceo')
+    def get(self, customer_email):
+        # Get all sales for the customer with remaining_amount > 0
+        sales = Sale.query.filter(
+            Sale.customer_name == customer_email,
+            Sale.remaining_amount > 0
+        ).all()
+
+        if not sales:
+            return make_response_data(success=False, message=f"No outstanding debts found for {customer_email}.", status_code=404)
+
+        # Create PDF buffer
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # Title
+        title = Paragraph(f"Customer Debt Report - {customer_email}", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+
+        # Summary
+        total_debt = sum(sale.remaining_amount for sale in sales)
+        total_amount = sum(sale.amount for sale in sales)
+        total_paid = total_amount - total_debt
+        summary_text = f"Total Amount: KES {total_amount:,.2f} | Total Paid: KES {total_paid:,.2f} | Outstanding Debt: KES {total_debt:,.2f}"
+        summary = Paragraph(summary_text, styles['Normal'])
+        elements.append(summary)
+        elements.append(Spacer(1, 12))
+
+        # Table data
+        data = [['Date', 'Stock Name', 'Fruit Name', 'Qty', 'Unit Price', 'Amount', 'Paid Amount', 'Remaining Amount']]
+        for sale in sales:
+            data.append([
+                sale.date.strftime('%Y-%m-%d'),
+                sale.stock_name,
+                sale.fruit_name,
+                sale.qty,
+                f'KES {sale.unit_price:,.2f}',
+                f'KES {sale.amount:,.2f}',
+                f'KES {sale.paid_amount:,.2f}',
+                f'KES {sale.remaining_amount:,.2f}'
+            ])
+
+        # Create table
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+
+        elements.append(table)
+
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"debt_report_{customer_email.replace('@', '_')}.pdf",
             mimetype='application/pdf'
         )

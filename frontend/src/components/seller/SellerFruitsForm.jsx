@@ -7,7 +7,8 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
     fruit_name: '',
     qty: '',
     unit_price: '',
-    amount: ''
+    amount: '',
+    buyer_name: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,7 +20,8 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
         fruit_name: fruit.fruit_name || '',
         qty: fruit.qty || '',
         unit_price: fruit.unit_price || '',
-        amount: fruit.amount || ''
+        amount: fruit.amount || '',
+        buyer_name: fruit.customer_name || ''
       });
     } else if (initialData) {
       setFormData({
@@ -27,7 +29,8 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
         fruit_name: initialData.fruit_name || '',
         qty: initialData.qty || '',
         unit_price: initialData.unit_price || '',
-        amount: initialData.amount || ''
+        amount: initialData.amount || '',
+        buyer_name: initialData.customer_name || ''
       });
     }
   }, [fruit, initialData]);
@@ -69,7 +72,8 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
         qty: parseFloat(formData.qty),
         unit_price: parseFloat(formData.unit_price),
         date: dateStr,
-        amount: parseFloat(formData.amount)
+        amount: parseFloat(formData.amount),
+        customer_name: formData.buyer_name
       };
 
       if (fruit) {
@@ -182,6 +186,18 @@ const SellerFruitsForm = ({ fruit, initialData, onSave, onCancel }) => {
                 id="amount"
                 name="amount"
                 value={formData.amount}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="buyer_name" className="form-label">Buyer's Name (Customer Name)</label>
+              <input
+                type="text"
+                className="form-control"
+                id="buyer_name"
+                name="buyer_name"
+                value={formData.buyer_name}
                 onChange={handleChange}
                 required
               />

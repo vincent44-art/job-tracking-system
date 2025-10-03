@@ -21,9 +21,9 @@ class ReceiptResource(Resource):
             date=datetime.fromisoformat(data['date']),
             payment=data['payment'],
             items=json.dumps(data['items']),
-            subtotal=data['subtotal'],
-            discount=data['discount'],
-            final_total=data['finalTotal']
+            subtotal=float(data['subtotal']) if data['subtotal'] else 0.0,
+            discount=float(data['discount']) if data['discount'] else 0.0,
+            final_total=float(data['finalTotal']) if data['finalTotal'] else 0.0
         )
         db.session.add(receipt)
         db.session.commit()

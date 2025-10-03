@@ -3,8 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 // CeoMessagesDisplay removed
 import {
   fetchDriverExpenses,
-  addDriverExpense,
-  deleteDriverExpense
+  addDriverExpense
 } from '../api/driver';
 import { fetchOtherExpenses } from '../api/otherExpenses';
 import OtherExpenseForm from '../components/OtherExpenseForm';
@@ -93,19 +92,7 @@ const DriverDashboard = () => {
     }
   };
 
-  const handleDeleteExpense = async (expenseId) => {
-    if (!window.confirm('Are you sure you want to delete this expense?')) return;
-    try {
-      setLoading(true);
-      await deleteDriverExpense(expenseId);
-      setCarExpenses(prev => prev.filter(exp => exp.id !== expenseId));
-    } catch (err) {
-      setError('Failed to delete expense. Please try again.');
-      console.error('Error deleting expense:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <div className="fruit-tracking-bg">
@@ -239,7 +226,6 @@ const DriverDashboard = () => {
                           <th>Car Number Plate</th>
                           <th>Stock Name</th>
                           <th>Amount (KES)</th>
-                          <th>Action</th>
                           <th>Date</th>
                         </tr>
                       </thead>
@@ -252,16 +238,6 @@ const DriverDashboard = () => {
                             <td>{expense.car_number_plate || '-'}</td>
                             <td>{expense.stock_name || '-'}</td>
                             <td>{expense.amount}</td>
-                            <td>
-                              <button
-                                className="btn btn-sm btn-danger"
-                                title="Delete Expense"
-                                onClick={() => handleDeleteExpense(expense.id)}
-                                disabled={loading}
-                              >
-                                <i className="bi bi-trash"></i>
-                              </button>
-                            </td>
                             <td>{expense.date ? new Date(expense.date).toLocaleDateString() : '-'}</td>
                           </tr>
                         ))}

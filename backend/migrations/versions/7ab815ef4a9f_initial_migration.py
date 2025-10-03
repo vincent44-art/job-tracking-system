@@ -1,8 +1,8 @@
-"""fix all tables
+"""initial migration
 
-Revision ID: 4b54dd9bcd25
-Revises: d0f592990ea3
-Create Date: 2025-09-09 10:21:07.260748
+Revision ID: 7ab815ef4a9f
+Revises: 
+Create Date: 2025-10-02 21:37:55.406108
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '4b54dd9bcd25'
-down_revision = 'd0f592990ea3'
+revision = '7ab815ef4a9f'
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -26,6 +26,9 @@ def upgrade():
     sa.Column('type', sa.String(length=80), nullable=True),
     sa.Column('description', sa.String(length=256), nullable=True),
     sa.Column('date', sa.Date(), nullable=True),
+    sa.Column('car_number_plate', sa.String(length=20), nullable=True),
+    sa.Column('car_name', sa.String(length=100), nullable=True),
+    sa.Column('stock_name', sa.String(length=100), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('gradients',
@@ -41,16 +44,69 @@ def upgrade():
     sa.Column('purpose', sa.String(length=100), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('it_alert',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('event_ids', sa.JSON(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('severity', sa.Enum('LOW', 'MEDIUM', 'HIGH', 'CRITICAL', name='alertseverity'), nullable=False),
+    sa.Column('acknowledged', sa.Boolean(), nullable=True),
+    sa.Column('acknowledged_by', sa.String(length=120), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('assigned_to', sa.String(length=120), nullable=True),
+    sa.Column('suggested_actions', sa.JSON(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('receipts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('receipt_num', sa.String(length=50), nullable=False),
+    sa.Column('seller_name', sa.String(length=100), nullable=True),
+    sa.Column('seller_address', sa.String(length=200), nullable=True),
+    sa.Column('seller_phone', sa.String(length=20), nullable=True),
+    sa.Column('buyer_name', sa.String(length=100), nullable=True),
+    sa.Column('buyer_contact', sa.String(length=50), nullable=True),
+    sa.Column('date', sa.Date(), nullable=False),
+    sa.Column('payment', sa.String(length=50), nullable=True),
+    sa.Column('items', sa.Text(), nullable=True),
+    sa.Column('subtotal', sa.Float(), nullable=True),
+    sa.Column('discount', sa.Float(), nullable=True),
+    sa.Column('final_total', sa.Float(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('receipt_num')
+    )
+    op.create_table('stock_tracking',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('stock_name', sa.String(length=128), nullable=False),
+    sa.Column('date_in', sa.Date(), nullable=False),
+    sa.Column('fruit_type', sa.String(length=64), nullable=False),
+    sa.Column('quantity_in', sa.Float(), nullable=False),
+    sa.Column('amount_per_kg', sa.Float(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('other_charges', sa.Float(), nullable=True),
+    sa.Column('date_out', sa.Date(), nullable=True),
+    sa.Column('duration', sa.Integer(), nullable=True),
+    sa.Column('gradient_used', sa.String(length=128), nullable=True),
+    sa.Column('gradient_amount_used', sa.Float(), nullable=True),
+    sa.Column('gradient_cost_per_unit', sa.Float(), nullable=True),
+    sa.Column('total_gradient_cost', sa.Float(), nullable=True),
+    sa.Column('quantity_out', sa.Float(), nullable=True),
+    sa.Column('spoilage', sa.Float(), nullable=True),
+    sa.Column('total_stock_cost', sa.Float(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=120), nullable=False),
     sa.Column('password_hash', sa.String(length=256), nullable=True),
-    sa.Column('role', sa.Enum('CEO', 'STOREKEEPER', 'SELLER', 'PURCHASER', 'DRIVER', name='userrole'), nullable=False),
+    sa.Column('role', sa.Enum('CEO', 'STOREKEEPER', 'SELLER', 'PURCHASER', 'DRIVER', 'IT', 'ADMIN', name='userrole'), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('salary', sa.Float(), nullable=True),
     sa.Column('is_paid', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('profile_image', sa.String(length=256), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
@@ -79,10 +135,28 @@ def upgrade():
     sa.ForeignKeyConstraint(['added_by'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('it_event',
+    sa.Column('id', sa.String(length=50), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=False),
+    sa.Column('user_email', sa.String(length=120), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('event_type', sa.Enum('LOGIN', 'LOGOUT', 'FAILED_LOGIN', 'PERMISSION_CHANGE', 'DATA_EXPORT', 'FILE_UPLOAD', 'CONFIG_CHANGE', 'API_ERROR', name='eventtype'), nullable=False),
+    sa.Column('severity', sa.Enum('INFO', 'WARNING', 'CRITICAL', name='severity'), nullable=False),
+    sa.Column('ip', sa.String(length=45), nullable=True),
+    sa.Column('device', sa.String(length=255), nullable=True),
+    sa.Column('resource', sa.String(length=255), nullable=True),
+    sa.Column('summary', sa.Text(), nullable=False),
+    sa.Column('payload', sa.JSON(), nullable=True),
+    sa.Column('related_event_ids', sa.JSON(), nullable=True),
+    sa.Column('server_logs', sa.Text(), nullable=True),
+    sa.Column('stack_trace', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('message',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('sender_id', sa.Integer(), nullable=False),
-    sa.Column('recipient_role', sa.Enum('CEO', 'STOREKEEPER', 'SELLER', 'PURCHASER', 'DRIVER', name='userrole'), nullable=True),
+    sa.Column('recipient_role', sa.Enum('CEO', 'STOREKEEPER', 'SELLER', 'PURCHASER', 'DRIVER', 'IT', 'ADMIN', name='userrole'), nullable=True),
     sa.Column('recipient_id', sa.Integer(), nullable=True),
     sa.Column('message', sa.Text(), nullable=False),
     sa.Column('is_read', sa.Boolean(), nullable=True),
@@ -114,6 +188,7 @@ def upgrade():
     sa.Column('cost', sa.Float(), nullable=False),
     sa.Column('purchase_date', sa.Date(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('amount_per_kg', sa.Float(), nullable=False),
     sa.ForeignKeyConstraint(['purchaser_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -127,17 +202,34 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('seller_fruits',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('stock_name', sa.String(length=100), nullable=False),
+    sa.Column('fruit_name', sa.String(length=50), nullable=False),
+    sa.Column('qty', sa.Float(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('date', sa.Date(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('customer_name', sa.String(length=100), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('sale',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('seller_id', sa.Integer(), nullable=False),
-    sa.Column('assignment', sa.String(length=100), nullable=True),
-    sa.Column('assignment_id', sa.Integer(), nullable=True),
-    sa.Column('fruit_type', sa.String(length=50), nullable=False),
-    sa.Column('quantity', sa.String(length=50), nullable=False),
-    sa.Column('revenue', sa.Float(), nullable=False),
-    sa.Column('sale_date', sa.Date(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['assignment_id'], ['assignments.id'], ),
+    sa.Column('seller_fruit_id', sa.Integer(), nullable=True),
+    sa.Column('stock_name', sa.String(length=100), nullable=False),
+    sa.Column('fruit_name', sa.String(length=50), nullable=False),
+    sa.Column('qty', sa.Float(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('paid_amount', sa.Float(), nullable=False),
+    sa.Column('remaining_amount', sa.Float(), nullable=False),
+    sa.Column('customer_name', sa.String(length=100), nullable=True),
+    sa.Column('date', sa.Date(), nullable=True),
+    sa.ForeignKeyConstraint(['seller_fruit_id'], ['seller_fruits.id'], ),
     sa.ForeignKeyConstraint(['seller_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -164,13 +256,18 @@ def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('stock_movement')
     op.drop_table('sale')
+    op.drop_table('seller_fruits')
     op.drop_table('salaries')
     op.drop_table('purchase')
     op.drop_table('other_expenses')
     op.drop_table('message')
+    op.drop_table('it_event')
     op.drop_table('inventory')
     op.drop_table('assignments')
     op.drop_table('user')
+    op.drop_table('stock_tracking')
+    op.drop_table('receipts')
+    op.drop_table('it_alert')
     op.drop_table('gradients')
     op.drop_table('driver_expenses')
     # ### end Alembic commands ###

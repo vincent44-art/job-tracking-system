@@ -224,39 +224,53 @@ const OtherExpensesTab = ({ token }) => {
                   <tbody>
                     {filteredExpenses.length > 0 ? (
                       filteredExpenses.map(expense => (
-                        <tr key={expense.id}>
-                          <td>{new Date(expense.date).toLocaleDateString()}</td>
-                          <td>{expense.expense_type}</td>
-                          <td>{expense.description}</td>
-                          <td className="fw-bold">{formatCurrency(expense.amount)}</td>
-                          <td>{expense.user_id}</td>
-                          <td>
-                            {expense.id ? (
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDelete(expense.id)}
-                                title="Delete expense"
+                        <React.Fragment key={expense.id}>
+                          <tr>
+                            <td>{new Date(expense.date).toLocaleDateString()}</td>
+                            <td>{expense.expense_type}</td>
+                            <td>{expense.description}</td>
+                            <td className="fw-bold">{formatCurrency(expense.amount)}</td>
+                            <td>{expense.user_id}</td>
+                            <td>
+                              {expense.id ? (
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDelete(expense.id)}
+                                  title="Delete expense"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              ) : (
+                                <span className="text-muted">N/A</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td colSpan="6" className="text-center py-2">
+                              <a
+                                href={`/api/other-expenses/pdf?date=${encodeURIComponent(expense.date)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-sm btn-outline-primary"
                               >
-                                <Trash2 size={16} />
-                              </button>
-                            ) : (
-                              <span className="text-muted">N/A</span>
-                            )}
-                          </td>
-                        </tr>
+                                View PDF for {new Date(expense.date).toLocaleDateString()}
+                              </a>
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan="6" className="text-center py-4">
-                          {expenses.length === 0 
-                            ? 'No expenses recorded yet' 
-                            : 'No matching expenses found'}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <tr>
+                <td colSpan="6" className="text-center py-4">
+                  {expenses.length === 0 
+                    ? 'No expenses recorded yet' 
+                    : 'No matching expenses found'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
             </div>
           </div>
         </div>

@@ -13,6 +13,9 @@ class Sale(db.Model):
     qty = db.Column(db.Float, nullable=False, default=0.0)
     unit_price = db.Column(db.Float, nullable=False, default=0.0)
     amount = db.Column(db.Float, nullable=False, default=0.0)
+    paid_amount = db.Column(db.Float, nullable=False, default=0.0)
+    remaining_amount = db.Column(db.Float, nullable=False, default=0.0)
+    customer_name = db.Column(db.String(100), nullable=True)
     date = db.Column(db.Date, default=datetime.utcnow)
 
     # Relationships
@@ -32,6 +35,9 @@ class Sale(db.Model):
             'qty': self.qty,
             'unit_price': self.unit_price,
             'amount': self.amount,
+            'paid_amount': self.paid_amount,
+            'remaining_amount': self.remaining_amount,
             'date': self.date.isoformat() if self.date else None,
-            'seller_email': self.seller.email if self.seller else None
+            'seller_email': self.seller.email if self.seller else None,
+            'customer_name': self.customer_name
         }

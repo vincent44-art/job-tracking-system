@@ -71,7 +71,7 @@ const SellerDashboard = () => {
   const [stockRecords, setStockRecords] = useState([]);
   const [sellerSales, setSellerSales] = useState([]);
   const [sellerFruits, setSellerFruits] = useState([]);
-  const [sellerSalesHistory, setSellerSalesHistory] = useState([]);
+
   const [showSellerFruitsForm, setShowSellerFruitsForm] = useState(false);
   const [editingFruit, setEditingFruit] = useState(null);
   const [showStockSelector, setShowStockSelector] = useState(false);
@@ -132,10 +132,8 @@ const SellerDashboard = () => {
             const sellerEmail = user?.email;
             const mySales = allSales.filter(sale => sale.seller_email === sellerEmail);
             setSellerSales(mySales);
-            setSellerSalesHistory(mySales);
           } else {
             setSellerSales([]);
-            setSellerSalesHistory([]);
           }
 
           // Load sales data for table display (replacing seller fruits)
@@ -188,7 +186,6 @@ const SellerDashboard = () => {
         }
       }
       setSellerSales(salesData);
-      setSellerSalesHistory(salesData);
     } catch (err) {
       console.error('Error refreshing sales data:', err);
     }
@@ -204,45 +201,7 @@ const SellerDashboard = () => {
     }).format(amount || 0);
   };
 
-  // Seller's sales history table as a component
-  function SellerSalesHistoryTable() {
-    if (!Array.isArray(sellerSalesHistory) || sellerSalesHistory.length === 0) {
-      return <div className="alert alert-info mt-3">No sales history found for this seller.</div>;
-    }
-    return (
-      <div className="card shadow-sm mt-4">
-        <div className="card-header bg-success text-white">
-          <h5 className="mb-0">My Sales History</h5>
-        </div>
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>Date</th>
-                  <th>Fruit</th>
-                  <th>Qty</th>
-                  <th>Unit Price</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sellerSalesHistory.map(sale => (
-                  <tr key={sale.id}>
-                    <td>{sale.date ? new Date(sale.date).toLocaleDateString() : ''}</td>
-                    <td>{sale.fruit_name || sale.fruitType || ''}</td>
-                    <td>{sale.qty || sale.quantitySold || sale.quantity || ''}</td>
-                    <td>{sale.unit_price ? formatKenyanCurrency(sale.unit_price) : ''}</td>
-                    <td>{sale.amount ? formatKenyanCurrency(sale.amount) : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
 
   // Build new grouped table data inside SellerDashboard
   const enrichedSales = useMemo(() => {
@@ -440,8 +399,6 @@ const SellerDashboard = () => {
           {error}
         </div>
       )}
-  {/* Seller's sales history table (outside row) */}
-  <SellerSalesHistoryTable />
       <div className="row">
         <div className="col-md-6">
           {/* Sale Invoice Form below */}

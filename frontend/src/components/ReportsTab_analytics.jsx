@@ -149,11 +149,11 @@ const ReportsTabAnalytics = () => {
 
   // Calculate key business metrics
   const calculateBusinessMetrics = () => {
-    const allSales = [...data.sales, ...data.sellerFruits];
+    const allSales = Array.isArray(data.sales) && Array.isArray(data.sellerFruits) ? [...data.sales, ...data.sellerFruits] : [];
     const totalRevenue = allSales.reduce((sum, sale) => sum + (parseFloat(sale.revenue) || 0), 0);
     const totalQuantity = allSales.reduce((sum, sale) => sum + (parseFloat(sale.quantitySold || sale.quantity) || 0), 0);
-    const totalPurchases = data.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.totalAmount) || 0), 0);
-    const totalExpenses = data.otherExpenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0);
+    const totalPurchases = Array.isArray(data.purchases) ? data.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.totalAmount) || 0), 0) : 0;
+    const totalExpenses = Array.isArray(data.otherExpenses) ? data.otherExpenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0) : 0;
     const totalProfit = totalRevenue - totalPurchases - totalExpenses;
 
     return {
@@ -168,7 +168,7 @@ const ReportsTabAnalytics = () => {
 
   // Calculate fruit profitability data
   const calculateFruitProfitability = () => {
-    const allSales = [...data.sales, ...data.sellerFruits];
+    const allSales = Array.isArray(data.sales) && Array.isArray(data.sellerFruits) ? [...data.sales, ...data.sellerFruits] : [];
     const fruitMetrics = {};
 
     // Estimated cost per unit for different fruits (in KES)
@@ -211,7 +211,7 @@ const ReportsTabAnalytics = () => {
 
   // Calculate sales trends over time
   const calculateSalesTrends = () => {
-    const allSales = [...data.sales, ...data.sellerFruits];
+    const allSales = Array.isArray(data.sales) && Array.isArray(data.sellerFruits) ? [...data.sales, ...data.sellerFruits] : [];
     const salesByDate = {};
 
     allSales.forEach(sale => {
