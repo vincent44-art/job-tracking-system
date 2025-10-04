@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchEvents, acknowledgeAlerts } from '../api/it';
+import { fetchEvents, acknowledgeAlerts, fetchAlerts } from '../api/it';
 import { formatISO } from 'date-fns';
 import { Moon, Sun, LogOut } from 'lucide-react';
 
@@ -24,11 +24,14 @@ function ITActivityDashboard() {
     resource: '',
   });
   const [events, setEvents] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [page, setPage] = useState(1);
   const [perPage] = useState(50);
   const [total, setTotal] = useState(0);
+  const [alertsTotal, setAlertsTotal] = useState(0);
   const [selectedEventIds, setSelectedEventIds] = useState(new Set());
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedAlert, setSelectedAlert] = useState(null);
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [acknowledging, setAcknowledging] = useState(false);
 
@@ -53,9 +56,27 @@ function ITActivityDashboard() {
     }
   }, [filters, page, perPage]);
 
+  // Fetch alerts with pagination
+  const loadAlerts = useCallback(async () => {
+    const params = {
+      page,
+      per_page: perPage,
+      acknowledged: false,
+    };
+    try {
+      const token = localStorage.getItem('access_token');
+      const data = await fetchAlerts(params, token);
+      setAlerts(data.data.alerts);
+      setAlertsTotal(data.data.meta.total);
+    } catch (error) {
+      console.error('Failed to load alerts', error);
+    }
+  }, [page, perPage]);
+
   useEffect(() => {
     loadEvents();
-  }, [loadEvents]);
+    loadAlerts();
+  }, [loadEvents, loadAlerts]);
 
   // Handle filter changes
   const handleFilterChange = (field, value) => {

@@ -7,6 +7,7 @@ const AccountTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedCustomers, setExpandedCustomers] = useState({});
+  const [saveTimeouts, setSaveTimeouts] = useState({});
 
   useEffect(() => {
     fetchDebtsData();
@@ -40,6 +41,51 @@ const AccountTab = () => {
     updatedSales[index].paid_amount = paidAmount;
     updatedSales[index].remaining_amount = updatedSales[index].amount - paidAmount;
     setSalesData(updatedSales);
+
+    // Clear previous timeout for this sale
+    if (saveTimeouts[updatedSales[index].id]) {
+      clearTimeout(saveTimeouts[updatedSales[index].id]);
+    }
+
+    // Set new timeout to save after 0.5 second
+    const timeoutId = setTimeout(() => {
+      handleSavePaidAmount(updatedSales[index].id);
+      setSaveTimeouts(prev => {
+        const newTimeouts = { ...prev };
+        delete newTimeouts[updatedSales[index].id];
+        return newTimeouts;
+      });
+    }, 1000);
+
+    setSaveTimeouts(prev => ({ ...prev, [updatedSales[index].id]: timeoutId }));
+  };
+
+  const handleSavePaidAmount = async (saleId) => {
+    const sale = salesData.find(s => s.id === saleId);
+    if (!sale) return;
+    try {
+      await updateSale(sale.id, {
+        stock_name: sale.stock_name,
+        fruit_name: sale.fruit_name,
+        qty: sale.qty,
+        unit_price: sale.unit_price,
+        paid_amount: sale.paid_amount,
+        date: sale.date,
+      });
+      // Clear the timeout if it exists
+      if (saveTimeouts[saleId]) {
+        clearTimeout(saveTimeouts[saleId]);
+        setSaveTimeouts(prev => {
+          const newTimeouts = { ...prev };
+          delete newTimeouts[saleId];
+          return newTimeouts;
+        });
+      }
+      // Optionally refetch to ensure consistency
+      fetchDebtsData();
+    } catch (err) {
+      alert('Failed to save paid amount.');
+    }
   };
 
   const handleSaveAll = async () => {
@@ -81,6 +127,12 @@ const AccountTab = () => {
     }
   };
 
+  // New helper to calculate total debt dynamically from salesData
+  const calculateTotalDebt = (customerName) => {
+    const customerSales = getCustomerSales(customerName);
+    return customerSales.reduce((acc, sale) => acc + sale.remaining_amount, 0);
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
 
@@ -101,7 +153,7 @@ const AccountTab = () => {
             <React.Fragment key={debt.customer_name}>
               <tr>
                 <td className="border border-gray-300 px-2 py-1">{debt.customer_name}</td>
-                <td className="border border-gray-300 px-2 py-1">{debt.total_debt.toFixed(2)}</td>
+                <td className="border border-gray-300 px-2 py-1">{calculateTotalDebt(debt.customer_name).toFixed(2)}</td>
                 <td className="border border-gray-300 px-2 py-1">
                   <button
                     onClick={() => toggleExpand(debt.customer_name)}
@@ -143,6 +195,7 @@ const AccountTab = () => {
                                 type="number"
                                 value={sale.paid_amount}
                                 onChange={(e) => handlePaidAmountChange(salesData.findIndex(s => s.id === sale.id), e.target.value)}
+                                onBlur={() => handleSavePaidAmount(sale.id)}
                                 className="w-full border border-gray-300 rounded px-1 py-0.5"
                                 min="0"
                                 max={sale.amount}

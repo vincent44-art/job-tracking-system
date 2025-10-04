@@ -216,9 +216,16 @@ def log_api_error(resource, error_message, status_code=None):
     Log API error.
     """
     from flask_jwt_extended import get_jwt_identity
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id) if user_id else None
-
+    user_id = None
+    user = None
+    # Avoid JWT lookup for static files or images
+    if not (str(resource).startswith('/static') or str(resource).endswith('.png') or str(resource).endswith('.jpg') or str(resource).endswith('.jpeg') or str(resource).endswith('.ico')):
+        try:
+            user_id = get_jwt_identity()
+            user = User.query.get(user_id) if user_id else None
+        except Exception:
+            user_id = None
+            user = None
     log_event(
         event_type=EventType.API_ERROR,
         severity=Severity.WARNING,

@@ -22,11 +22,27 @@ const StockTrackerTab = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [showProfitLossModal, setShowProfitLossModal] = useState(false);
 
   const navigate = useNavigate();
   const goToStockTrackingRecords = () => {
     navigate('/stock-tracking-records');
-  } 
+  }
+
+  const handleTrackStock = (stockName) => {
+    navigate('/stock-tracking-records', { state: { filterStock: stockName } });
+  }
+
+  const handleViewProfitLoss = (stock) => {
+    setSelectedStock(stock);
+    setShowProfitLossModal(true);
+  }
+
+  const closeModal = () => {
+    setShowProfitLossModal(false);
+    setSelectedStock(null);
+  }
 
   useEffect(() => {
     const toCamel = s => s.replace(/([-_][a-z])/g, g => g.toUpperCase().replace('-', '').replace('_', ''));
@@ -266,34 +282,57 @@ const StockTrackerTab = () => {
                 <thead className="table-dark">
                   <tr>
                     <th>Stock Name</th>
-                    <th>Fruit Type</th>
                     <th>Purchase Cost</th>
                     <th>Storage Usage</th>
                     <th>Transport Costs</th>
                     <th>Other Expenses</th>
                     <th>Revenue</th>
+                    <th>Quantity Sold</th>
                     <th>Profit/Loss</th>
                     <th>Date In</th>
                     <th>Date Out</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.stockExpenses && data.stockExpenses.length > 0 ? (
                     <>
                       {data.stockExpenses.map((stock, idx) => (
-                        <tr key={stock.stockId || stock.stock_id || idx}>
-                          <td>{stock.stockName || stock.stock_name}</td>
-                          <td>{stock.fruitType || stock.fruit_type}</td>
+                        <tr key={stock.stock_name || idx}>
+                          <td>
+                            <button
+                              className="btn btn-link p-0 text-decoration-none"
+                              onClick={() => handleTrackStock(stock.stockName || stock.stock_name)}
+                            >
+                              {stock.stockName || stock.stock_name}
+                            </button>
+                          </td>
                           <td>KES {stock.purchaseCost?.toLocaleString() || stock.purchase_cost?.toLocaleString() || 0}</td>
                           <td>{stock.storageUsage?.toLocaleString() || stock.storage_usage?.toLocaleString() || 0} units</td>
                           <td>KES {stock.transportCosts?.toLocaleString() || stock.transport_costs?.toLocaleString() || 0}</td>
                           <td>KES {stock.otherExpenses?.toLocaleString() || stock.other_expenses?.toLocaleString() || 0}</td>
                           <td>KES {stock.revenue?.toLocaleString() || 0}</td>
-                          <td className={(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'text-success' : 'text-danger'}>
+                          <td>{stock.quantitySold?.toLocaleString() || stock.quantity_sold?.toLocaleString() || 0} units</td>
+                          <td className={`fw-bold ${(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'text-success' : 'text-danger'}`}>
+                            <i className={`bi ${(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'bi-graph-up' : 'bi-graph-down'} me-1`}></i>
                             KES {(stock.profitLoss ?? stock.profit_loss ?? 0).toLocaleString()}
                           </td>
                           <td>{stock.dateIn || stock.date_in || 'N/A'}</td>
                           <td>{stock.dateOut || stock.date_out || 'N/A'}</td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-primary me-2"
+                              onClick={() => handleViewProfitLoss(stock)}
+                            >
+                              View Details
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => handleTrackStock(stock.stockName || stock.stock_name)}
+                            >
+                              Track Stock
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {/* Grand total row */}
@@ -303,9 +342,12 @@ const StockTrackerTab = () => {
                           KES {data.stockExpenses.reduce((sum, s) => sum + (s.revenue || 0), 0).toLocaleString()}
                         </td>
                         <td>
+                          {data.stockExpenses.reduce((sum, s) => sum + (s.quantity_sold || 0), 0).toLocaleString()} units
+                        </td>
+                        <td>
                           KES {data.stockExpenses.reduce((sum, s) => sum + (s.profit_loss || 0), 0).toLocaleString()}
                         </td>
-                        <td colSpan="2"></td>
+                        <td colSpan="3"></td>
                       </tr>
                     </>
                   ) : (
@@ -360,6 +402,64 @@ const StockTrackerTab = () => {
           </div>
         </div>
       </div>
+
+      {/* Profit/Loss Details Modal */}
+      {showProfitLossModal && selectedStock && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Profit/Loss Details - {selectedStock.stockName || selectedStock.stock_name}</h5>
+                <button type="button" className="btn-close" onClick={closeModal}></button>
+              </div>
+              <div className="modal-body">
+                <div className="row">
+                  <div className="col-md-6">
+                    <h6>Cost Breakdown</h6>
+                    <ul className="list-group">
+                      <li className="list-group-item d-flex justify-content-between">
+                        Purchase Cost <span>KES {(selectedStock.purchaseCost || selectedStock.purchase_cost || 0).toLocaleString()}</span>
+                      </li>
+                      <li className="list-group-item d-flex justify-content-between">
+                        Transport Costs <span>KES {(selectedStock.transportCosts || selectedStock.transport_costs || 0).toLocaleString()}</span>
+                      </li>
+                      <li className="list-group-item d-flex justify-content-between">
+                        Other Expenses <span>KES {(selectedStock.otherExpenses || selectedStock.other_expenses || 0).toLocaleString()}</span>
+                      </li>
+                      <li className="list-group-item d-flex justify-content-between fw-bold">
+                        Total Costs <span>KES {((selectedStock.purchaseCost || selectedStock.purchase_cost || 0) + (selectedStock.transportCosts || selectedStock.transport_costs || 0) + (selectedStock.otherExpenses || selectedStock.other_expenses || 0)).toLocaleString()}</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="col-md-6">
+                    <h6>Revenue & Profit</h6>
+                    <ul className="list-group">
+                      <li className="list-group-item d-flex justify-content-between">
+                        Revenue <span>KES {(selectedStock.revenue || 0).toLocaleString()}</span>
+                      </li>
+                      <li className={`list-group-item d-flex justify-content-between fw-bold ${(selectedStock.profitLoss ?? selectedStock.profit_loss) >= 0 ? 'text-success' : 'text-danger'}`}>
+                        Profit/Loss <span>KES {(selectedStock.profitLoss ?? selectedStock.profit_loss ?? 0).toLocaleString()}</span>
+                      </li>
+                    </ul>
+                    <div className="mt-3">
+                      <h6>Additional Info</h6>
+                      <p><strong>Total Quantity In:</strong> {(selectedStock.total_quantity_in || 0).toLocaleString()} units</p>
+                      <p><strong>Quantity Sold:</strong> {(selectedStock.quantitySold || selectedStock.quantity_sold || 0).toLocaleString()} units</p>
+                      <p><strong>Storage Usage:</strong> {(selectedStock.storageUsage || selectedStock.storage_usage || 0).toLocaleString()} units</p>
+                      <p><strong>Date In:</strong> {selectedStock.dateIn || selectedStock.date_in || 'N/A'}</p>
+                      <p><strong>Date Out:</strong> {selectedStock.dateOut || selectedStock.date_out || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={closeModal}>Close</button>
+                <button type="button" className="btn btn-primary" onClick={() => { closeModal(); handleTrackStock(selectedStock.stockName || selectedStock.stock_name); }}>Track This Stock</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
   {/* Stock Tracking Table removed: now on its own page */}
     </div>

@@ -14,14 +14,15 @@ const SalaryManagementTab = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        const token = localStorage.getItem('access_token');
         const [salariesRes, usersRes] = await Promise.all([
-          fetchSalaries(),
-          fetchUsers()
+          fetchSalaries(token),
+          fetchUsers(token)
         ]);
         console.log('Loaded users:', usersRes.data);
         console.log('Loaded salaries:', salariesRes.data);
-        const usersData = usersRes.data || [];
-        setSalaries(salariesRes.data || []);
+        const usersData = usersRes.data?.data || [];
+        setSalaries(salariesRes.data?.data || []);
         setUsers(usersData);
         setExpandedUsers(new Set(usersData.map(u => u.id)));
       } catch (err) {
@@ -125,8 +126,9 @@ const SalaryManagementTab = () => {
                                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
                               });
                               // Refresh salaries
-                              const salariesRes = await fetchSalaries();
-                              setSalaries(salariesRes.data || []);
+                              const token = localStorage.getItem('access_token');
+                              const salariesRes = await fetchSalaries(token);
+                              setSalaries(salariesRes.data?.data || []);
                             }}>
                             {salary.is_paid ? 'Mark Pending' : 'Mark Paid'}
                           </button>
@@ -134,8 +136,9 @@ const SalaryManagementTab = () => {
                             className="btn btn-sm btn-danger"
                             onClick={async () => {
                               await deleteSalary(salary.id);
-                              const salariesRes = await fetchSalaries();
-                              setSalaries(salariesRes.data || []);
+                              const token = localStorage.getItem('access_token');
+                              const salariesRes = await fetchSalaries(token);
+                              setSalaries(salariesRes.data?.data || []);
                             }}
                           >
                             Delete
@@ -159,7 +162,7 @@ const SalaryManagementTab = () => {
       <SalaryFormModal
         show={showSalaryModal}
         onClose={() => setShowSalaryModal(false)}
-        onSave={async (salaryData) => {
+          onSave={async (salaryData) => {
           await fetch('/api/salaries', {
             method: 'POST',
             headers: {
@@ -170,7 +173,8 @@ const SalaryManagementTab = () => {
           });
           setShowSalaryModal(false);
           // Refresh salaries
-          const salariesRes = await fetchSalaries();
+          const token = localStorage.getItem('access_token');
+          const salariesRes = await fetchSalaries(token);
           setSalaries(salariesRes.data || []);
         }}
         users={users}

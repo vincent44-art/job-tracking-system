@@ -32,6 +32,16 @@ export async function acknowledgeAlerts(eventIds, token) {
   return response.data;
 }
 
+export async function fetchAlerts(params, token) {
+  const response = await axios.get(`${API_BASE}/alerts`, {
+    params,
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return response.data;
+}
+
 export async function createIncident(payload, token) {
   const response = await axios.post(`${API_BASE}/incidents`, payload, {
     headers: {

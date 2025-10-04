@@ -195,9 +195,9 @@ export const getAllUsers = async () => {
 };
 
 // Fetch car expenses
-export const fetchCarExpenses = async () => {
+export const fetchCarExpenses = async (token = null) => {
   try {
-    const response = await api.get('/car-expenses');
+    const response = await api.get('/car-expenses', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error fetching car expenses:', error);
@@ -338,9 +338,9 @@ export const deleteOtherExpense = async (expenseId, token = null) => {
 };
 
 // Fetch salaries
-export const fetchSalaries = async () => {
+export const fetchSalaries = async (token = null) => {
   try {
-    const response = await api.get('/salaries');
+    const response = await api.get('/salaries', token ? { headers: { Authorization: `Bearer ${token}` } } : {});
     return response;
   } catch (error) {
     console.error('Error fetching salaries:', error);

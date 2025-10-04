@@ -41,7 +41,9 @@ import {
   fetchPurchases,
   fetchSales,
   fetchOtherExpenses,
-  fetchUsers
+  fetchUsers,
+  fetchSalaries,
+  fetchCarExpenses
 } from './apiHelpers';
 import { fetchStockTracking } from '../api/stockTracking';
 import { fetchSellerFruits } from '../api/sellerFruits';
@@ -68,7 +70,9 @@ const ReportsTabAnalytics = () => {
     otherExpenses: [],
     users: [],
     stockTracking: [],
-    sellerFruits: []
+    sellerFruits: [],
+    salaries: [],
+    carExpenses: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -94,7 +98,9 @@ const ReportsTabAnalytics = () => {
             expensesRes,
             usersRes,
             stockTrackingRes,
-            sellerFruitsRes
+            sellerFruitsRes,
+            salariesRes,
+            carExpensesRes
           ] = await Promise.all([
             fetchInventory(token),
             fetchStockMovements(token),
@@ -103,18 +109,22 @@ const ReportsTabAnalytics = () => {
             fetchOtherExpenses(token),
             fetchUsers(token),
             fetchStockTracking(token),
-            fetchSellerFruits(token)
+            fetchSellerFruits(token),
+            fetchSalaries(token),
+            fetchCarExpenses(token)
           ]);
 
         setData({
           inventory: Array.isArray(inventoryRes.data?.data) ? inventoryRes.data.data : inventoryRes.data || [],
           stockMovements: Array.isArray(movementsRes.data?.data) ? movementsRes.data.data : movementsRes.data || [],
-          purchases: Array.isArray(purchasesRes.data?.data) ? purchasesRes.data.data : purchasesRes.data || [],
+          purchases: Array.isArray(purchasesRes.data?.data?.items) ? purchasesRes.data.data.items : purchasesRes.data?.data || [],
           sales: Array.isArray(salesRes) ? salesRes : [],
           otherExpenses: Array.isArray(expensesRes.data?.data) ? expensesRes.data.data : expensesRes.data || [],
           users: Array.isArray(usersRes.data?.data) ? usersRes.data.data : usersRes.data || [],
           stockTracking: Array.isArray(stockTrackingRes.data?.data) ? stockTrackingRes.data.data : stockTrackingRes.data || [],
-          sellerFruits: Array.isArray(sellerFruitsRes) ? sellerFruitsRes : []
+          sellerFruits: Array.isArray(sellerFruitsRes) ? sellerFruitsRes : [],
+          salaries: Array.isArray(salariesRes.data?.data) ? salariesRes.data.data : salariesRes.data || [],
+          carExpenses: Array.isArray(carExpensesRes.data?.data) ? carExpensesRes.data.data : carExpensesRes.data || []
         });
       } catch (err) {
         console.error('Failed to load analytics data:', err);
@@ -171,41 +181,66 @@ const ReportsTabAnalytics = () => {
     const allSales = Array.isArray(data.sales) && Array.isArray(data.sellerFruits) ? [...data.sales, ...data.sellerFruits] : [];
     const fruitMetrics = {};
 
-    // Estimated cost per unit for different fruits (in KES)
-    const estimatedCosts = {
-      'Sweet banana': 50, 'Kampala': 45, 'Cavendish': 55, 'Plantain': 40, 'Matoke': 35,
-      'American sweet potatoes': 60, 'White sweet potatoes': 55, 'Red sweet potatoes': 65,
-      'Local Avocados': 80, 'Hass Avocados': 120, 'Oranges': 70, 'Pixie': 75, 'Lemons': 85
+    // Helper function to normalize fruit names
+    const normalizeFruitName = (name) => {
+      if (!name) return '';
+      return name.toLowerCase().trim();
     };
 
-    allSales.forEach(sale => {
-      const fruitType = sale.fruit_type || sale.fruitType || sale.fruit;
-      const revenue = parseFloat(sale.revenue || 0);
-      const quantity = parseFloat(sale.quantitySold || sale.quantity || 0);
+    // Process purchases
+    data.purchases.forEach(purchase => {
+      const fruitType = normalizeFruitName(purchase.fruitType || purchase.fruit_type);
+      const amount = parseFloat(purchase.amount || 0);
+      const quantity = parseFloat(purchase.quantity || purchase.qty || 0);
 
       if (!fruitMetrics[fruitType]) {
         fruitMetrics[fruitType] = {
-          fruitType,
-          totalRevenue: 0,
-          totalQuantity: 0,
-          totalCost: 0,
-          salesCount: 0
+          fruitType: purchase.fruitType || purchase.fruit_type, // Keep original case for display
+          purchasedQuantity: 0,
+          purchasedAmount: 0,
+          soldQuantity: 0,
+          soldAmount: 0,
+          salesCount: 0,
+          purchaseCount: 0
         };
       }
 
-      fruitMetrics[fruitType].totalRevenue += revenue;
-      fruitMetrics[fruitType].totalQuantity += quantity;
+      fruitMetrics[fruitType].purchasedQuantity += quantity;
+      fruitMetrics[fruitType].purchasedAmount += amount;
+      fruitMetrics[fruitType].purchaseCount += 1;
+    });
+
+    // Process sales
+    allSales.forEach(sale => {
+      const fruitType = normalizeFruitName(sale.fruit_name || sale.fruit_type || sale.fruitType || sale.fruit);
+      const revenue = parseFloat(sale.amount || sale.revenue || 0);
+      const quantity = parseFloat(sale.qty || sale.quantitySold || sale.quantity || 0);
+
+      if (!fruitMetrics[fruitType]) {
+        fruitMetrics[fruitType] = {
+          fruitType: sale.fruit_name || sale.fruit_type || sale.fruitType || sale.fruit, // Keep original case for display
+          purchasedQuantity: 0,
+          purchasedAmount: 0,
+          soldQuantity: 0,
+          soldAmount: 0,
+          salesCount: 0,
+          purchaseCount: 0
+        };
+      }
+
+      fruitMetrics[fruitType].soldQuantity += quantity;
+      fruitMetrics[fruitType].soldAmount += revenue;
       fruitMetrics[fruitType].salesCount += 1;
     });
 
+    // Calculate profit and margin
     Object.keys(fruitMetrics).forEach(fruitType => {
       const metrics = fruitMetrics[fruitType];
-      const costPerUnit = estimatedCosts[fruitType] || 50;
-      metrics.totalCost = metrics.totalQuantity * costPerUnit;
-      metrics.totalProfit = metrics.totalRevenue - metrics.totalCost;
-      metrics.profitMargin = metrics.totalRevenue > 0 ? (metrics.totalProfit / metrics.totalRevenue) * 100 : 0;
+      metrics.totalProfit = metrics.soldAmount - metrics.purchasedAmount;
+      metrics.profitMargin = metrics.soldAmount > 0 ? (metrics.totalProfit / metrics.soldAmount) * 100 : 0;
     });
 
+    // Sort by profit descending (best to worst)
     return Object.values(fruitMetrics).sort((a, b) => b.totalProfit - a.totalProfit);
   };
 
@@ -278,6 +313,123 @@ const ReportsTabAnalytics = () => {
     return Object.values(userMetrics).sort((a, b) => b.totalRevenue - a.totalRevenue);
   };
 
+  // Calculate monthly summaries
+  const calculateMonthlySummaries = () => {
+    console.log('Purchases data:', data.purchases); // Debug log
+    if (!Array.isArray(data.purchases) || data.purchases.length === 0) {
+      console.warn('No purchases data found or purchases array is empty.');
+    } else {
+      data.purchases.forEach((purchase, idx) => {
+        console.log(`Purchase[${idx}]:`, purchase);
+      });
+    }
+    const monthlyData = {};
+    const getMonthKey = (dateStr) => {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      if (isNaN(d)) return null;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    // Process purchases
+    data.purchases.forEach(purchase => {
+      const month = getMonthKey(purchase.date);
+      if (!month) return;
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          month,
+          salesTotal: 0,
+          purchasesTotal: 0,
+          expensesTotal: 0,
+          salariesTotal: 0,
+          carExpensesTotal: 0
+        };
+      }
+      // Use totalAmount if available, otherwise fallback to amount
+      monthlyData[month].purchasesTotal += parseFloat(purchase.totalAmount || purchase.amount || 0);
+    });
+
+    // Process sales
+    data.sales.forEach(sale => {
+      const month = getMonthKey(sale.date || sale.sale_date);
+      if (!month) return;
+
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          month,
+          salesTotal: 0,
+          purchasesTotal: 0,
+          expensesTotal: 0,
+          salariesTotal: 0,
+          carExpensesTotal: 0
+        };
+      }
+      monthlyData[month].salesTotal += parseFloat(sale.amount || 0);
+    });
+
+    // Process other expenses
+    data.otherExpenses.forEach(expense => {
+      const month = getMonthKey(expense.date);
+      if (!month) return;
+
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          month,
+          salesTotal: 0,
+          purchasesTotal: 0,
+          expensesTotal: 0,
+          salariesTotal: 0,
+          carExpensesTotal: 0
+        };
+      }
+      monthlyData[month].expensesTotal += parseFloat(expense.amount || 0);
+    });
+
+    // Process salaries
+    data.salaries.forEach(salary => {
+      const month = getMonthKey(salary.date);
+      if (!month) return;
+
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          month,
+          salesTotal: 0,
+          purchasesTotal: 0,
+          expensesTotal: 0,
+          salariesTotal: 0,
+          carExpensesTotal: 0
+        };
+      }
+      monthlyData[month].salariesTotal += parseFloat(salary.amount || 0);
+    });
+
+    // Process car expenses
+    data.carExpenses.forEach(expense => {
+      const month = getMonthKey(expense.date);
+      if (!month) return;
+
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          month,
+          salesTotal: 0,
+          purchasesTotal: 0,
+          expensesTotal: 0,
+          salariesTotal: 0,
+          carExpensesTotal: 0
+        };
+      }
+      monthlyData[month].carExpensesTotal += parseFloat(expense.amount || 0);
+    });
+
+    // Calculate profit/loss and format
+    const result = Object.values(monthlyData).map(item => ({
+      ...item,
+      profitLoss: item.salesTotal - item.purchasesTotal - item.expensesTotal - item.salariesTotal - item.carExpensesTotal
+    }));
+
+    return result.sort((a, b) => b.month.localeCompare(a.month));
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center py-5">
@@ -330,6 +482,7 @@ const ReportsTabAnalytics = () => {
   const salesTrends = calculateSalesTrends();
   const expenseBreakdown = calculateExpenseBreakdown();
   const userPerformance = calculateUserPerformance();
+  const monthlySummaries = calculateMonthlySummaries();
 
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
@@ -594,9 +747,10 @@ const ReportsTabAnalytics = () => {
                 <tr>
                   <th>Rank</th>
                   <th>Fruit Type</th>
-                  <th>Quantity Sold</th>
-                  <th>Revenue</th>
-                  <th>Est. Cost</th>
+                  <th>Qty Purchased</th>
+                  <th>Amt Purchased</th>
+                  <th>Qty Sold</th>
+                  <th>Amt Sold</th>
                   <th>Profit</th>
                   <th>Margin</th>
                   <th>Performance</th>
@@ -611,9 +765,10 @@ const ReportsTabAnalytics = () => {
                       </span>
                     </td>
                     <td><strong>{fruit.fruitType}</strong></td>
-                    <td>{fruit.totalQuantity.toFixed(1)} kg</td>
-                    <td>{formatCurrency(fruit.totalRevenue)}</td>
-                    <td>{formatCurrency(fruit.totalCost)}</td>
+                    <td>{fruit.purchasedQuantity.toFixed(1)} kg</td>
+                    <td>{formatCurrency(fruit.purchasedAmount)}</td>
+                    <td>{fruit.soldQuantity.toFixed(1)} kg</td>
+                    <td>{formatCurrency(fruit.soldAmount)}</td>
                     <td className={fruit.totalProfit >= 0 ? 'text-success' : 'text-danger'}>
                       {formatCurrency(fruit.totalProfit)}
                     </td>
@@ -630,6 +785,45 @@ const ReportsTabAnalytics = () => {
                       ) : (
                         <TrendingDown className="text-danger" size={20} />
                       )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly Summary Table */}
+      <div className="card border-0 shadow-sm mt-4">
+        <div className="card-header bg-white">
+          <h5 className="mb-0">Monthly Summary</h5>
+        </div>
+        <div className="card-body">
+          <div className="table-responsive">
+            <table className="table table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Total Purchases</th>
+                  <th>Total Sales</th>
+                  <th>Total Expenses</th>
+                  <th>Total Salaries</th>
+                  <th>Total Car Expenses</th>
+                  <th>Profit / Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlySummaries.map((item) => (
+                  <tr key={item.month}>
+                    <td>{item.month}</td>
+                    <td>{formatCurrency(item.purchasesTotal)}</td>
+                    <td>{formatCurrency(item.salesTotal)}</td>
+                    <td>{formatCurrency(item.expensesTotal)}</td>
+                    <td>{formatCurrency(item.salariesTotal)}</td>
+                    <td>{formatCurrency(item.carExpensesTotal)}</td>
+                    <td className={item.profitLoss >= 0 ? 'text-success' : 'text-danger'}>
+                      {formatCurrency(item.profitLoss)}
                     </td>
                   </tr>
                 ))}
