@@ -125,7 +125,7 @@ class SaleResource(Resource):
     @role_required('ceo', 'seller')
     def put(self, sale_id):
         current_user = get_current_user()
-        sale = Sale.query.filter_by(id=sale_id, seller_id=current_user.id if current_user.role == 'seller' else None).first_or_404()
+        sale = Sale.query.get_or_404(sale_id)
         args = parser.parse_args()
 
         # Update sale

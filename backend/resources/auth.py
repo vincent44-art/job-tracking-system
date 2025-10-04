@@ -6,6 +6,7 @@ from flask_jwt_extended import (
 from flask import current_app, request
 from ..models.user import User
 from ..utils.helpers import make_response_data, get_current_user
+from ..utils.it_monitor import log_login_success, log_login_failure
 
 from flask import make_response
 from datetime import timedelta
@@ -30,11 +31,13 @@ class LoginResource(Resource):
         if user and user.check_password(password):
             access_token = create_access_token(identity=user.id, additional_claims={"role": user.role.value})
             refresh_token = create_refresh_token(identity=user.id)
+            log_login_success(user)
             return make_response_data(data={
                 'access_token': access_token,
                 'refresh_token': refresh_token,
                 'user': user.to_dict()
             }, message="Login successful")
+        log_login_failure(email)
         return make_response_data(success=False, message="Invalid credentials", status_code=401)
 
 class MeResource(Resource):

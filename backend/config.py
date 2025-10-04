@@ -15,3 +15,27 @@ class Config:
 
     CORS_ORIGINS = ["http://localhost:3000"]
 
+    # IT Alert Rules
+    ALERT_RULES = {
+        'failed_login_burst': {
+            'condition': '>=5 failed_login from same IP within 15m',
+            'severity': 'critical',
+            'actions': ['block_ip', 'force_password_reset']
+        },
+        'mass_data_export': {
+            'condition': '>1GB data export by non-admin',
+            'severity': 'high',
+            'actions': ['alert_it_team']
+        },
+        'api_error_burst': {
+            'condition': '>=10 api_error within 5m',
+            'severity': 'warning',
+            'actions': ['review_api_usage']
+        },
+        'permission_change': {
+            'condition': 'any permission_change',
+            'severity': 'info',
+            'actions': ['log_audit']
+        }
+    }
+

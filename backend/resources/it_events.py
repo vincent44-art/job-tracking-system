@@ -7,7 +7,6 @@ from ..utils.helpers import make_response_data
 from datetime import datetime, timedelta
 import json
 
-
 class ITEventsResource(Resource):
     @jwt_required()
     def get(self):
@@ -20,13 +19,17 @@ class ITEventsResource(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('start', type=str, help='Start date ISO string')
         parser.add_argument('end', type=str, help='End date ISO string')
-        parser.add_argument('severity', type=str, action='append', help='Severity filter')
-        parser.add_argument('event_type', type=str, action='append', help='Event type filter')
+        parser.add_argument('severity[]', type=str, action='append', help='Severity filter')
+        parser.add_argument('event_type[]', type=str, action='append', help='Event type filter')
         parser.add_argument('user_email', type=str, help='User email filter')
         parser.add_argument('page', type=int, default=1, help='Page number')
         parser.add_argument('per_page', type=int, default=50, help='Items per page')
 
         args = parser.parse_args()
+
+        # Handle array parameters
+        args['severity'] = args.pop('severity[]', [])
+        args['event_type'] = args.pop('event_type[]', [])
 
         query = ITEvent.query
 

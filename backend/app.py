@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -11,6 +11,7 @@ from backend.config import Config
 from backend.extensions import db
 from backend.models.user import User, UserRole
 from backend.utils.helpers import make_response_data
+from backend.utils.it_monitor import log_api_error
 from backend.resources import api_bp  # Your API blueprints
 from backend.resources.dashboard import dashboard_bp
 from backend.resources.__init__ import CurrentStockResource
@@ -123,7 +124,8 @@ def create_app(config_class=Config):
     api.add_resource(ITEventsResource, '/api/it/events')
     api.add_resource(ITEventResource, '/api/it/events/<string:event_id>')
     api.add_resource(ITAcknowledgeAlertsResource, '/api/it/alerts/acknowledge')
-    from backend.resources.it_alerts import ITIncidentsResource
+    from backend.resources.it_alerts import ITAlertsResource, ITIncidentsResource
+    api.add_resource(ITAlertsResource, '/api/it/alerts')
     api.add_resource(ITIncidentsResource, '/api/it/incidents')
     from backend.resources.sales import SaleListResource, SaleResource, SaleSummaryResource, DailySalesReportResource, ClearSalesResource, CustomerDebtResource, CustomerDebtReportResource
     from backend.resources.purchases import DailyPurchasesReportResource
@@ -185,12 +187,24 @@ def create_app(config_class=Config):
     # Error Handlers
     @app.errorhandler(404)
     def not_found_error(error):
+        log_api_error(request.path, "Resource not found", 404)
         return make_response_data(False, 404, "Resource not found.", [str(error)])
 
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
+        log_api_error(request.path, "Internal server error", 500)
         return make_response_data(False, 500, "An internal server error occurred.", [str(error)])
+
+    @app.errorhandler(401)
+    def unauthorized_error(error):
+        log_api_error(request.path, "Unauthorized access", 401)
+        return make_response_data(False, 401, "Unauthorized.", [str(error)])
+
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        log_api_error(request.path, "Forbidden access", 403)
+        return make_response_data(False, 403, "Forbidden.", [str(error)])
 
     return app
 

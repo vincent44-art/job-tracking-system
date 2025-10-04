@@ -46,10 +46,27 @@ class StockTrackingListResource(Resource):
     def post(self):
         data = parser.parse_args()
         try:
-            date_in = datetime.strptime(data['dateIn'], '%Y-%m-%d').date()
-            date_out = datetime.strptime(data['dateOut'], '%Y-%m-%d').date() if data.get('dateOut') else None
-        except ValueError:
-            return make_response_data(success=False, message="Invalid date format. Use YYYY-MM-DD.", status_code=400)
+            # Automatically set date_in to today if not provided or invalid
+            if not data.get('dateIn'):
+                date_in = datetime.now().date()
+            else:
+                try:
+                    date_in = datetime.strptime(data['dateIn'], '%Y-%m-%d').date()
+                except ValueError:
+                    date_in = datetime.now().date()
+
+            # Automatically set date_out to None if not provided or invalid
+            if not data.get('dateOut'):
+                date_out = None
+            else:
+                try:
+                    date_out = datetime.strptime(data['dateOut'], '%Y-%m-%d').date()
+                except ValueError:
+                    date_out = None
+
+        except Exception as e:
+            return make_response_data(success=False, message=f"Invalid date format or error: {str(e)}", status_code=400)
+
         record = StockTracking(
             stock_name=data['stockName'],
             date_in=date_in,
@@ -250,39 +267,59 @@ class StockTrackingAggregatedResource(Resource):
             stocks = StockTracking.query.all()
             logger.info(f"Found {len(stocks)} stock tracking records")
 
+            # Group stocks by stock_name
+            stock_groups = {}
+            for stock in stocks:
+                name = stock.stock_name
+                if name not in stock_groups:
+                    stock_groups[name] = []
+                stock_groups[name].append(stock)
+
             aggregated_data = []
 
-            for stock in stocks:
+            for stock_name, stock_list in stock_groups.items():
                 try:
-                    # Calculate storage usage from stock movements
+                    # Aggregate basic info
+                    fruit_type = stock_list[0].fruit_type  # Assume same for group
+                    total_purchase_cost = sum(stock.total_amount for stock in stock_list)
+                    total_quantity_in = sum(stock.quantity_in for stock in stock_list)
+                    earliest_date_in = min((stock.date_in for stock in stock_list if stock.date_in), default=None)
+                    latest_date_out = max((stock.date_out for stock in stock_list if stock.date_out), default=None)
+
+                    # Calculate storage usage from stock movements (sum for all stocks in group)
                     storage_usage = 0
                     try:
                         storage_result = StockMovement.query.join(Inventory).filter(
-                            Inventory.name == stock.stock_name,
+                            Inventory.name == stock_name,
                             StockMovement.movement_type == 'out'
                         ).with_entities(db.func.sum(StockMovement.quantity)).scalar()
                         storage_usage = float(storage_result) if storage_result else 0
                     except Exception as e:
-                        logger.warning(f"Error calculating storage usage for stock {stock.stock_name}: {str(e)}")
+                        logger.warning(f"Error calculating storage usage for stock {stock_name}: {str(e)}")
                         storage_usage = 0
 
-                    # Calculate transport costs from driver expenses
+                    # Calculate transport costs from driver expenses (sum for group)
                     transport_costs = 0
                     try:
                         transport_result = DriverExpense.query.filter(
-                            DriverExpense.stock_name == stock.stock_name
+                            DriverExpense.stock_name == stock_name
                         ).with_entities(db.func.sum(DriverExpense.amount)).scalar()
                         transport_costs = float(transport_result) if transport_result else 0
                     except Exception as e:
-                        logger.warning(f"Error calculating transport costs for stock {stock.stock_name}: {str(e)}")
+                        logger.warning(f"Error calculating transport costs for stock {stock_name}: {str(e)}")
                         transport_costs = 0
 
-                    # Calculate other expenses (link by date range - 7 days before/after stock date)
+                    # Calculate other expenses (link by date range - 7 days before/after group dates)
                     other_expenses = 0
                     try:
-                        stock_date = stock.date_in or stock.date_out or datetime.now().date()
-                        date_start = stock_date - timedelta(days=7)
-                        date_end = stock_date + timedelta(days=7)
+                        if earliest_date_in or latest_date_out:
+                            stock_date = earliest_date_in or latest_date_out or datetime.now().date()
+                            date_start = stock_date - timedelta(days=7)
+                            date_end = (latest_date_out or stock_date) + timedelta(days=7)
+                        else:
+                            # If no dates, use a wide range or skip
+                            date_start = datetime.now().date() - timedelta(days=30)
+                            date_end = datetime.now().date() + timedelta(days=30)
 
                         expense_result = OtherExpense.query.filter(
                             OtherExpense.date >= date_start,
@@ -290,42 +327,50 @@ class StockTrackingAggregatedResource(Resource):
                         ).with_entities(db.func.sum(OtherExpense.amount)).scalar()
                         other_expenses = float(expense_result) if expense_result else 0
                     except Exception as e:
-                        logger.warning(f"Error calculating other expenses for stock {stock.stock_name}: {str(e)}")
+                        logger.warning(f"Error calculating other expenses for stock {stock_name}: {str(e)}")
                         other_expenses = 0
 
-                    # Calculate revenue from sales
+                    # Calculate revenue and quantity sold from sales (sum for fruit_type from date_start to now)
                     revenue = 0
+                    quantity_sold = 0
                     try:
-                        revenue_result = Sale.query.filter(
-                            Sale.fruit_name == stock.fruit_type,
-                            Sale.date >= stock.date_in,
-                            Sale.date <= (stock.date_out or datetime.now().date())
-                        ).with_entities(db.func.sum(Sale.amount)).scalar()
+                        date_start = earliest_date_in or datetime.now().date() - timedelta(days=365)
+                        date_end = datetime.now().date()  # Include all sales up to current date
+                        sales_query = Sale.query.filter(
+                            Sale.fruit_name == fruit_type,
+                            Sale.date >= date_start,
+                            Sale.date <= date_end
+                        )
+                        revenue_result = sales_query.with_entities(db.func.sum(Sale.amount)).scalar()
+                        quantity_result = sales_query.with_entities(db.func.sum(Sale.qty)).scalar()
                         revenue = float(revenue_result) if revenue_result else 0
+                        quantity_sold = float(quantity_result) if quantity_result else 0
                     except Exception as e:
-                        logger.warning(f"Error calculating revenue for stock {stock.stock_name}: {str(e)}")
+                        logger.warning(f"Error calculating revenue and quantity sold for stock {stock_name}: {str(e)}")
                         revenue = 0
+                        quantity_sold = 0
 
                     # Calculate profit/loss
-                    total_costs = stock.total_amount + transport_costs + other_expenses
+                    total_costs = total_purchase_cost + transport_costs + other_expenses
                     profit_loss = revenue - total_costs
 
                     aggregated_data.append({
-                        'stock_id': stock.id,
-                        'stock_name': stock.stock_name,
-                        'fruit_type': stock.fruit_type,
-                        'purchase_cost': stock.total_amount,
+                        'stock_name': stock_name,
+                        'fruit_type': fruit_type,
+                        'purchase_cost': total_purchase_cost,
                         'storage_usage': storage_usage,
                         'transport_costs': transport_costs,
                         'other_expenses': other_expenses,
                         'revenue': revenue,
+                        'quantity_sold': quantity_sold,
                         'profit_loss': profit_loss,
-                        'date_in': stock.date_in.isoformat() if stock.date_in else None,
-                        'date_out': stock.date_out.isoformat() if stock.date_out else None
+                        'date_in': earliest_date_in.isoformat() if earliest_date_in else None,
+                        'date_out': latest_date_out.isoformat() if latest_date_out else None,
+                        'total_quantity_in': total_quantity_in
                     })
 
                 except Exception as e:
-                    logger.error(f"Error processing stock {stock.stock_name}: {str(e)}")
+                    logger.error(f"Error processing stock group {stock_name}: {str(e)}")
                     continue
 
             # Also calculate fruit profitability summary
