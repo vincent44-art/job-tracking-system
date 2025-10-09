@@ -4,12 +4,12 @@ import { createSale } from './apiHelpers';
 import { fetchStockTracking } from '../api/stockTracking';
 
 function generateReceiptNumber() {
-  // TTL yyyyMMdd-NNN random receipt num
+  // TTL yyyyMMdd-NNNN random receipt num
   const now = new Date();
   const base = now.getFullYear().toString() +
     String(now.getMonth() + 1).padStart(2, '0') +
     String(now.getDate()).padStart(2, '0');
-  const random = Math.floor(100 + Math.random() * 900);
+  const random = Math.floor(1000 + Math.random() * 9000);
   return `${base}-${random}`;
 }
 
@@ -30,7 +30,7 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
   const [items, setItems] = useState([{ ...initialItem }]);
   const [discount, setDiscount] = useState('');
   const [tax, setTax] = useState('');
-  const [amountReceived, setAmountReceived] = useState('');
+  const [expectedAmount, setExpectedAmount] = useState('');
   const [submittedData, setSubmittedData] = useState(null);
   const [stockRecords, setStockRecords] = useState([]);
   const [selectedStockName, setSelectedStockName] = useState('');
@@ -43,7 +43,7 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
         const token = localStorage.getItem('access_token');
         if (token) {
           const stockRes = await fetchStockTracking(token);
-          const outRecords = (stockRes.data || []).filter(r => r.dateOut);
+          const outRecords = Array.isArray(stockRes.data) ? stockRes.data.filter(r => r.dateOut) : [];
           setStockRecords(outRecords);
         }
       } catch (err) {
@@ -97,13 +97,13 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
   }
   function getBalance() {
     const total = getFinalTotal();
-    const received = parseFloat(amountReceived) || 0;
+    const received = parseFloat(expectedAmount) || 0;
     return received - total;
   }
 
   function handleSubmit(e) {
     e.preventDefault();
-  const data = { seller, buyer, invoiceNum, date, dueDate, payment, paymentDetails, paymentTerms, items, subtotal: getSubtotal(), tax, taxAmount: getTaxAmount(), discount, finalTotal: getFinalTotal(), amountReceived, balance: getBalance() };
+  const data = { seller, buyer, invoiceNum, date, dueDate, payment, paymentDetails, paymentTerms, items, subtotal: getSubtotal(), tax, taxAmount: getTaxAmount(), discount, finalTotal: getFinalTotal(), expectedAmount, balance: getBalance(), customerName };
     setSubmittedData(data);
     // Save to backend
     api.post('/receipts', data).catch(err => console.error('Failed to save invoice:', err));
@@ -186,7 +186,7 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
     ${tax ? `<div>Tax (VAT ${tax}%): KES ${getTaxAmount().toLocaleString()}</div>` : ''}
     ${discount ? `<div>Discount: KES ${parseFloat(discount).toLocaleString()}</div>` : ''}
     <div class="total">Grand Total: KES ${getFinalTotal().toLocaleString()}</div>
-    ${amountReceived ? `<div>Amount Received: KES ${parseFloat(amountReceived).toLocaleString()}</div>` : ''}
+    ${expectedAmount ? `<div>Expected Amount: KES ${parseFloat(expectedAmount).toLocaleString()}</div>` : ''}
     ${getBalance() !== 0 ? `<div>Balance: KES ${getBalance().toLocaleString()}</div>` : '<div>Paid in Full</div>'}
     <div class="header">Thank You for Your Business!</div>
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${invoiceNum}" alt="QR Code" style="margin: 10px;">
@@ -237,18 +237,18 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
     <div class="details">Payment Details: ${paymentDetails || 'N/A'}</div>
     <div class="details">Payment Terms: ${paymentTerms || 'N/A'}</div>
     <div class="details">Buyer: ${buyer.name || 'N/A'}${buyer.contact ? ` | ${buyer.contact}` : ''}${buyer.address ? ` | ${buyer.address}` : ''}</div>
-    <table>
-        <thead>
-            <tr>
-                <th>Item / Service</th>
-                <th>Description</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-            </tr>
-        </thead>
-        <tbody>
-${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
+    <div>Subtotal: KES ${getSubtotal().toLocaleString()}</div>
+    <thead>
+        <tr>
+            <th>Item / Service</th>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
             <tr>
                 <td>${i.fruit}</td>
                 <td>${i.description || '-'}</td>
@@ -259,11 +259,10 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
 `).join('')}
         </tbody>
     </table>
-    <div>Subtotal: KES ${getSubtotal().toLocaleString()}</div>
     ${tax ? `<div>Tax (VAT ${tax}%): KES ${getTaxAmount().toLocaleString()}</div>` : ''}
     ${discount ? `<div>Discount: KES ${parseFloat(discount).toLocaleString()}</div>` : ''}
     <div class="total">Grand Total: KES ${getFinalTotal().toLocaleString()}</div>
-    ${amountReceived ? `<div>Amount Received: KES ${parseFloat(amountReceived).toLocaleString()}</div>` : ''}
+    ${expectedAmount ? `<div>Expected Amount: KES ${parseFloat(expectedAmount).toLocaleString()}</div>` : ''}
     ${getBalance() !== 0 ? `<div>Balance: KES ${getBalance().toLocaleString()}</div>` : '<div>Paid in Full</div>'}
     <div class="header">Thank You for Your Business!</div>
   <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${invoiceNum}" alt="QR Code" style="margin: 10px;">
@@ -370,8 +369,8 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
               <input className="form-control" type="number" min="0" value={discount} onChange={e => setDiscount(e.target.value)} /></div>
             <div className="col-md-4"><label className="form-label">Tax (VAT %)</label>
               <input className="form-control" type="number" min="0" value={tax} onChange={e => setTax(e.target.value)} /></div>
-            <div className="col-md-4"><label className="form-label">Amount Received (KES)</label>
-              <input className="form-control" type="number" min="0" value={amountReceived} onChange={e => setAmountReceived(e.target.value)} /></div>
+            <div className="col-md-4"><label className="form-label">Expected Amount (KES)</label>
+              <input className="form-control" type="number" min="0" value={expectedAmount} onChange={e => setExpectedAmount(e.target.value)} /></div>
           </div>
 
           <hr />
@@ -426,6 +425,7 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
               <div style={{ fontSize: 12 }}>Payment Method: {submittedData.payment}</div>
               <div style={{ fontSize: 12 }}>Payment Details: {submittedData.paymentDetails || 'N/A'}</div>
               <div style={{ fontSize: 12 }}>Payment Terms: {submittedData.paymentTerms || 'N/A'}</div>
+              <div style={{ fontSize: 12 }}>Customer Name: {submittedData.customerName || 'N/A'}</div>
             </div>
             <hr />
             <div className="mb-2">
@@ -460,7 +460,7 @@ ${items.filter(i => i.fruit && i.quantity && i.unitPrice).map(i => `
             {submittedData.taxAmount > 0 && <div className="d-flex justify-content-between"><span>Tax (VAT {submittedData.tax}%):</span><span>KES {submittedData.taxAmount.toLocaleString()}</span></div>}
             {submittedData.discount > 0 && <div className="d-flex justify-content-between"><span>Discount:</span><span>KES {parseFloat(submittedData.discount).toLocaleString()}</span></div>}
             <div className="d-flex justify-content-between fw-bold"><span>Grand Total:</span><span>KES {submittedData.finalTotal.toLocaleString()}</span></div>
-            {submittedData.amountReceived && <div className="d-flex justify-content-between"><span>Amount Received:</span><span>KES {parseFloat(submittedData.amountReceived).toLocaleString()}</span></div>}
+            {submittedData.expectedAmount && <div className="d-flex justify-content-between"><span>Expected Amount:</span><span>KES {parseFloat(submittedData.expectedAmount).toLocaleString()}</span></div>}
             {submittedData.balance !== 0 && <div className="d-flex justify-content-between"><span>Balance:</span><span>KES {submittedData.balance.toLocaleString()}</span></div>}
             <div className="text-center text-success fw-bold mt-2" style={{ fontSize: 16 }}>
               Thank You for Your Business!

@@ -6,6 +6,7 @@ from backend.models.other_expense import OtherExpense
 from backend.models.driver import DriverExpense
 from backend.models.stock_movement import StockMovement
 from backend.models.inventory import Inventory
+from backend.models.purchases import Purchase
 from ..utils.helpers import make_response_data
 from ..utils.decorators import role_required
 from datetime import datetime, timedelta
@@ -373,11 +374,15 @@ class StockTrackingAggregatedResource(Resource):
                     logger.error(f"Error processing stock group {stock_name}: {str(e)}")
                     continue
 
-            # Also calculate fruit profitability summary
+            # Also calculate fruit profitability summary from purchases and sales
             fruit_profitability = {}
-            for stock in stocks:
+            purchases = Purchase.query.all()
+            sales = Sale.query.all()
+
+            # Aggregate purchases
+            for purchase in purchases:
                 try:
-                    fruit = stock.fruit_type
+                    fruit = purchase.fruit_type
                     if fruit not in fruit_profitability:
                         fruit_profitability[fruit] = {
                             'fruit_name': fruit,
@@ -387,25 +392,40 @@ class StockTrackingAggregatedResource(Resource):
                             'total_costs': 0
                         }
 
-                    fruit_profitability[fruit]['total_purchased'] += stock.quantity_in
-                    fruit_profitability[fruit]['total_costs'] += stock.total_amount
+                    # Parse quantity, handling strings with units
+                    quantity_str = str(purchase.quantity).strip()
+                    # Extract numeric part
+                    import re
+                    quantity_match = re.match(r'(\d+(\.\d+)?)', quantity_str)
+                    quantity = float(quantity_match.group(1)) if quantity_match else 0.0
 
-                    # Get sales for this fruit
-                    try:
-                        sales = Sale.query.filter(
-                            Sale.fruit_name == fruit,
-                            Sale.date >= stock.date_in,
-                            Sale.date <= (stock.date_out or datetime.now().date())
-                        ).all()
-
-                        for sale in sales:
-                            fruit_profitability[fruit]['total_sold'] += float(sale.qty)
-                            fruit_profitability[fruit]['total_revenue'] += sale.amount
-                    except Exception as e:
-                        logger.warning(f"Error fetching sales for fruit {fruit}: {str(e)}")
+                    fruit_profitability[fruit]['total_purchased'] += quantity
+                    fruit_profitability[fruit]['total_costs'] += float(purchase.cost or 0)
 
                 except Exception as e:
-                    logger.error(f"Error processing fruit profitability for {stock.fruit_type}: {str(e)}")
+                    logger.error(f"Error processing purchase for fruit {purchase.fruit_type}: {str(e)}")
+                    continue
+
+            # Aggregate sales (from sales table and seller_fruits table)
+            from backend.models.seller_fruit import SellerFruit
+            sales_records = sales + SellerFruit.query.all()
+            for sale in sales_records:
+                try:
+                    fruit = sale.fruit_name
+                    if fruit not in fruit_profitability:
+                        fruit_profitability[fruit] = {
+                            'fruit_name': fruit,
+                            'total_purchased': 0,
+                            'total_sold': 0,
+                            'total_revenue': 0,
+                            'total_costs': 0
+                        }
+
+                    fruit_profitability[fruit]['total_sold'] += float(sale.qty)
+                    fruit_profitability[fruit]['total_revenue'] += sale.amount
+
+                except Exception as e:
+                    logger.error(f"Error processing sale for fruit {sale.fruit_name}: {str(e)}")
                     continue
 
             # Calculate profit margin for each fruit

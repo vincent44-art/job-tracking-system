@@ -10,9 +10,6 @@ const initialStockIn = {
   dateIn: '',
   fruitType: '',
   quantityIn: '',
-  amountPerKg: '',
-  totalAmount: '',
-  otherCharges: '',
 };
 
 const initialStockOut = {
@@ -50,11 +47,7 @@ const StoreKeeperDashboard = () => {
     load();
   }, []);
 
-  // Auto-calculate totalAmount and totalGradientCost
-  useEffect(() => {
-    const totalAmount = parseFloat(stockIn.quantityIn || 0) * parseFloat(stockIn.amountPerKg || 0);
-    setStockIn((prev) => ({ ...prev, totalAmount: totalAmount ? totalAmount.toFixed(2) : '' }));
-  }, [stockIn.quantityIn, stockIn.amountPerKg]);
+
 
   useEffect(() => {
     const totalGradientCost = parseFloat(stockOut.gradientAmountUsed || 0) * parseFloat(stockOut.gradientCostPerUnit || 0);
@@ -86,11 +79,9 @@ const StoreKeeperDashboard = () => {
   };
 
   // Auto-calculate total stock cost
-  const getTotalStockCost = (totalAmount, otherCharges, totalGradientCost) => {
-    const ta = parseFloat(totalAmount || 0);
-    const oc = parseFloat(otherCharges || 0);
+  const getTotalStockCost = (totalGradientCost) => {
     const tgc = parseFloat(totalGradientCost || 0);
-    return (ta + oc + tgc).toFixed(2);
+    return tgc.toFixed(2);
   };
 
   const handleStockInChange = (e) => {
@@ -132,8 +123,6 @@ const StoreKeeperDashboard = () => {
       if (!stockInRecord) return;
       const duration = getDuration(stockInRecord.dateIn, stockOut.dateOut);
       const totalStockCost = getTotalStockCost(
-        stockInRecord.totalAmount,
-        stockInRecord.otherCharges,
         stockOut.totalGradientCost
       );
       // Merge Stock In and Stock Out data
@@ -183,18 +172,7 @@ const StoreKeeperDashboard = () => {
                   <label className="form-label">Quantity In (Kg)</label>
                   <input type="number" className="form-control" name="quantityIn" value={stockIn.quantityIn} onChange={handleStockInChange} required />
                 </div>
-                <div className="mb-3">
-                  <label className="form-label">Amount per Kg</label>
-                  <input type="number" className="form-control" name="amountPerKg" value={stockIn.amountPerKg} onChange={handleStockInChange} required />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Total Amount</label>
-                  <input type="number" className="form-control" name="totalAmount" value={stockIn.totalAmount} readOnly />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Other Charges</label>
-                  <input type="number" className="form-control" name="otherCharges" value={stockIn.otherCharges} onChange={handleStockInChange} />
-                </div>
+
                 <button type="submit" className="btn btn-success w-100">Submit Stock In</button>
               </form>
             </div>
@@ -280,9 +258,7 @@ const StoreKeeperDashboard = () => {
                     <th>Date In</th>
                     <th>Fruit Type</th>
                     <th>Quantity In</th>
-                    <th>Amount per Kg</th>
-                    <th>Total Amount</th>
-                    <th>Other Charges</th>
+
                     <th>Duration</th>
                     <th>Gradient Used</th>
                     <th>Gradient Amount Used</th>
@@ -301,9 +277,7 @@ const StoreKeeperDashboard = () => {
                       <td>{rec.dateIn}</td>
                       <td>{rec.fruitType}</td>
                       <td>{rec.quantityIn}</td>
-                      <td>{rec.amountPerKg}</td>
-                      <td>{rec.totalAmount}</td>
-                      <td>{rec.otherCharges}</td>
+
                       <td>{rec.duration}</td>
                       <td>{rec.gradientUsed}</td>
                       <td>{rec.gradientAmountUsed}</td>
@@ -316,7 +290,7 @@ const StoreKeeperDashboard = () => {
                     </tr>
                   ))}
                   {records.length === 0 && (
-                    <tr><td colSpan="16" className="text-center text-muted">No records yet</td></tr>
+                    <tr><td colSpan="13" className="text-center text-muted">No records yet</td></tr>
                   )}
                 </tbody>
               </table>

@@ -109,7 +109,7 @@ const SellerDashboard = () => {
         const token = localStorage.getItem('access_token');
       if (token) {
           const stockRes = await fetchStockTracking(token);
-          const outRecords = (stockRes.data || []).filter(r => r.dateOut);
+          const outRecords = Array.isArray(stockRes.data) ? stockRes.data.filter(r => r.dateOut) : [];
           setStockRecords(outRecords);
 
           // Load seller sales directly for table display
@@ -136,19 +136,15 @@ const SellerDashboard = () => {
             setSellerSales([]);
           }
 
-          // Load sales data for table display (replacing seller fruits)
-          let salesData = await fetchSales(user?.email, token);
-          // Normalize: if salesData is not an array, try to extract array from known response shapes
-          if (!Array.isArray(salesData)) {
-            if (salesData && Array.isArray(salesData.data)) {
-              salesData = salesData.data;
-            } else if (salesData && Array.isArray(salesData.sales)) {
-              salesData = salesData.sales;
-            } else {
-              salesData = [];
-            }
+          // Load seller sales data for table display
+          try {
+            const salesData = await fetchSales(user?.email, token);
+            console.log('Seller sales data:', salesData); // Debug log
+            setSellerFruits(salesData);
+          } catch (error) {
+            console.error('Error fetching seller sales:', error);
+            setSellerFruits([]);
           }
-          setSellerFruits(salesData);
         } else {
           console.warn('Missing access_token; skipping stock-tracking and sales fetch');
         }
@@ -209,13 +205,10 @@ const SellerDashboard = () => {
     return rows.map((sale) => {
       const matchedStock = matchStockForSale(sale, stockRecords);
       const stockName = matchedStock?.stockName || 'Unknown';
-      const unitPrice = matchedStock?.amountPerKg
-        ? parseFloat(matchedStock.amountPerKg)
-        : (sale.revenue && (sale.quantitySold || sale.quantity))
-          ? parseFloat(sale.revenue) / parseFloat(sale.quantitySold || sale.quantity)
-          : null;
       const qty = parseFloat(sale.quantitySold || sale.quantity || 0);
-      const amount = sale.revenue != null ? parseFloat(sale.revenue) : (unitPrice ? unitPrice * qty : 0);
+      const unitPrice = parseFloat(sale.unit_price || 0);
+      // Always calculate amount as unit_price * quantity
+      const amount = unitPrice * qty;
       const date = sale.date || sale.sale_date;
       const fruit = sale.fruitType || sale.fruit_type || '';
       return { stockName, date, fruit, qty, unitPrice, amount };
@@ -344,13 +337,12 @@ const SellerDashboard = () => {
 
   const handleSellerFruitSave = async () => {
     try {
-      const fruits = await fetchSellerFruits();
-      setSellerFruits(Array.isArray(fruits) ? fruits : []);
+      await refreshTableData();
       setShowSellerFruitsForm(false);
       setEditingFruit(null);
     } catch (err) {
-      setError('Failed to refresh seller fruits data.');
-      console.error('Error refreshing seller fruits:', err);
+      setError('Failed to refresh table data.');
+      console.error('Error refreshing table data:', err);
     }
   };
 
@@ -359,8 +351,8 @@ const SellerDashboard = () => {
     setEditingFruit(null);
   };
 
-  // Function to refresh sales table (formerly seller fruits)
-  const refreshSellerFruits = async () => {
+  // Function to refresh table data
+  const refreshTableData = async () => {
     try {
       const token = localStorage.getItem('access_token');
       let salesData = await fetchSales(user?.email, token);
@@ -402,7 +394,7 @@ const SellerDashboard = () => {
       <div className="row">
         <div className="col-md-6">
           {/* Sale Invoice Form below */}
-          <SaleInvoiceForm onSellerFruitsAdded={refreshSellerSales} />
+          <SaleInvoiceForm onSellerFruitsAdded={refreshTableData} />
           <hr />
 
           {/* Other Expenses Form */}
@@ -440,7 +432,7 @@ const SellerDashboard = () => {
                         setSelectedStockData(null);
                         setShowSellerFruitsForm(true);
                       }}
-                      onRefresh={refreshSellerFruits}
+                      onRefresh={refreshTableData}
                       formatKenyanCurrency={formatKenyanCurrency}
                       formatDateCell={formatDateCell}
                       downloadSellerFruitsPDF={downloadSellerFruitsPDF}

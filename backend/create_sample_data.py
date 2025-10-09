@@ -75,10 +75,13 @@ def create_sample_data():
         # Create sample inventory
         for fruit in fruit_types:
             inventory = Inventory(
+                name=f"{fruit} Inventory",
                 fruit_type=fruit,
-                quantity=100 + (hash(fruit) % 200),
-                cost_price=50 + (hash(fruit) % 100),
-                selling_price=80 + (hash(fruit) % 150)
+                quantity=str(100 + (hash(fruit) % 200)),
+                unit='kg',
+                location='Main Warehouse',
+                purchase_price=50 + (hash(fruit) % 100),
+                added_by=ceo.id
             )
             db.session.add(inventory)
         
@@ -93,13 +96,17 @@ def create_sample_data():
                 for i in range(2 + (hash(fruit + str(month_offset)) % 2)):
                     quantity = 50 + (hash(fruit + str(i)) % 100)
                     cost_per_unit = 30 + (hash(fruit + str(i)) % 70)
-                    
+
                     purchase = Purchase(
+                        purchaser_id=purchaser.id,
+                        employee_name=f'Employee {i+1}',
                         fruit_type=fruit,
-                        quantity=quantity,
+                        quantity=str(quantity),  # Store as string as per model
+                        unit='kg',
+                        buyer_name=f'Buyer {i+1}',
                         cost=quantity * cost_per_unit,
                         purchase_date=month_date - timedelta(days=hash(fruit) % 15),
-                        purchaser_id=purchaser.id
+                        amount_per_kg=cost_per_unit
                     )
                     db.session.add(purchase)
         
@@ -160,12 +167,66 @@ def create_sample_data():
         
         # Create sample gradients
         gradients = [
-            Gradient(fruit_type='Apples', grade='Grade A', price_per_kg=120.00),
-            Gradient(fruit_type='Apples', grade='Grade B', price_per_kg=100.00),
-            Gradient(fruit_type='Bananas', grade='Grade A', price_per_kg=80.00),
-            Gradient(fruit_type='Bananas', grade='Grade B', price_per_kg=60.00),
-            Gradient(fruit_type='Oranges', grade='Grade A', price_per_kg=90.00),
-            Gradient(fruit_type='Oranges', grade='Grade B', price_per_kg=70.00),
+            Gradient(
+                fruit_type='Apples',
+                gradient_type='Grade A',
+                name='Apples Grade A',
+                application_date=datetime.utcnow().date(),
+                description='High quality apples',
+                quantity='100',
+                unit='kg',
+                purpose='Quality grading'
+            ),
+            Gradient(
+                fruit_type='Apples',
+                gradient_type='Grade B',
+                name='Apples Grade B',
+                application_date=datetime.utcnow().date(),
+                description='Medium quality apples',
+                quantity='80',
+                unit='kg',
+                purpose='Quality grading'
+            ),
+            Gradient(
+                fruit_type='Bananas',
+                gradient_type='Grade A',
+                name='Bananas Grade A',
+                application_date=datetime.utcnow().date(),
+                description='High quality bananas',
+                quantity='120',
+                unit='kg',
+                purpose='Quality grading'
+            ),
+            Gradient(
+                fruit_type='Bananas',
+                gradient_type='Grade B',
+                name='Bananas Grade B',
+                application_date=datetime.utcnow().date(),
+                description='Medium quality bananas',
+                quantity='90',
+                unit='kg',
+                purpose='Quality grading'
+            ),
+            Gradient(
+                fruit_type='Oranges',
+                gradient_type='Grade A',
+                name='Oranges Grade A',
+                application_date=datetime.utcnow().date(),
+                description='High quality oranges',
+                quantity='110',
+                unit='kg',
+                purpose='Quality grading'
+            ),
+            Gradient(
+                fruit_type='Oranges',
+                gradient_type='Grade B',
+                name='Oranges Grade B',
+                application_date=datetime.utcnow().date(),
+                description='Medium quality oranges',
+                quantity='85',
+                unit='kg',
+                purpose='Quality grading'
+            ),
         ]
         
         for gradient in gradients:

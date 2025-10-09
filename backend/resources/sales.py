@@ -260,9 +260,15 @@ class SaleResource(Resource):
         sale = Sale.query.get_or_404(sale_id)
         data = parser.parse_args()
 
+        sale.stock_name = data['stock_name']
+        sale.fruit_name = data['fruit_name']
         sale.qty = data['qty']
         sale.unit_price = data['unit_price']
+        sale.paid_amount = data.get('paid_amount', sale.paid_amount)
         sale.amount = data['qty'] * data['unit_price']
+        sale.remaining_amount = sale.amount - sale.paid_amount
+        if 'customer_name' in data:
+            sale.customer_name = data['customer_name']
         sale.date = datetime.strptime(
             data['date'], '%Y-%m-%d'
         ).date()

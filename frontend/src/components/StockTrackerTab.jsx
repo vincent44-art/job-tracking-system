@@ -125,6 +125,19 @@ const StockTrackerTab = () => {
   const stockMovementsArr = Array.isArray(data.stockMovements) ? data.stockMovements : [];
   const inventoryArr = Array.isArray(data.inventory) ? data.inventory : [];
 
+  // Compute revenue by fruit from sales data
+  const revenueByFruit = {};
+  salesArr.forEach(sale => {
+    const fruitName = sale.fruitName || sale.fruit_name;
+    if (fruitName) {
+      if (!revenueByFruit[fruitName]) revenueByFruit[fruitName] = 0;
+      revenueByFruit[fruitName] += parseFloat(sale.amount || 0);
+    }
+  });
+  console.log('revenueByFruit:', revenueByFruit);
+  console.log('salesArr:', salesArr);
+  console.log('stockExpenses:', data.stockExpenses.map(s => ({stock_name: s.stockName, fruit_type: s.fruitType, revenue: revenueByFruit[s.fruitType]})));
+
   // Aggregations
   const totalBought = purchasesArr.reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalSold = salesArr.reduce((sum, s) => sum + (s.revenue || 0), 0);
@@ -171,7 +184,8 @@ const StockTrackerTab = () => {
           Go to Stock Tracking Records
         </button>
       </div>
-      {/* Summary Cards */}
+      {/* Summary Cards - MUTED */}
+      {/*
       <div className="row mb-4">
         <div className="col-md-3">
           <div className="card bg-primary text-white shadow-lg">
@@ -206,8 +220,10 @@ const StockTrackerTab = () => {
           </div>
         </div>
       </div>
+      */}
 
-      {/* Stock Usage */}
+      {/* Stock Usage - MUTED */}
+      {/*
       <div className="row mb-4">
         <div className="col-md-6">
           <div className="card bg-secondary text-white shadow-lg">
@@ -226,8 +242,10 @@ const StockTrackerTab = () => {
           </div>
         </div>
       </div>
+      */}
 
-      {/* Stock Summary by Fruit Type */}
+      {/* Stock Summary by Fruit Type - MUTED */}
+      {/*
       <div className="row">
         <div className="col-12">
           <div className="card shadow-lg border-0 fruit-card">
@@ -269,6 +287,7 @@ const StockTrackerTab = () => {
           </div>
         </div>
       </div>
+      */}
 
       {/* Stock Expenses Table */}
       <div className="row mt-4">
@@ -311,7 +330,7 @@ const StockTrackerTab = () => {
                           <td>{stock.storageUsage?.toLocaleString() || stock.storage_usage?.toLocaleString() || 0} units</td>
                           <td>KES {stock.transportCosts?.toLocaleString() || stock.transport_costs?.toLocaleString() || 0}</td>
                           <td>KES {stock.otherExpenses?.toLocaleString() || stock.other_expenses?.toLocaleString() || 0}</td>
-                          <td>KES {stock.revenue?.toLocaleString() || 0}</td>
+                          <td>KES {(revenueByFruit[stock.fruitType || stock.fruit_type] || 0).toLocaleString()}</td>
                           <td>{stock.quantitySold?.toLocaleString() || stock.quantity_sold?.toLocaleString() || 0} units</td>
                           <td className={`fw-bold ${(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'text-success' : 'text-danger'}`}>
                             <i className={`bi ${(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'bi-graph-up' : 'bi-graph-down'} me-1`}></i>
@@ -339,7 +358,7 @@ const StockTrackerTab = () => {
                       <tr className="table-info fw-bold">
                         <td colSpan="6" className="text-end">Grand Total:</td>
                         <td>
-                          KES {data.stockExpenses.reduce((sum, s) => sum + (s.revenue || 0), 0).toLocaleString()}
+                          KES {data.stockExpenses.reduce((sum, s) => sum + (revenueByFruit[s.fruitType || s.fruit_type] || 0), 0).toLocaleString()}
                         </td>
                         <td>
                           {data.stockExpenses.reduce((sum, s) => sum + (s.quantity_sold || 0), 0).toLocaleString()} units
@@ -360,7 +379,8 @@ const StockTrackerTab = () => {
         </div>
       </div>
 
-      {/* Fruit Profitability Table */}
+      {/* Fruit Profitability Table - MUTED */}
+      {/*
       <div className="row mt-4">
         <div className="col-12">
           <div className="card shadow-lg border-0">
@@ -402,6 +422,7 @@ const StockTrackerTab = () => {
           </div>
         </div>
       </div>
+      */}
 
       {/* Profit/Loss Details Modal */}
       {showProfitLossModal && selectedStock && (

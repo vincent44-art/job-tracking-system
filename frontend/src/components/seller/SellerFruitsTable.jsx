@@ -9,6 +9,8 @@ const SellerFruitsTable = ({
   formatDateCell,
   downloadSellerFruitsPDF 
 }) => {
+  // Debug log to check incoming data
+  console.log('SellerFruitsTable received data:', sellerFruits);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -98,18 +100,6 @@ const SellerFruitsTable = ({
       key,
       direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
     }));
-  };
-
-  const handleDelete = async (saleId) => {
-    if (window.confirm('Are you sure you want to delete this sale record?')) {
-      try {
-        await deleteSellerFruit(saleId);
-        onRefresh();
-      } catch (error) {
-        console.error('Error deleting sale:', error);
-        alert('Failed to delete sale. Please try again.');
-      }
-    }
   };
 
   const toggleColumnVisibility = (column) => {
@@ -305,7 +295,7 @@ const SellerFruitsTable = ({
                 Array.from(groupedByStock.entries()).flatMap(([stockName, group], groupIdx) => [
                   // PDF download row for this group
                   <tr key={`pdf-row-${stockName}`} className="table-success">
-                    <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="py-2">
+                    <td colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="py-2">
                       <span className="fw-bold me-2">{stockName} PDF:</span>
                       <button
                         className="btn btn-outline-success btn-sm"

@@ -71,6 +71,7 @@ const AccountTab = () => {
         unit_price: sale.unit_price,
         paid_amount: sale.paid_amount,
         date: sale.date,
+        customer_name: sale.customer_name,
       });
       // Clear the timeout if it exists
       if (saveTimeouts[saleId]) {
@@ -98,6 +99,7 @@ const AccountTab = () => {
           unit_price: sale.unit_price,
           paid_amount: sale.paid_amount,
           date: sale.date,
+          customer_name: sale.customer_name,
         });
       }
       alert('All changes saved successfully.');

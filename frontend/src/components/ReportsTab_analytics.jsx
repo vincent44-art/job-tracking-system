@@ -10,9 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area
+  ResponsiveContainer
 } from 'recharts';
 import {
   Chart as ChartJS,
@@ -26,7 +24,7 @@ import {
   Legend as ChartLegend,
   ArcElement,
 } from 'chart.js';
-import { format, parseISO } from 'date-fns';
+
 import {
   TrendingUp,
   TrendingDown,
@@ -45,7 +43,7 @@ import {
   fetchSalaries,
   fetchCarExpenses
 } from './apiHelpers';
-import { fetchStockTracking } from '../api/stockTracking';
+import { fetchStockTracking, fetchStockTrackingAggregated } from '../api/stockTracking';
 import { fetchSellerFruits } from '../api/sellerFruits';
 
 // Register Chart.js components
@@ -72,7 +70,9 @@ const ReportsTabAnalytics = () => {
     stockTracking: [],
     sellerFruits: [],
     salaries: [],
-    carExpenses: []
+    carExpenses: [],
+    stockExpenses: [],
+    fruitProfitability: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -100,7 +100,8 @@ const ReportsTabAnalytics = () => {
             stockTrackingRes,
             sellerFruitsRes,
             salariesRes,
-            carExpensesRes
+            carExpensesRes,
+            aggregatedRes
           ] = await Promise.all([
             fetchInventory(token),
             fetchStockMovements(token),
@@ -111,20 +112,46 @@ const ReportsTabAnalytics = () => {
             fetchStockTracking(token),
             fetchSellerFruits(token),
             fetchSalaries(token),
-            fetchCarExpenses(token)
+            fetchCarExpenses(token),
+            fetchStockTrackingAggregated(token)
           ]);
 
         setData({
           inventory: Array.isArray(inventoryRes.data?.data) ? inventoryRes.data.data : inventoryRes.data || [],
           stockMovements: Array.isArray(movementsRes.data?.data) ? movementsRes.data.data : movementsRes.data || [],
-          purchases: Array.isArray(purchasesRes.data?.data?.items) ? purchasesRes.data.data.items : purchasesRes.data?.data || [],
+          stockTracking: Array.isArray(stockTrackingRes.data?.data) ? stockTrackingRes.data.data :
+                        Array.isArray(stockTrackingRes.data) ? stockTrackingRes.data : [],
+          purchases: Array.isArray(purchasesRes.data?.data?.items) ? purchasesRes.data.data.items :
+                    Array.isArray(purchasesRes.data?.data) ? purchasesRes.data.data :
+                    Array.isArray(purchasesRes.data) ? purchasesRes.data :
+                    Array.isArray(purchasesRes) ? purchasesRes : [],
           sales: Array.isArray(salesRes) ? salesRes : [],
           otherExpenses: Array.isArray(expensesRes.data?.data) ? expensesRes.data.data : expensesRes.data || [],
           users: Array.isArray(usersRes.data?.data) ? usersRes.data.data : usersRes.data || [],
-          stockTracking: Array.isArray(stockTrackingRes.data?.data) ? stockTrackingRes.data.data : stockTrackingRes.data || [],
           sellerFruits: Array.isArray(sellerFruitsRes) ? sellerFruitsRes : [],
           salaries: Array.isArray(salariesRes.data?.data) ? salariesRes.data.data : salariesRes.data || [],
-          carExpenses: Array.isArray(carExpensesRes.data?.data) ? carExpensesRes.data.data : carExpensesRes.data || []
+          carExpenses: Array.isArray(carExpensesRes.data?.data) ? carExpensesRes.data.data : carExpensesRes.data || [],
+          stockExpenses: Array.isArray(aggregatedRes.data?.stock_expenses) ? aggregatedRes.data.stock_expenses : [],
+          fruitProfitability: Array.isArray(aggregatedRes.data?.fruit_profitability) ? aggregatedRes.data.fruit_profitability : []
+        });
+
+        const purchaseData = Array.isArray(purchasesRes.data?.data?.items) ? purchasesRes.data.data.items : 
+                    Array.isArray(purchasesRes.data?.data) ? purchasesRes.data.data :
+                    Array.isArray(purchasesRes.data) ? purchasesRes.data : 
+                    Array.isArray(purchasesRes) ? purchasesRes : [];
+        
+        console.log('Fetched data:', {
+          purchases: purchaseData,
+          purchasesResponse: purchasesRes,
+          purchasesDataShape: {
+            isArray: Array.isArray(purchasesRes),
+            hasData: Boolean(purchasesRes.data),
+            dataIsArray: Array.isArray(purchasesRes.data),
+            hasDataData: Boolean(purchasesRes.data?.data),
+            dataDataIsArray: Array.isArray(purchasesRes.data?.data),
+            hasItems: Boolean(purchasesRes.data?.data?.items),
+            itemsIsArray: Array.isArray(purchasesRes.data?.data?.items)
+          }
         });
       } catch (err) {
         console.error('Failed to load analytics data:', err);
@@ -187,34 +214,58 @@ const ReportsTabAnalytics = () => {
       return name.toLowerCase().trim();
     };
 
-    // Process purchases
-    data.purchases.forEach(purchase => {
-      const fruitType = normalizeFruitName(purchase.fruitType || purchase.fruit_type);
-      const amount = parseFloat(purchase.amount || 0);
-      const quantity = parseFloat(purchase.quantity || purchase.qty || 0);
+    // Process purchases from the aggregated fruit profitability data (now from purchases)
+    if (Array.isArray(data.fruitProfitability)) {
+      console.log('Processing aggregated fruit profitability records:', data.fruitProfitability);
+      data.fruitProfitability.forEach(fruit => {
+        const fruitType = normalizeFruitName(fruit.fruit_name);
+        const purchasedQuantity = parseFloat(fruit.total_purchased || 0);
+        const purchasedAmount = parseFloat(fruit.total_costs || 0);
 
-      if (!fruitMetrics[fruitType]) {
-        fruitMetrics[fruitType] = {
-          fruitType: purchase.fruitType || purchase.fruit_type, // Keep original case for display
-          purchasedQuantity: 0,
-          purchasedAmount: 0,
-          soldQuantity: 0,
-          soldAmount: 0,
-          salesCount: 0,
-          purchaseCount: 0
-        };
-      }
+        console.log('Processing aggregated fruit record:', {
+          fruitType,
+          purchasedQuantity,
+          purchasedAmount,
+          raw: fruit
+        });
 
-      fruitMetrics[fruitType].purchasedQuantity += quantity;
-      fruitMetrics[fruitType].purchasedAmount += amount;
-      fruitMetrics[fruitType].purchaseCount += 1;
-    });
+        if (!fruitMetrics[fruitType]) {
+          fruitMetrics[fruitType] = {
+            fruitType: fruit.fruit_name, // Keep original case for display
+            purchasedQuantity: 0,
+            purchasedAmount: 0,
+            soldQuantity: 0,
+            soldAmount: 0,
+            salesCount: 0,
+            purchaseCount: 0
+          };
+        }
+
+        // Set the aggregated purchase data
+        fruitMetrics[fruitType].purchasedQuantity = purchasedQuantity;
+        fruitMetrics[fruitType].purchasedAmount = purchasedAmount;
+        fruitMetrics[fruitType].purchaseCount = 1; // Since it's aggregated
+      });
+    }
 
     // Process sales
     allSales.forEach(sale => {
       const fruitType = normalizeFruitName(sale.fruit_name || sale.fruit_type || sale.fruitType || sale.fruit);
       const revenue = parseFloat(sale.amount || sale.revenue || 0);
       const quantity = parseFloat(sale.qty || sale.quantitySold || sale.quantity || 0);
+
+      console.log('Processing sale record:', {
+        fruitType,
+        revenue,
+        quantity,
+        raw: sale
+      });
+
+      // Skip invalid records
+      if (!fruitType || isNaN(revenue) || isNaN(quantity)) {
+        console.warn('Skipping invalid sale record:', sale);
+        return;
+      }
 
       if (!fruitMetrics[fruitType]) {
         fruitMetrics[fruitType] = {
@@ -236,39 +287,34 @@ const ReportsTabAnalytics = () => {
     // Calculate profit and margin
     Object.keys(fruitMetrics).forEach(fruitType => {
       const metrics = fruitMetrics[fruitType];
+      // Ensure all numeric values are properly set
+      metrics.purchasedQuantity = parseFloat(metrics.purchasedQuantity) || 0;
+      metrics.purchasedAmount = parseFloat(metrics.purchasedAmount) || 0;
+      metrics.soldQuantity = parseFloat(metrics.soldQuantity) || 0;
+      metrics.soldAmount = parseFloat(metrics.soldAmount) || 0;
+      
       metrics.totalProfit = metrics.soldAmount - metrics.purchasedAmount;
       metrics.profitMargin = metrics.soldAmount > 0 ? (metrics.totalProfit / metrics.soldAmount) * 100 : 0;
+      
+      console.log('Fruit Metrics for:', metrics.fruitType, {
+        purchased: { qty: metrics.purchasedQuantity, amount: metrics.purchasedAmount },
+        sold: { qty: metrics.soldQuantity, amount: metrics.soldAmount },
+        profit: metrics.totalProfit,
+        margin: metrics.profitMargin
+      });
     });
 
     // Sort by profit descending (best to worst)
-    return Object.values(fruitMetrics).sort((a, b) => b.totalProfit - a.totalProfit);
+    const sorted = Object.values(fruitMetrics).sort((a, b) => b.totalProfit - a.totalProfit);
+    console.log('Final sorted metrics:', sorted);
+    return sorted;
   };
 
-  // Calculate sales trends over time
-  const calculateSalesTrends = () => {
-    const allSales = Array.isArray(data.sales) && Array.isArray(data.sellerFruits) ? [...data.sales, ...data.sellerFruits] : [];
-    const salesByDate = {};
 
-    allSales.forEach(sale => {
-      const date = sale.date || sale.sale_date;
-      if (!date) return;
-
-      const day = format(parseISO(date), 'yyyy-MM-dd');
-      if (!salesByDate[day]) {
-        salesByDate[day] = { date: day, revenue: 0, quantity: 0, count: 0 };
-      }
-
-      salesByDate[day].revenue += parseFloat(sale.revenue || 0);
-      salesByDate[day].quantity += parseFloat(sale.quantitySold || sale.quantity || 0);
-      salesByDate[day].count += 1;
-    });
-
-    return Object.values(salesByDate).sort((a, b) => a.date.localeCompare(b.date));
-  };
 
   // Calculate expense breakdown
   const calculateExpenseBreakdown = () => {
-    const expenses = [...data.otherExpenses];
+    const expenses = Array.isArray(data.otherExpenses) ? [...data.otherExpenses] : [];
     const expenseByCategory = {};
 
     expenses.forEach(expense => {
@@ -286,32 +332,7 @@ const ReportsTabAnalytics = () => {
     return Object.values(expenseByCategory);
   };
 
-  // Calculate user performance
-  const calculateUserPerformance = () => {
-    const allSales = [...data.sales, ...data.sellerFruits];
-    const userMetrics = {};
 
-    allSales.forEach(sale => {
-      const userEmail = sale.sellerName || sale.created_by || 'Unknown';
-      const revenue = parseFloat(sale.revenue || 0);
-      const quantity = parseFloat(sale.quantitySold || sale.quantity || 0);
-
-      if (!userMetrics[userEmail]) {
-        userMetrics[userEmail] = {
-          userEmail,
-          totalRevenue: 0,
-          totalQuantity: 0,
-          salesCount: 0
-        };
-      }
-
-      userMetrics[userEmail].totalRevenue += revenue;
-      userMetrics[userEmail].totalQuantity += quantity;
-      userMetrics[userEmail].salesCount += 1;
-    });
-
-    return Object.values(userMetrics).sort((a, b) => b.totalRevenue - a.totalRevenue);
-  };
 
   // Calculate monthly summaries
   const calculateMonthlySummaries = () => {
@@ -332,94 +353,104 @@ const ReportsTabAnalytics = () => {
     };
 
     // Process purchases
-    data.purchases.forEach(purchase => {
-      const month = getMonthKey(purchase.date);
-      if (!month) return;
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
-          salesTotal: 0,
-          purchasesTotal: 0,
-          expensesTotal: 0,
-          salariesTotal: 0,
-          carExpensesTotal: 0
-        };
-      }
-      // Use totalAmount if available, otherwise fallback to amount
-      monthlyData[month].purchasesTotal += parseFloat(purchase.totalAmount || purchase.amount || 0);
-    });
+    if (Array.isArray(data.purchases)) {
+      data.purchases.forEach(purchase => {
+        const month = getMonthKey(purchase.date);
+        if (!month) return;
+        if (!monthlyData[month]) {
+          monthlyData[month] = {
+            month,
+            salesTotal: 0,
+            purchasesTotal: 0,
+            expensesTotal: 0,
+            salariesTotal: 0,
+            carExpensesTotal: 0
+          };
+        }
+        // Use totalAmount if available, otherwise fallback to amount
+        monthlyData[month].purchasesTotal += parseFloat(purchase.totalAmount || purchase.amount || 0);
+      });
+    }
 
     // Process sales
-    data.sales.forEach(sale => {
-      const month = getMonthKey(sale.date || sale.sale_date);
-      if (!month) return;
+    if (Array.isArray(data.sales)) {
+      data.sales.forEach(sale => {
+        const month = getMonthKey(sale.date || sale.sale_date);
+        if (!month) return;
 
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
-          salesTotal: 0,
-          purchasesTotal: 0,
-          expensesTotal: 0,
-          salariesTotal: 0,
-          carExpensesTotal: 0
-        };
-      }
-      monthlyData[month].salesTotal += parseFloat(sale.amount || 0);
-    });
+        if (!monthlyData[month]) {
+          monthlyData[month] = {
+            month,
+            salesTotal: 0,
+            purchasesTotal: 0,
+            expensesTotal: 0,
+            salariesTotal: 0,
+            carExpensesTotal: 0
+          };
+        }
+        monthlyData[month].salesTotal += parseFloat(sale.amount || 0);
+      });
+    }
 
     // Process other expenses
-    data.otherExpenses.forEach(expense => {
-      const month = getMonthKey(expense.date);
-      if (!month) return;
+    if (Array.isArray(data.otherExpenses)) {
+      data.otherExpenses.forEach(expense => {
+        const month = getMonthKey(expense.date);
+        if (!month) return;
 
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
-          salesTotal: 0,
-          purchasesTotal: 0,
-          expensesTotal: 0,
-          salariesTotal: 0,
-          carExpensesTotal: 0
-        };
-      }
-      monthlyData[month].expensesTotal += parseFloat(expense.amount || 0);
-    });
+        if (!monthlyData[month]) {
+          monthlyData[month] = {
+            month,
+            salesTotal: 0,
+            purchasesTotal: 0,
+            expensesTotal: 0,
+            salariesTotal: 0,
+            carExpensesTotal: 0
+          };
+        }
+        monthlyData[month].expensesTotal += parseFloat(expense.amount || 0);
+      });
+    }
 
     // Process salaries
-    data.salaries.forEach(salary => {
-      const month = getMonthKey(salary.date);
-      if (!month) return;
+    if (Array.isArray(data.salaries)) {
+      data.salaries.forEach(salary => {
+        const month = getMonthKey(salary.date);
+        if (!month) return;
 
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
-          salesTotal: 0,
-          purchasesTotal: 0,
-          expensesTotal: 0,
-          salariesTotal: 0,
-          carExpensesTotal: 0
-        };
-      }
-      monthlyData[month].salariesTotal += parseFloat(salary.amount || 0);
-    });
+        if (!monthlyData[month]) {
+          monthlyData[month] = {
+            month,
+            salesTotal: 0,
+            purchasesTotal: 0,
+            expensesTotal: 0,
+            salariesTotal: 0,
+            carExpensesTotal: 0
+          };
+        }
+        monthlyData[month].salariesTotal += parseFloat(salary.amount || 0);
+      });
+    }
 
     // Process car expenses
-    data.carExpenses.forEach(expense => {
-      const month = getMonthKey(expense.date);
-      if (!month) return;
+    if (Array.isArray(data.carExpenses)) {
+      data.carExpenses.forEach(expense => {
+        const month = getMonthKey(expense.date);
+        if (!month) return;
 
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
-          salesTotal: 0,
-          purchasesTotal: 0,
-          expensesTotal: 0,
-          salariesTotal: 0,
-          carExpensesTotal: 0
-        };
-      }
-      monthlyData[month].carExpensesTotal += parseFloat(expense.amount || 0);
-    });
+        if (!monthlyData[month]) {
+          monthlyData[month] = {
+            month,
+            salesTotal: 0,
+            purchasesTotal: 0,
+            expensesTotal: 0,
+            salariesTotal: 0,
+            carExpensesTotal: 0
+          };
+        }
+        monthlyData[month].carExpensesTotal += parseFloat(expense.amount || 0);
+      });
+    }
 
     // Calculate profit/loss and format
     const result = Object.values(monthlyData).map(item => ({
@@ -479,9 +510,7 @@ const ReportsTabAnalytics = () => {
 
   const businessMetrics = calculateBusinessMetrics();
   const fruitProfitability = calculateFruitProfitability();
-  const salesTrends = calculateSalesTrends();
   const expenseBreakdown = calculateExpenseBreakdown();
-  const userPerformance = calculateUserPerformance();
   const monthlySummaries = calculateMonthlySummaries();
 
   // Chart colors
@@ -574,7 +603,7 @@ const ReportsTabAnalytics = () => {
 
       {/* Charts Row 1 */}
       <div className="row mb-4">
-        <div className="col-md-8">
+        {/* <div className="col-md-8">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-header bg-white">
               <h5 className="mb-0">Sales Trends Over Time</h5>
@@ -594,7 +623,7 @@ const ReportsTabAnalytics = () => {
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
+        </div> */}
         <div className="col-md-4">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-header bg-white">
@@ -675,7 +704,7 @@ const ReportsTabAnalytics = () => {
 
       {/* Charts Row 3 */}
       <div className="row mb-4">
-        <div className="col-md-8">
+        {/* <div className="col-md-8">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-header bg-white">
               <h5 className="mb-0">User Performance</h5>
@@ -732,7 +761,7 @@ const ReportsTabAnalytics = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Summary Table */}

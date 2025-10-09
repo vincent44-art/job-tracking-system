@@ -164,14 +164,13 @@ const DriverDashboard = () => {
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Stock Name (Carrying)</label>
-                    <input
-                      type="text"
-                      placeholder="Stock Name"
-                      value={formData.stock_name}
-                      onChange={e => setFormData({ ...formData, stock_name: e.target.value })}
-                      className="form-control"
-                      required
-                    />
+                  <input
+                    type="text"
+                    placeholder="Stock Name"
+                    value={formData.stock_name}
+                    onChange={e => setFormData({ ...formData, stock_name: e.target.value })}
+                    className="form-control"
+                  />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Amount (KES)</label>
