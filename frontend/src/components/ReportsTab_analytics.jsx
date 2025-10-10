@@ -131,8 +131,8 @@ const ReportsTabAnalytics = () => {
           sellerFruits: Array.isArray(sellerFruitsRes) ? sellerFruitsRes : [],
           salaries: Array.isArray(salariesRes.data?.data) ? salariesRes.data.data : salariesRes.data || [],
           carExpenses: Array.isArray(carExpensesRes.data?.data) ? carExpensesRes.data.data : carExpensesRes.data || [],
-          stockExpenses: Array.isArray(aggregatedRes.data?.stock_expenses) ? aggregatedRes.data.stock_expenses : [],
-          fruitProfitability: Array.isArray(aggregatedRes.data?.fruit_profitability) ? aggregatedRes.data.fruit_profitability : []
+          stockExpenses: Array.isArray(aggregatedRes.data?.data?.stock_expenses) ? aggregatedRes.data.data.stock_expenses : [],
+          fruitProfitability: Array.isArray(aggregatedRes.data?.data?.fruit_profitability) ? aggregatedRes.data.data.fruit_profitability : []
         });
 
         const purchaseData = Array.isArray(purchasesRes.data?.data?.items) ? purchasesRes.data.data.items : 
@@ -214,24 +214,24 @@ const ReportsTabAnalytics = () => {
       return name.toLowerCase().trim();
     };
 
-    // Process purchases from the aggregated fruit profitability data (now from purchases)
-    if (Array.isArray(data.fruitProfitability)) {
-      console.log('Processing aggregated fruit profitability records:', data.fruitProfitability);
-      data.fruitProfitability.forEach(fruit => {
-        const fruitType = normalizeFruitName(fruit.fruit_name);
-        const purchasedQuantity = parseFloat(fruit.total_purchased || 0);
-        const purchasedAmount = parseFloat(fruit.total_costs || 0);
+    // Process purchases from the stock tracking data (similar to stock expenses)
+    if (Array.isArray(data.stockTracking)) {
+      console.log('Processing stock tracking records for purchases:', data.stockTracking);
+      data.stockTracking.forEach(stock => {
+        const fruitType = normalizeFruitName(stock.fruitType);
+        const purchasedQuantity = parseFloat(stock.quantityIn || 0);
+        const purchasedAmount = parseFloat(stock.totalAmount || 0);
 
-        console.log('Processing aggregated fruit record:', {
+        console.log('Processing stock record:', {
           fruitType,
           purchasedQuantity,
           purchasedAmount,
-          raw: fruit
+          raw: stock
         });
 
         if (!fruitMetrics[fruitType]) {
           fruitMetrics[fruitType] = {
-            fruitType: fruit.fruit_name, // Keep original case for display
+            fruitType: stock.fruitType, // Keep original case for display
             purchasedQuantity: 0,
             purchasedAmount: 0,
             soldQuantity: 0,
@@ -241,10 +241,9 @@ const ReportsTabAnalytics = () => {
           };
         }
 
-        // Set the aggregated purchase data
-        fruitMetrics[fruitType].purchasedQuantity = purchasedQuantity;
-        fruitMetrics[fruitType].purchasedAmount = purchasedAmount;
-        fruitMetrics[fruitType].purchaseCount = 1; // Since it's aggregated
+        fruitMetrics[fruitType].purchasedQuantity += purchasedQuantity;
+        fruitMetrics[fruitType].purchasedAmount += purchasedAmount;
+        fruitMetrics[fruitType].purchaseCount += 1;
       });
     }
 

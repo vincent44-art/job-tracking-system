@@ -396,7 +396,7 @@ class StockTrackingAggregatedResource(Resource):
                     quantity_str = str(purchase.quantity).strip()
                     # Extract numeric part
                     import re
-                    quantity_match = re.match(r'(\d+(\.\d+)?)', quantity_str)
+                    quantity_match = re.search(r'(\d+(\.\d+)?)', quantity_str)
                     quantity = float(quantity_match.group(1)) if quantity_match else 0.0
 
                     fruit_profitability[fruit]['total_purchased'] += quantity
