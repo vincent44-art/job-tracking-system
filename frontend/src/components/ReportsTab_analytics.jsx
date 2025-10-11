@@ -105,7 +105,7 @@ const ReportsTabAnalytics = () => {
           ] = await Promise.all([
             fetchInventory(token),
             fetchStockMovements(token),
-            fetchPurchases(token),
+            fetchPurchases(null, token),
             fetchSales(null, token),
             fetchOtherExpenses(token),
             fetchUsers(token),
@@ -189,7 +189,7 @@ const ReportsTabAnalytics = () => {
     const allSales = Array.isArray(data.sales) && Array.isArray(data.sellerFruits) ? [...data.sales, ...data.sellerFruits] : [];
     const totalRevenue = allSales.reduce((sum, sale) => sum + (parseFloat(sale.revenue) || 0), 0);
     const totalQuantity = allSales.reduce((sum, sale) => sum + (parseFloat(sale.quantitySold || sale.quantity) || 0), 0);
-    const totalPurchases = Array.isArray(data.purchases) ? data.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.totalAmount) || 0), 0) : 0;
+    const totalPurchases = Array.isArray(data.purchases) ? data.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.amount || purchase.totalAmount || 0) || 0), 0) : 0;
     const totalExpenses = Array.isArray(data.otherExpenses) ? data.otherExpenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0) : 0;
     const totalProfit = totalRevenue - totalPurchases - totalExpenses;
 
@@ -214,20 +214,39 @@ const ReportsTabAnalytics = () => {
       return name.toLowerCase().trim();
     };
 
-    // Process purchases from the stock tracking data (similar to stock expenses)
-    if (Array.isArray(data.stockTracking)) {
-      console.log('Processing stock tracking records for purchases:', data.stockTracking);
+    // Process purchases from the purchases data; fallback to stock tracking if unavailable
+    if (Array.isArray(data.purchases) && data.purchases.length > 0) {
+      data.purchases.forEach(purchase => {
+        const fruitType = normalizeFruitName(purchase.fruitType || purchase.fruit_type || purchase.fruit);
+        const purchasedQuantity = parseFloat(purchase.quantity || 0);
+        const purchasedAmount = parseFloat(purchase.amount || purchase.totalAmount || 0);
+
+        if (!fruitType) return;
+
+        if (!fruitMetrics[fruitType]) {
+          fruitMetrics[fruitType] = {
+            fruitType: purchase.fruitType || purchase.fruit_type || purchase.fruit, // Keep original case for display
+            purchasedQuantity: 0,
+            purchasedAmount: 0,
+            soldQuantity: 0,
+            soldAmount: 0,
+            salesCount: 0,
+            purchaseCount: 0
+          };
+        }
+
+        fruitMetrics[fruitType].purchasedQuantity += purchasedQuantity;
+        fruitMetrics[fruitType].purchasedAmount += purchasedAmount;
+        fruitMetrics[fruitType].purchaseCount += 1;
+      });
+    } else if (Array.isArray(data.stockTracking)) {
+      // Fallback to stock tracking data in case purchases are not available
       data.stockTracking.forEach(stock => {
         const fruitType = normalizeFruitName(stock.fruitType);
         const purchasedQuantity = parseFloat(stock.quantityIn || 0);
         const purchasedAmount = parseFloat(stock.totalAmount || 0);
 
-        console.log('Processing stock record:', {
-          fruitType,
-          purchasedQuantity,
-          purchasedAmount,
-          raw: stock
-        });
+        if (!fruitType) return;
 
         if (!fruitMetrics[fruitType]) {
           fruitMetrics[fruitType] = {

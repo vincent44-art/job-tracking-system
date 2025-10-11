@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { deleteSellerFruit } from '../../api/sellerFruits';
 
 const SellerFruitsTable = ({ 
   sellerFruits, 

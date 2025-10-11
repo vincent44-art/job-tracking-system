@@ -8,7 +8,6 @@ import SellerFruitsTable from '../components/seller/SellerFruitsTable';
 import OtherExpenseForm from '../components/OtherExpenseForm';
 import OtherExpensesTable from '../components/OtherExpensesTable';
 import { fetchStockTracking } from '../api/stockTracking';
-import { fetchSellerFruits } from '../api/sellerFruits';
 import { fetchSales } from '../components/apiHelpers';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -166,26 +165,7 @@ const SellerDashboard = () => {
     }
   }, [user?.email, user?.name, fetchSellerExpenses]);
 
-  // Function to refresh sales table
-  const refreshSellerSales = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      let salesData = await fetchSales(user?.email, token);
-      // Normalize: if salesData is not an array, try to extract array from known response shapes
-      if (!Array.isArray(salesData)) {
-        if (salesData && Array.isArray(salesData.data)) {
-          salesData = salesData.data;
-        } else if (salesData && Array.isArray(salesData.sales)) {
-          salesData = salesData.sales;
-        } else {
-          salesData = [];
-        }
-      }
-      setSellerSales(salesData);
-    } catch (err) {
-      console.error('Error refreshing sales data:', err);
-    }
-  };
+
 
   // Sales are fetched directly from backend for the seller
   // Removed unused userAssignments variable

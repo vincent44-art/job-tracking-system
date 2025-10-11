@@ -119,9 +119,7 @@ const StockTrackerTab = () => {
     );
   }
 
-  const purchasesArr = Array.isArray(data.purchases) ? data.purchases : [];
   const salesArr = Array.isArray(data.sales) ? data.sales : [];
-  const otherExpensesArr = Array.isArray(data.otherExpenses) ? data.otherExpenses : [];
   const stockMovementsArr = Array.isArray(data.stockMovements) ? data.stockMovements : [];
   const inventoryArr = Array.isArray(data.inventory) ? data.inventory : [];
 
@@ -138,16 +136,7 @@ const StockTrackerTab = () => {
   console.log('salesArr:', salesArr);
   console.log('stockExpenses:', data.stockExpenses.map(s => ({stock_name: s.stockName, fruit_type: s.fruitType, revenue: revenueByFruit[s.fruitType]})));
 
-  // Aggregations
-  const totalBought = purchasesArr.reduce((sum, p) => sum + (p.amount || 0), 0);
-  const totalSold = salesArr.reduce((sum, s) => sum + (s.revenue || 0), 0);
-  const totalExpenses = otherExpensesArr.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const profit = totalSold - totalBought - totalExpenses;
 
-  // Stock usage: sum of 'out' movements
-  const totalUsed = stockMovementsArr
-    .filter(m => m.movement_type === 'out')
-    .reduce((sum, m) => sum + parseFloat(m.quantity || 0), 0);
 
   // Group inventory by fruit_type for summary
   const stockSummary = {};

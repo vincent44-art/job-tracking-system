@@ -8,7 +8,7 @@ const SalaryManagementTab = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expandedUsers, setExpandedUsers] = useState(new Set());
+
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -24,7 +24,6 @@ const SalaryManagementTab = () => {
         const usersData = usersRes.data?.data || [];
         setSalaries(salariesRes.data?.data || []);
         setUsers(usersData);
-        setExpandedUsers(new Set(usersData.map(u => u.id)));
       } catch (err) {
         console.error('Failed to load data:', err);
         setError('Failed to load data. Please try again.');
@@ -40,16 +39,6 @@ const SalaryManagementTab = () => {
       style: 'currency',
       currency: 'KES'
     }).format(amount);
-  };
-
-  const toggleUserExpansion = (userId) => {
-    const newExpanded = new Set(expandedUsers);
-    if (newExpanded.has(userId)) {
-      newExpanded.delete(userId);
-    } else {
-      newExpanded.add(userId);
-    }
-    setExpandedUsers(newExpanded);
   };
 
   if (loading) {
