@@ -67,9 +67,9 @@ const StockTrackerTab = () => {
         ] = await Promise.all([
           fetchInventory(token),
           fetchStockMovements(token),
-          fetchPurchases(),
-          fetchSales(),
-          fetchOtherExpenses(),
+          fetchPurchases(null, token),
+          fetchSales(null, token),
+          fetchOtherExpenses(token),
           fetchStockTracking(token),
           fetchStockTrackingAggregated(token)
         ]);
@@ -77,8 +77,13 @@ const StockTrackerTab = () => {
         setData({
           inventory: normalizeKeys(Array.isArray(inventoryRes.data?.data) ? inventoryRes.data.data : inventoryRes.data || []),
           stockMovements: normalizeKeys(Array.isArray(movementsRes.data?.data) ? movementsRes.data.data : movementsRes.data || []),
-          purchases: normalizeKeys(Array.isArray(purchasesRes.data?.data) ? purchasesRes.data.data : purchasesRes.data || []),
-          sales: normalizeKeys(Array.isArray(salesRes.data?.data) ? salesRes.data.data : salesRes.data || []),
+          purchases: normalizeKeys(
+            Array.isArray(purchasesRes.data?.data?.items) ? purchasesRes.data.data.items :
+            Array.isArray(purchasesRes.data?.data) ? purchasesRes.data.data :
+            Array.isArray(purchasesRes.data) ? purchasesRes.data :
+            []
+          ),
+          sales: normalizeKeys(Array.isArray(salesRes) ? salesRes : []),
           otherExpenses: normalizeKeys(Array.isArray(expensesRes.data?.data) ? expensesRes.data.data : expensesRes.data || []),
           // Use backend data directly for stockTracking, fallback to []
           stockTracking: Array.isArray(stockTrackingRes.data?.data) ? stockTrackingRes.data.data : (Array.isArray(stockTrackingRes.data) ? stockTrackingRes.data : []),
@@ -123,18 +128,42 @@ const StockTrackerTab = () => {
   const stockMovementsArr = Array.isArray(data.stockMovements) ? data.stockMovements : [];
   const inventoryArr = Array.isArray(data.inventory) ? data.inventory : [];
 
+  // Normalize helper to align keys across datasets
+  const normalizeFruit = (s) => (s || '').toString().trim().toLowerCase();
+
   // Compute revenue by fruit from sales data
   const revenueByFruit = {};
   salesArr.forEach(sale => {
-    const fruitName = sale.fruitName || sale.fruit_name;
-    if (fruitName) {
-      if (!revenueByFruit[fruitName]) revenueByFruit[fruitName] = 0;
-      revenueByFruit[fruitName] += parseFloat(sale.amount || 0);
-    }
+    const key = normalizeFruit(sale.fruitName || sale.fruit_name || sale.fruitType || sale.fruit_type || sale.fruit);
+    if (!key) return;
+    revenueByFruit[key] = (revenueByFruit[key] || 0) + (parseFloat(sale.amount || 0) || 0);
   });
+
+  // Compute purchase cost by fruit from purchases data
+  const purchaseCostByFruit = {};
+  const purchasesArr = Array.isArray(data.purchases) ? data.purchases : [];
+  purchasesArr.forEach(purchase => {
+    const key = normalizeFruit(purchase.fruitType || purchase.fruit_type || purchase.fruitName || purchase.fruit_name || purchase.fruit);
+    if (!key) return;
+    purchaseCostByFruit[key] = (purchaseCostByFruit[key] || 0) + (parseFloat(purchase.amount || purchase.totalAmount || 0) || 0);
+  });
+
   console.log('revenueByFruit:', revenueByFruit);
+  console.log('purchaseCostByFruit:', purchaseCostByFruit);
   console.log('salesArr:', salesArr);
-  console.log('stockExpenses:', data.stockExpenses.map(s => ({stock_name: s.stockName, fruit_type: s.fruitType, revenue: revenueByFruit[s.fruitType]})));
+  console.log('stockExpenses:', data.stockExpenses.map(s => ({stock_name: s.stockName, fruit_type: s.fruitType, revenue: revenueByFruit[normalizeFruit(s.fruitType)], purchase: purchaseCostByFruit[normalizeFruit(s.fruitType)]})));
+
+  const fruitKeys = new Set([...Object.keys(purchaseCostByFruit), ...Object.keys(revenueByFruit)]);
+  const fallbackRows = Array.from(fruitKeys).map(fruit => ({
+    stock_name: fruit,
+    fruit_type: fruit,
+    purchase_cost: purchaseCostByFruit[fruit] || 0,
+    revenue: revenueByFruit[fruit] || 0,
+    profit_loss: (revenueByFruit[fruit] || 0) - (purchaseCostByFruit[fruit] || 0),
+    date_in: null,
+    date_out: null,
+  }));
+  const rows = (Array.isArray(data.stockExpenses) && data.stockExpenses.length > 0) ? data.stockExpenses : fallbackRows;
 
 
 
@@ -291,11 +320,7 @@ const StockTrackerTab = () => {
                   <tr>
                     <th>Stock Name</th>
                     <th>Purchase Cost</th>
-                    <th>Storage Usage</th>
-                    <th>Transport Costs</th>
-                    <th>Other Expenses</th>
                     <th>Revenue</th>
-                    <th>Quantity Sold</th>
                     <th>Profit/Loss</th>
                     <th>Date In</th>
                     <th>Date Out</th>
@@ -303,63 +328,73 @@ const StockTrackerTab = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.stockExpenses && data.stockExpenses.length > 0 ? (
+                  {rows && rows.length > 0 ? (
                     <>
-                      {data.stockExpenses.map((stock, idx) => (
-                        <tr key={stock.stock_name || idx}>
-                          <td>
-                            <button
-                              className="btn btn-link p-0 text-decoration-none"
-                              onClick={() => handleTrackStock(stock.stockName || stock.stock_name)}
-                            >
-                              {stock.stockName || stock.stock_name}
-                            </button>
-                          </td>
-                          <td>KES {stock.purchaseCost?.toLocaleString() || stock.purchase_cost?.toLocaleString() || 0}</td>
-                          <td>{stock.storageUsage?.toLocaleString() || stock.storage_usage?.toLocaleString() || 0} units</td>
-                          <td>KES {stock.transportCosts?.toLocaleString() || stock.transport_costs?.toLocaleString() || 0}</td>
-                          <td>KES {stock.otherExpenses?.toLocaleString() || stock.other_expenses?.toLocaleString() || 0}</td>
-                          <td>KES {(revenueByFruit[stock.fruitType || stock.fruit_type] || 0).toLocaleString()}</td>
-                          <td>{stock.quantitySold?.toLocaleString() || stock.quantity_sold?.toLocaleString() || 0} units</td>
-                          <td className={`fw-bold ${(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'text-success' : 'text-danger'}`}>
-                            <i className={`bi ${(stock.profitLoss ?? stock.profit_loss) >= 0 ? 'bi-graph-up' : 'bi-graph-down'} me-1`}></i>
-                            KES {(stock.profitLoss ?? stock.profit_loss ?? 0).toLocaleString()}
-                          </td>
-                          <td>{stock.dateIn || stock.date_in || 'N/A'}</td>
-                          <td>{stock.dateOut || stock.date_out || 'N/A'}</td>
-                          <td>
-                            <button
-                              className="btn btn-sm btn-outline-primary me-2"
-                              onClick={() => handleViewProfitLoss(stock)}
-                            >
-                              View Details
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleTrackStock(stock.stockName || stock.stock_name)}
-                            >
-                              Track Stock
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {rows.map((stock, idx) => {
+                        const name = stock.stockName || stock.stock_name || stock.fruitType || stock.fruit_type || `Row ${idx+1}`;
+                        const keyFruit = normalizeFruit(stock.fruitType || stock.fruit_type || stock.stockName || stock.stock_name);
+                        const purchaseCost = (stock.purchaseCost ?? stock.purchase_cost ?? purchaseCostByFruit[keyFruit] ?? 0);
+                        const revenue = (stock.revenue ?? revenueByFruit[keyFruit] ?? 0);
+                        const profitLoss = (stock.profitLoss ?? stock.profit_loss ?? (revenue - purchaseCost));
+                        return (
+                          <tr key={name + '-' + idx}>
+                            <td>
+                              <button
+                                className="btn btn-link p-0 text-decoration-none"
+                                onClick={() => handleTrackStock(stock.stockName || stock.stock_name || name)}
+                              >
+                                {name}
+                              </button>
+                            </td>
+                            <td>KES {purchaseCost.toLocaleString()}</td>
+                            <td>KES {revenue.toLocaleString()}</td>
+                            <td className={`fw-bold ${profitLoss >= 0 ? 'text-success' : 'text-danger'}`}>
+                              <i className={`bi ${profitLoss >= 0 ? 'bi-graph-up' : 'bi-graph-down'} me-1`}></i>
+                              KES {profitLoss.toLocaleString()}
+                            </td>
+                            <td>{stock.dateIn || stock.date_in || 'N/A'}</td>
+                            <td>{stock.dateOut || stock.date_out || 'N/A'}</td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-outline-primary me-2"
+                                onClick={() => handleViewProfitLoss(stock)}
+                              >
+                                View Details
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-secondary"
+                                onClick={() => handleTrackStock(stock.stockName || stock.stock_name || name)}
+                              >
+                                Track Stock
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                       {/* Grand total row */}
                       <tr className="table-info fw-bold">
-                        <td colSpan="6" className="text-end">Grand Total:</td>
+                        <td colSpan="2" className="text-end">Grand Total:</td>
                         <td>
-                          KES {data.stockExpenses.reduce((sum, s) => sum + (revenueByFruit[s.fruitType || s.fruit_type] || 0), 0).toLocaleString()}
+                          KES {rows.reduce((sum, s) => {
+                            const k = normalizeFruit(s.fruitType || s.fruit_type || s.stockName || s.stock_name);
+                            const rev = (s.revenue ?? revenueByFruit[k] ?? 0);
+                            return sum + rev;
+                          }, 0).toLocaleString()}
                         </td>
                         <td>
-                          {data.stockExpenses.reduce((sum, s) => sum + (s.quantity_sold || 0), 0).toLocaleString()} units
-                        </td>
-                        <td>
-                          KES {data.stockExpenses.reduce((sum, s) => sum + (s.profit_loss || 0), 0).toLocaleString()}
+                          KES {rows.reduce((sum, s) => {
+                            const k = normalizeFruit(s.fruitType || s.fruit_type || s.stockName || s.stock_name);
+                            const p = (s.purchaseCost ?? s.purchase_cost ?? purchaseCostByFruit[k] ?? 0);
+                            const r = (s.revenue ?? revenueByFruit[k] ?? 0);
+                            const pl = (s.profitLoss ?? s.profit_loss ?? (r - p));
+                            return sum + pl;
+                          }, 0).toLocaleString()}
                         </td>
                         <td colSpan="3"></td>
                       </tr>
                     </>
                   ) : (
-                    <tr><td colSpan="10" className="text-center text-muted">No stock expense data available</td></tr>
+                    <tr><td colSpan="7" className="text-center text-muted">No stock expense data available</td></tr>
                   )}
                 </tbody>
               </table>
@@ -424,28 +459,19 @@ const StockTrackerTab = () => {
               </div>
               <div className="modal-body">
                 <div className="row">
-                  <div className="col-md-6">
-                    <h6>Cost Breakdown</h6>
-                    <ul className="list-group">
-                      <li className="list-group-item d-flex justify-content-between">
-                        Purchase Cost <span>KES {(selectedStock.purchaseCost || selectedStock.purchase_cost || 0).toLocaleString()}</span>
-                      </li>
-                      <li className="list-group-item d-flex justify-content-between">
-                        Transport Costs <span>KES {(selectedStock.transportCosts || selectedStock.transport_costs || 0).toLocaleString()}</span>
-                      </li>
-                      <li className="list-group-item d-flex justify-content-between">
-                        Other Expenses <span>KES {(selectedStock.otherExpenses || selectedStock.other_expenses || 0).toLocaleString()}</span>
-                      </li>
-                      <li className="list-group-item d-flex justify-content-between fw-bold">
-                        Total Costs <span>KES {((selectedStock.purchaseCost || selectedStock.purchase_cost || 0) + (selectedStock.transportCosts || selectedStock.transport_costs || 0) + (selectedStock.otherExpenses || selectedStock.other_expenses || 0)).toLocaleString()}</span>
-                      </li>
-                    </ul>
-                  </div>
+                <div className="col-md-6">
+                  <h6>Cost Breakdown</h6>
+                  <ul className="list-group">
+                    <li className="list-group-item d-flex justify-content-between fw-bold">
+                      Purchase Cost (Total Costs) <span>KES {(selectedStock.purchaseCost || selectedStock.purchase_cost || 0).toLocaleString()}</span>
+                    </li>
+                  </ul>
+                </div>
                   <div className="col-md-6">
                     <h6>Revenue & Profit</h6>
                     <ul className="list-group">
                       <li className="list-group-item d-flex justify-content-between">
-                        Revenue <span>KES {(selectedStock.revenue || 0).toLocaleString()}</span>
+                        Revenue <span>KES {(revenueByFruit[selectedStock.fruitType || selectedStock.fruit_type] || 0).toLocaleString()}</span>
                       </li>
                       <li className={`list-group-item d-flex justify-content-between fw-bold ${(selectedStock.profitLoss ?? selectedStock.profit_loss) >= 0 ? 'text-success' : 'text-danger'}`}>
                         Profit/Loss <span>KES {(selectedStock.profitLoss ?? selectedStock.profit_loss ?? 0).toLocaleString()}</span>
@@ -454,8 +480,6 @@ const StockTrackerTab = () => {
                     <div className="mt-3">
                       <h6>Additional Info</h6>
                       <p><strong>Total Quantity In:</strong> {(selectedStock.total_quantity_in || 0).toLocaleString()} units</p>
-                      <p><strong>Quantity Sold:</strong> {(selectedStock.quantitySold || selectedStock.quantity_sold || 0).toLocaleString()} units</p>
-                      <p><strong>Storage Usage:</strong> {(selectedStock.storageUsage || selectedStock.storage_usage || 0).toLocaleString()} units</p>
                       <p><strong>Date In:</strong> {selectedStock.dateIn || selectedStock.date_in || 'N/A'}</p>
                       <p><strong>Date Out:</strong> {selectedStock.dateOut || selectedStock.date_out || 'N/A'}</p>
                     </div>
