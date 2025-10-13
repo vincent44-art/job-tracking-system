@@ -131,86 +131,38 @@ const StockTrackerTab = () => {
                     <tr>
                       <th>Stock Name</th>
                       <th>Date In</th>
+                      <th>Fruit Type</th>
                       <th>Quantity (Kg)</th>
-                      <th>Revenue</th>
-                      <th>Date Out</th>
-                      <th>Sold Amount</th>
-                      <th>Profit/Loss</th>
+                      <th>Amount/Kg</th>
+                      <th>Total Amount</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(() => {
-                      // Group stocks by dateIn and sort by date
-                      const groupedStocks = stockTrackingArr.slice(0, 5).reduce((groups, stock) => {
-                        const dateKey = stock.dateIn;
-                        if (!groups[dateKey]) {
-                          groups[dateKey] = [];
-                        }
-                        groups[dateKey].push(stock);
-                        return groups;
-                      }, {});
-
-                      // Sort dates
-                      const sortedDates = Object.keys(groupedStocks).sort((a, b) => new Date(b) - new Date(a));
-
-                      const rows = [];
-                      sortedDates.forEach((dateKey, dateIndex) => {
-                        const stocksForDate = groupedStocks[dateKey];
-
-                        // Add separator row between different dates (except for the first group)
-                        if (dateIndex > 0) {
-                          rows.push(
-                            <tr key={`separator-${dateIndex}`} className="table-secondary">
-                              <td colSpan="10" className="text-center py-1" style={{ height: '10px', border: 'none' }}>
-                                {/* Empty separator row */}
-                              </td>
-                            </tr>
-                          );
-                        }
-
-                        // Add stocks for this date
-                        stocksForDate.forEach((stock) => {
-                          const soldAmount = stock.quantityOut ? stock.quantityOut * stock.amountPerKg : 0;
-                          const profitLoss = stock.dateOut ? soldAmount - (stock.totalStockCost || 0) : -(stock.totalStockCost || 0);
-                          const isProfit = profitLoss > 0;
-                          const isLoss = profitLoss < 0;
-                          const isSameDay = stock.dateIn === stock.dateOut;
-
-                          rows.push(
-                            <tr key={stock.id} className={isSameDay ? 'table-warning' : ''}>
-                              <td>{stock.stockName}</td>
-                              <td>{new Date(stock.dateIn).toLocaleDateString()}</td>
-                              <td>{stock.quantityIn}</td>
-                              <td>{soldAmount > 0 ? `$${soldAmount.toFixed(2)}` : '$0.00'}</td>
-                              <td>{stock.dateOut ? new Date(stock.dateOut).toLocaleDateString() : '-'}</td>
-                              <td>{soldAmount > 0 ? `$${soldAmount.toFixed(2)}` : '-'}</td>
-                              <td>
-                                <span className={isProfit ? 'text-success fw-bold' : isLoss ? 'text-danger fw-bold' : ''}>
-                                  {profitLoss !== 0 ? `${isProfit ? '+' : ''}$${profitLoss.toFixed(2)}` : '$0.00'}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  className="btn btn-sm btn-info me-2"
-                                  onClick={() => handleTrackStock(stock.stockName)}
-                                >
-                                  Track
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-primary"
-                                  onClick={() => handleViewProfitLoss(stock)}
-                                >
-                                  P/L
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        });
-                      });
-
-                      return rows;
-                    })()}
+                    {stockTrackingArr.slice(0, 5).map((stock) => (
+                      <tr key={stock.id}>
+                        <td>{stock.stockName}</td>
+                        <td>{new Date(stock.dateIn).toLocaleDateString()}</td>
+                        <td>{stock.fruitType}</td>
+                        <td>{stock.quantityIn}</td>
+                        <td>${stock.amountPerKg}</td>
+                        <td>${stock.totalAmount}</td>
+                        <td>
+                          <button
+                            className="btn btn-sm btn-info me-2"
+                            onClick={() => handleTrackStock(stock.stockName)}
+                          >
+                            Track
+                          </button>
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => handleViewProfitLoss(stock)}
+                          >
+                            P/L
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

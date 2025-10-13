@@ -25,7 +25,7 @@ parser.add_argument('qty', type=float, required=True)
 parser.add_argument('unit_price', type=float, required=True)
 parser.add_argument('paid_amount', type=float, required=False, default=0.0)
 parser.add_argument('customer_name', type=str, required=False)
-parser.add_argument('date', type=str, required=True)
+parser.add_argument('date', type=str, required=False)
 
 class SaleListResource(Resource):
     def get(self):
@@ -83,7 +83,7 @@ class SaleListResource(Resource):
             amount=args['qty'] * args['unit_price'],
             remaining_amount=(args['qty'] * args['unit_price']) - args.get('paid_amount', 0.0),
             customer_name=args.get('customer_name'),
-            date=datetime.strptime(args['date'], '%Y-%m-%d').date()
+            date=(datetime.strptime(args['date'], '%Y-%m-%d').date() if args.get('date') else datetime.now().date())
         )
 
         db.session.add(sale)
@@ -138,7 +138,8 @@ class SaleResource(Resource):
         sale.remaining_amount = sale.amount - sale.paid_amount
         if 'customer_name' in args:
             sale.customer_name = args['customer_name']
-        sale.date = datetime.strptime(args['date'], '%Y-%m-%d').date()
+        if args.get('date'):
+            sale.date = datetime.strptime(args['date'], '%Y-%m-%d').date()
 
         db.session.commit()
 
@@ -223,14 +224,18 @@ class ClearSalesResource(Resource):
         data = parser.parse_args()
         current_user = get_current_user()
 
-        try:
-            sale_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-        except ValueError:
-            return make_response_data(
-                success=False,
-                message="Invalid date format for date. Use YYYY-MM-DD.",
-                status_code=400
-            )
+        date_str = data.get('date')
+        if date_str:
+            try:
+                sale_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return make_response_data(
+                    success=False,
+                    message="Invalid date format for date. Use YYYY-MM-DD.",
+                    status_code=400
+                )
+        else:
+            sale_date = datetime.now().date()
 
         # Calculate amount
         amount = data['qty'] * data['unit_price']
@@ -269,9 +274,10 @@ class SaleResource(Resource):
         sale.remaining_amount = sale.amount - sale.paid_amount
         if 'customer_name' in data:
             sale.customer_name = data['customer_name']
-        sale.date = datetime.strptime(
-            data['date'], '%Y-%m-%d'
-        ).date()
+        if data.get('date'):
+            sale.date = datetime.strptime(
+                data['date'], '%Y-%m-%d'
+            ).date()
 
         db.session.commit()
         return make_response_data(

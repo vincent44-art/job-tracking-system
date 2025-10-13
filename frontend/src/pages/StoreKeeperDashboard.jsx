@@ -106,7 +106,7 @@ const StoreKeeperDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('access_token');
-      const record = { ...stockIn };
+      const record = { ...stockIn, amountPerKg: 0, totalAmount: 0 };
       const res = await addStockTracking(record, token);
       setRecords((prev) => ([...(Array.isArray(prev) ? prev : []), res.data]));
       setStockIn(initialStockIn);

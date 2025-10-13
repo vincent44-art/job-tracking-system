@@ -24,8 +24,8 @@ parser.add_argument('stockName', type=str, required=True)
 parser.add_argument('dateIn', type=str, required=True)
 parser.add_argument('fruitType', type=str, required=True)
 parser.add_argument('quantityIn', type=float, required=True)
-parser.add_argument('amountPerKg', type=float, required=True)
-parser.add_argument('totalAmount', type=float, required=True)
+parser.add_argument('amountPerKg', type=float, required=False, default=0)
+parser.add_argument('totalAmount', type=float, required=False, default=0)
 parser.add_argument('otherCharges', type=float, default=0)
 parser.add_argument('dateOut', type=str)
 parser.add_argument('duration', type=int)
@@ -40,8 +40,65 @@ parser.add_argument('totalStockCost', type=float)
 class StockTrackingListResource(Resource):
     @role_required('storekeeper', 'ceo', 'seller', 'purchaser', 'driver', 'admin', 'it')
     def get(self):
+        # Get all records and group by stock_name and date_out
         records = StockTracking.query.order_by(StockTracking.date_in.desc()).all()
-        return make_response_data(data=[r.to_dict() for r in records], message="Stock tracking records fetched.")
+
+        # Group records by stock_name and date_out combination
+        grouped_records = {}
+        for record in records:
+            # Create a key combining stock_name and date_out (or 'pending' if no date_out)
+            key = f"{record.stock_name}_{record.date_out.isoformat() if record.date_out else 'pending'}"
+            if key not in grouped_records:
+                grouped_records[key] = []
+            grouped_records[key].append(record)
+
+        # Aggregate records in each group
+        aggregated_data = []
+        for key, group_records in grouped_records.items():
+            if len(group_records) == 1:
+                # Single record, use as is
+                aggregated_data.append(group_records[0].to_dict())
+            else:
+                # Multiple records for same stock and date_out, aggregate them
+                first_record = group_records[0]
+
+                # Sum quantities and amounts
+                total_quantity_in = sum(r.quantity_in for r in group_records)
+                total_quantity_out = sum(r.quantity_out or 0 for r in group_records)
+                total_amount = sum(r.total_amount for r in group_records)
+                total_other_charges = sum(r.other_charges for r in group_records)
+                total_gradient_cost = sum(r.total_gradient_cost or 0 for r in group_records)
+                total_spoilage = sum(r.spoilage or 0 for r in group_records)
+                total_stock_cost = sum(r.total_stock_cost or 0 for r in group_records)
+
+                # Create aggregated record
+                aggregated_record = {
+                    'id': first_record.id,  # Use first record's ID for PDF generation
+                    'stockName': first_record.stock_name,
+                    'dateIn': first_record.date_in.isoformat() if first_record.date_in else None,
+                    'fruitType': first_record.fruit_type,  # Will be overridden in PDF with detailed sales
+                    'quantityIn': total_quantity_in,
+                    'amountPerKg': first_record.amount_per_kg,  # Keep original for reference
+                    'totalAmount': total_amount,
+                    'otherCharges': total_other_charges,
+                    'dateOut': first_record.date_out.isoformat() if first_record.date_out else None,
+                    'duration': first_record.duration,
+                    'gradientUsed': first_record.gradient_used,
+                    'gradientAmountUsed': sum(r.gradient_amount_used or 0 for r in group_records),
+                    'gradientCostPerUnit': first_record.gradient_cost_per_unit,
+                    'totalGradientCost': total_gradient_cost,
+                    'quantityOut': total_quantity_out if total_quantity_out > 0 else None,
+                    'spoilage': total_spoilage if total_spoilage > 0 else None,
+                    'totalStockCost': total_stock_cost if total_stock_cost > 0 else None,
+                    'isAggregated': True,  # Flag to indicate this is an aggregated record
+                    'originalRecords': [r.id for r in group_records]  # Store original record IDs
+                }
+                aggregated_data.append(aggregated_record)
+
+        # Sort by date_in descending
+        aggregated_data.sort(key=lambda x: x.get('dateIn', ''), reverse=True)
+
+        return make_response_data(data=aggregated_data, message="Stock tracking records fetched.")
 
     @role_required('storekeeper', 'ceo')
     def post(self):
@@ -130,13 +187,22 @@ def generate_stock_pdf(stock_record):
     elements.append(Paragraph(f"Stock Tracking Report - {stock_record.stock_name}", title_style))
     elements.append(Spacer(1, 12))
 
+    # Get all original records if this is an aggregated record
+    original_records = []
+    if hasattr(stock_record, 'isAggregated') and stock_record.isAggregated:
+        # This is an aggregated record, get all original records
+        original_record_ids = getattr(stock_record, 'originalRecords', [])
+        original_records = StockTracking.query.filter(StockTracking.id.in_(original_record_ids)).all()
+    else:
+        # Single record
+        original_records = [stock_record]
+
     # Basic Information Section
     elements.append(Paragraph("Basic Information", section_style))
     elements.append(Spacer(1, 6))
 
     basic_data = [
         ['Stock Name', stock_record.stock_name],
-        ['Fruit Type', stock_record.fruit_type],
         ['Date In', stock_record.date_in.strftime('%Y-%m-%d') if stock_record.date_in else 'N/A'],
         ['Date Out', stock_record.date_out.strftime('%Y-%m-%d') if stock_record.date_out else 'N/A'],
         ['Duration (days)', str(stock_record.duration) if stock_record.duration else 'N/A'],
@@ -156,16 +222,59 @@ def generate_stock_pdf(stock_record):
     elements.append(basic_table)
     elements.append(Spacer(1, 20))
 
+    # Fruits Sold Section - Show detailed breakdown of each fruit type sold
+    elements.append(Paragraph("Fruits Sold Details", section_style))
+    elements.append(Spacer(1, 6))
+
+    fruit_sales_data = [['Fruit Type', 'Quantity Sold', 'Amount per Kg', 'Total Amount']]
+    total_quantity_sold = 0
+    total_revenue = 0
+
+    for record in original_records:
+        if record.quantity_out and record.quantity_out > 0:
+            fruit_sales_data.append([
+                record.fruit_type,
+                f"{record.quantity_out} units",
+                f"KES {record.amount_per_kg:.2f}",
+                f"KES {(record.quantity_out * record.amount_per_kg):.2f}"
+            ])
+            total_quantity_sold += record.quantity_out
+            total_revenue += record.quantity_out * record.amount_per_kg
+
+    # Add totals row
+    fruit_sales_data.append([
+        'TOTAL',
+        f"{total_quantity_sold} units",
+        '',
+        f"KES {total_revenue:.2f}"
+    ])
+
+    fruit_table = Table(fruit_sales_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+    fruit_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
+        ('BACKGROUND', (-1, -1), (-1, -1), colors.lightblue),  # Total row
+        ('FONTNAME', (-1, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(fruit_table)
+    elements.append(Spacer(1, 20))
+
     # Quantity and Pricing Section
-    elements.append(Paragraph("Quantity and Pricing", section_style))
+    elements.append(Paragraph("Stock Summary", section_style))
     elements.append(Spacer(1, 6))
 
     quantity_data = [
-        ['Quantity In', f"{stock_record.quantity_in} units"],
-        ['Quantity Out', f"{stock_record.quantity_out or 0} units"],
+        ['Total Quantity In', f"{stock_record.quantity_in} units"],
+        ['Total Quantity Out', f"{total_quantity_sold} units"],
         ['Spoilage', f"{stock_record.spoilage or 0} units"],
-        ['Amount per Kg', f"KES {stock_record.amount_per_kg:.2f}"],
-        ['Total Amount', f"KES {stock_record.total_amount:.2f}"],
+        ['Total Revenue', f"KES {total_revenue:.2f}"],
+        ['Total Cost', f"KES {stock_record.total_amount:.2f}"],
         ['Other Charges', f"KES {stock_record.other_charges:.2f}"],
     ]
 
@@ -209,16 +318,21 @@ def generate_stock_pdf(stock_record):
         elements.append(gradient_table)
         elements.append(Spacer(1, 20))
 
-    # Total Cost Section
-    elements.append(Paragraph("Cost Summary", section_style))
+    # Profit/Loss Section
+    elements.append(Paragraph("Profit/Loss Summary", section_style))
     elements.append(Spacer(1, 6))
 
-    cost_data = [
-        ['Total Stock Cost', f"KES {stock_record.total_stock_cost:.2f}"],
+    total_costs = (stock_record.total_amount + stock_record.other_charges + (stock_record.total_gradient_cost or 0))
+    profit_loss = total_revenue - total_costs
+
+    profit_data = [
+        ['Total Revenue', f"KES {total_revenue:.2f}"],
+        ['Total Costs', f"KES {total_costs:.2f}"],
+        ['Profit/Loss', f"KES {profit_loss:.2f}"],
     ]
 
-    cost_table = Table(cost_data, colWidths=[2*inch, 2.5*inch])
-    cost_table.setStyle(TableStyle([
+    profit_table = Table(profit_data, colWidths=[2*inch, 2.5*inch])
+    profit_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -228,7 +342,7 @@ def generate_stock_pdf(stock_record):
         ('BACKGROUND', (0, 1), (-1, -1), colors.lightgreen),
         ('GRID', (0, 0), (-1, -1), 1, colors.black)
     ]))
-    elements.append(cost_table)
+    elements.append(profit_table)
 
     # Footer
     elements.append(Spacer(1, 30))

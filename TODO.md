@@ -1,10 +1,9 @@
-# TODO: Fix ESLint Unused Variables Warnings
-
-## Tasks
-- [x] Edit SalaryManagementTab.jsx: Remove toggleUserExpansion function and expandedUsers state
-- [x] Edit StockTrackerTab.jsx: Remove profit and totalUsed calculations
-- [x] Edit SellerFruitsTable.jsx: Remove import of deleteSellerFruit
-- [x] Edit ITActivityDashboard.jsx: Remove alerts, alertsTotal, selectedAlert, setSelectedAlert states and loadAlerts function
-- [x] Edit SellerDashboard.jsx: Remove import of fetchSellerFruits and refreshSellerSales function
-- [x] Run ESLint to verify warnings are resolved
-- [x] Test application functionality
+- [x] Modify the `rows` variable to use `data.stockTracking` (all individual stock records).
+- [x] Update table rendering for each stock record:
+  - Use stock.stock_name for the name.
+  - Compute purchase cost from `purchaseCostByFruit[normalizeFruit(stock.fruit_type)]`.
+  - Compute revenue from `revenueByFruit[normalizeFruit(stock.fruit_type)]`.
+  - Compute profit/loss as revenue - purchase cost.
+  - Use stock.date_in and stock.date_out for dates.
+- [x] Update the grand total to sum over all rows.
+- [x] If no stock tracking data, show "No stock data available".

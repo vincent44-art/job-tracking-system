@@ -1,41 +1,65 @@
 const BASE_URL = 'http://127.0.0.1:5000/api';
 
-export async function fetchStockTracking(token) {
+export const fetchStockTracking = async (token) => {
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+
   try {
-  console.log('fetchStockTracking: Making API call to /api/stock-tracking');
-  const res = await fetch(`${BASE_URL}/stock-tracking`, {
+    const response = await fetch('/api/stock-tracking', {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     });
 
-    if (!res.ok) {
-      console.error('fetchStockTracking: API call failed with status:', res.status);
-      throw new Error(`Failed to fetch stock tracking: ${res.status} ${res.statusText}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch stock tracking data');
     }
 
-    const data = await res.json();
-    console.log('fetchStockTracking: Response received:', data);
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('fetchStockTracking: API call failed:', error);
+    console.error('Stock tracking fetch error:', error);
     throw error;
   }
-}
+};
 
-export async function addStockTracking(record, token) {
-  const res = await fetch(`${BASE_URL}/stock-tracking`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(record)
-  });
-  if (!res.ok) throw new Error('Failed to add stock tracking record');
-  return await res.json();
-}
+export const addStockTracking = async (data, token) => {
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+
+  // Validate required fields based on backend model
+  const requiredFields = ['stockName', 'dateIn', 'fruitType', 'quantityIn'];
+  const missingFields = requiredFields.filter(field => !data[field]);
+
+  if (missingFields.length > 0) {
+    throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+  }
+
+  try {
+    const response = await fetch('/api/stock-tracking', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to create stock tracking record');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Stock tracking creation error:', error);
+    throw error;
+  }
+};
 
 export async function clearStockTracking(token) {
   const res = await fetch(`${BASE_URL}/stock-tracking/clear`, {
@@ -49,13 +73,28 @@ export async function clearStockTracking(token) {
   return await res.json();
 }
 
-export async function fetchStockTrackingAggregated(token) {
-  const res = await fetch(`${BASE_URL}/stock-tracking/aggregated`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+export const fetchStockTrackingAggregated = async (token) => {
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+
+  try {
+    const response = await fetch('/api/stock-tracking/aggregated', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch aggregated data');
     }
-  });
-  if (!res.ok) throw new Error('Failed to fetch aggregated stock tracking data');
-  return await res.json();
-}
+
+    return await response.json();
+  } catch (error) {
+    console.error('Aggregated data fetch error:', error);
+    throw error;
+  }
+};
