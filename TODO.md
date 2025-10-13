@@ -1,9 +1,17 @@
-- [x] Modify the `rows` variable to use `data.stockTracking` (all individual stock records).
-- [x] Update table rendering for each stock record:
-  - Use stock.stock_name for the name.
-  - Compute purchase cost from `purchaseCostByFruit[normalizeFruit(stock.fruit_type)]`.
-  - Compute revenue from `revenueByFruit[normalizeFruit(stock.fruit_type)]`.
-  - Compute profit/loss as revenue - purchase cost.
-  - Use stock.date_in and stock.date_out for dates.
-- [x] Update the grand total to sum over all rows.
-- [x] If no stock tracking data, show "No stock data available".
+# TODO: Add Daily PDF Generation for Stock Tracking
+
+## Backend Changes
+- [ ] Add new resource classes in stock_tracking.py for daily stock in and stock out PDFs
+- [ ] Create endpoints to generate PDFs for all stock in on a date and all stock out on a date
+- [ ] Implement PDF generation logic for daily stock entries and exits
+
+## Frontend Changes
+- [ ] Update stockTracking.js API to include calls for the new endpoints
+- [ ] Update StoreKeeperDashboard.jsx to include buttons for generating daily PDFs
+- [ ] Add date picker for selecting the date for PDF generation
+
+## Testing
+- [ ] Test PDF downloads for stock in and stock out
+- [ ] Ensure date selection works properly
+- [ ] Verify PDF content includes all relevant stock data for the day
+ 

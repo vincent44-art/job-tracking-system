@@ -15,18 +15,24 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       console.log('Form submitted with:', { email, password: '***' });
       const result = await login(email, password);
-      
+
       if (!result.success) {
-      setError(result.error || 'Login failed');
-      console.error('Login failed:', result.error);
-    } else {
-      console.log('Login successful, redirecting...');
-      navigate('/');  // 👈 Redirect user to dashboard (or main page)
-    }
+        setError(result.error || 'Login failed');
+        console.error('Login failed:', result.error);
+      } else {
+        console.log('Login successful, checking first login...');
+        if (result.isFirstLogin) {
+          console.log('First login detected, redirecting to change password...');
+          navigate('/change-password');
+        } else {
+          console.log('Not first login, redirecting to dashboard...');
+          navigate('/');  // 👈 Redirect user to dashboard (or main page)
+        }
+      }
     } catch (error) {
       console.error('Login error:', error);
       setError('An unexpected error occurred');
@@ -50,13 +56,15 @@ const Login = () => {
             </div>
           )}
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="on">
             <div className="mb-3">
               <label htmlFor="email" className="form-label">Email</label>
               <input
                 type="email"
                 className="form-control"
                 id="email"
+                name="username"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -71,6 +79,8 @@ const Login = () => {
                 type="password"
                 className="form-control"
                 id="password"
+                name="current-password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

@@ -23,6 +23,7 @@ class User(db.Model):
     is_paid = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    is_first_login = db.Column(db.Boolean, default=True)  # Flag for first login password change
     profile_image = db.Column(db.String(256), nullable=True)  # Path or URL to profile image
 
     # Relationships
@@ -47,6 +48,7 @@ class User(db.Model):
             'salary': self.salary,
             'is_paid': self.is_paid,
             'is_active': self.is_active,
+            'is_first_login': self.is_first_login,
             'created_at': self.created_at.isoformat(),
             'profile_image': self.profile_image
         }

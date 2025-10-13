@@ -31,7 +31,8 @@ class UserListResource(Resource):
             email=data['email'],
             name=data['name'],
             role=UserRole(role_value),
-            salary=data.get('salary', 0.0)
+            salary=data.get('salary', 0.0),
+            is_first_login=True
         )
         user.set_password(data['password'])
         db.session.add(user)

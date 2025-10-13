@@ -60,17 +60,10 @@ const login = async (email, password) => {
     api.defaults.headers.Authorization = `Bearer ${resData.access_token}`; // <-- Add this
     setUser(resData.user);
 
-
-    // Save user
-    setUser(resData.user);
-
     toast.success('Login successful');
 
-    // 🔥 OPTIONAL: Redirect after login
-    //window.location.href = '/dashboard';
-     
-
-    return { success: true };
+    // Check if first login - return flag for redirect handling
+    return { success: true, isFirstLogin: resData.user.is_first_login };
   } catch (error) {
     console.error('Login error:', error);
     const errorMsg = error.response?.data?.message || 'Login failed';
@@ -173,6 +166,7 @@ const login = async (email, password) => {
     login,
     logout,
     loading,
+    verifyAuth,
     getAllUsers,
     addUser,
     updateUser,

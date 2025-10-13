@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
+import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
 import PurchaserDashboard from './pages/PurchaserDashboard';
 import SellerDashboard from './pages/SellerDashboard';
@@ -41,6 +42,16 @@ const AppContent = () => {
 
   if (loading) {
     return <div className="text-center mt-5">Loading...</div>; // Prevent rendering until user is verified
+  }
+  
+  // Force first-time users to change password before accessing any dashboard
+  if (user && user.is_first_login) {
+    return (
+      <Routes>
+        <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="*" element={<Navigate to="/change-password" replace />} />
+      </Routes>
+    );
   }
   
   // Role-based dashboard routing
@@ -117,6 +128,7 @@ const AppContent = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/change-password" element={<ChangePassword />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

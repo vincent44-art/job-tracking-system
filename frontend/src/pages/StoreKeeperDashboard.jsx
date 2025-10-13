@@ -30,6 +30,64 @@ const StoreKeeperDashboard = () => {
   const [records, setRecords] = useState([]);
   const [otherExpenses, setOtherExpenses] = useState([]);
 
+  const handleDownloadPDF = async (recordId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`/api/stock-tracking/pdf/${recordId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_${recordId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('PDF download error:', error);
+      alert('Failed to download PDF. Please try again.');
+    }
+  };
+
+  const handleDownloadGroupPDF = async (date, type) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`/api/stock-tracking/pdf/group?date=${date}&type=${type}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download group PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_${type}_${date}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Group PDF download error:', error);
+      alert('Failed to download group PDF. Please try again.');
+    }
+  };
+
   // Fetch all stock records and other expenses on mount
   useEffect(() => {
     const load = async () => {
@@ -252,42 +310,68 @@ const StoreKeeperDashboard = () => {
             <div className="card-header bg-dark text-white">Stock Tracking Table</div>
             <div className="card-body table-responsive">
               <table className="table table-bordered table-striped">
-                <thead>
-                  <tr>
-                    <th>Stock Name</th>
-                    <th>Date In</th>
-                    <th>Fruit Type</th>
-                    <th>Quantity In</th>
+                  <thead>
+                    <tr>
+                      <th>Stock Name</th>
+                      <th>Date In</th>
+                      <th>Fruit Type</th>
+                      <th>Quantity In</th>
 
-                    <th>Duration</th>
-                    <th>Gradient Used</th>
-                    <th>Gradient Amount Used</th>
-                    <th>Gradient Cost per Unit</th>
-                    <th>Total Gradient Cost</th>
-                    <th>Date Out</th>
-                    <th>Quantity Out</th>
-                    <th>Spoilage</th>
-                    <th>Total Stock Cost</th>
-                  </tr>
-                </thead>
+                      <th>Duration</th>
+                      <th>Gradient Used</th>
+                      <th>Gradient Amount Used</th>
+                      <th>Gradient Cost per Unit</th>
+                      <th>Total Gradient Cost</th>
+                      <th>Date Out</th>
+                      <th>Quantity Out</th>
+                      <th>Spoilage</th>
+                      <th>Total Stock Cost</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {recordsArr.map((rec, idx) => (
-                    <tr key={rec.id || idx}>
-                      <td>{rec.stockName}</td>
-                      <td>{rec.dateIn}</td>
-                      <td>{rec.fruitType}</td>
-                      <td>{rec.quantityIn}</td>
+                    <React.Fragment key={rec.id || idx}>
+                      <tr>
+                        <td>{rec.stockName}</td>
+                        <td>{rec.dateIn}</td>
+                        <td>{rec.fruitType}</td>
+                        <td>{rec.quantityIn}</td>
 
-                      <td>{rec.duration}</td>
-                      <td>{rec.gradientUsed}</td>
-                      <td>{rec.gradientAmountUsed}</td>
-                      <td>{rec.gradientCostPerUnit}</td>
-                      <td>{rec.totalGradientCost}</td>
-                      <td>{rec.dateOut}</td>
-                      <td>{rec.quantityOut}</td>
-                      <td>{rec.spoilage}</td>
-                      <td>{rec.totalStockCost}</td>
-                    </tr>
+                        <td>{rec.duration}</td>
+                        <td>{rec.gradientUsed}</td>
+                        <td>{rec.gradientAmountUsed}</td>
+                        <td>{rec.gradientCostPerUnit}</td>
+                        <td>{rec.totalGradientCost}</td>
+                        <td>{rec.dateOut}</td>
+                        <td>{rec.quantityOut}</td>
+                        <td>{rec.spoilage}</td>
+                        <td>{rec.totalStockCost}</td>
+                      </tr>
+                      {rec.dateOut && (
+                        <tr>
+                          <td colSpan="13" className="text-center">
+                            <button
+                              className="btn btn-sm btn-success me-2"
+                              onClick={() => handleDownloadPDF(rec.id)}
+                            >
+                              Download PDF Report
+                            </button>
+                            <button
+                              className="btn btn-sm btn-warning me-2"
+                              onClick={() => handleDownloadGroupPDF(rec.dateIn, 'in')}
+                            >
+                              {rec.dateIn} In
+                            </button>
+                            <button
+                              className="btn btn-sm btn-warning"
+                              onClick={() => handleDownloadGroupPDF(rec.dateOut, 'out')}
+                            >
+                              {rec.dateOut} Out
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                   {records.length === 0 && (
                     <tr><td colSpan="13" className="text-center text-muted">No records yet</td></tr>

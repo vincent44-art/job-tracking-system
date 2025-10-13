@@ -10,6 +10,62 @@ const StockTrackingRecordsPage = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
 
+  const handleDownloadPDF = async (recordId) => {
+    try {
+      const response = await fetch(`/api/stock-tracking/pdf/${recordId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_${recordId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('PDF download error:', error);
+      alert('Failed to download PDF. Please try again.');
+    }
+  };
+
+  const handleDownloadGroupPDF = async (date, type) => {
+    try {
+      const response = await fetch(`/api/stock-tracking/pdf/group?date=${date}&type=${type}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download group PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_${type}_${date}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Group PDF download error:', error);
+      alert('Failed to download group PDF. Please try again.');
+    }
+  };
+
   useEffect(() => {
     fetchStockTracking(token)
       .then((data) => {
@@ -72,24 +128,50 @@ const StockTrackingRecordsPage = () => {
                   <tbody>
                     {records.length > 0 ? (
                       records.map((rec, idx) => (
-                        <tr key={rec.id || idx}>
-                          <td>{rec.stockName}</td>
-                          <td>{rec.dateIn}</td>
-                          <td>{rec.fruitType}</td>
-                          <td>{rec.quantityIn}</td>
-                          <td>{rec.amountPerKg}</td>
-                          <td>{rec.totalAmount}</td>
-                          <td>{rec.otherCharges}</td>
-                          <td>{rec.duration}</td>
-                          <td>{rec.gradientUsed}</td>
-                          <td>{rec.gradientAmountUsed}</td>
-                          <td>{rec.gradientCostPerUnit}</td>
-                          <td>{rec.totalGradientCost}</td>
-                          <td>{rec.dateOut}</td>
-                          <td>{rec.quantityOut}</td>
-                          <td>{rec.spoilage}</td>
-                          <td>{rec.totalStockCost}</td>
-                        </tr>
+                        <React.Fragment key={rec.id || idx}>
+                          <tr>
+                            <td>{rec.stockName}</td>
+                            <td>{rec.dateIn}</td>
+                            <td>{rec.fruitType}</td>
+                            <td>{rec.quantityIn}</td>
+                            <td>{rec.amountPerKg}</td>
+                            <td>{rec.totalAmount}</td>
+                            <td>{rec.otherCharges}</td>
+                            <td>{rec.duration}</td>
+                            <td>{rec.gradientUsed}</td>
+                            <td>{rec.gradientAmountUsed}</td>
+                            <td>{rec.gradientCostPerUnit}</td>
+                            <td>{rec.totalGradientCost}</td>
+                            <td>{rec.dateOut}</td>
+                            <td>{rec.quantityOut}</td>
+                            <td>{rec.spoilage}</td>
+                            <td>{rec.totalStockCost}</td>
+                          </tr>
+                          {rec.dateOut && (
+                            <tr>
+                              <td colSpan="16" className="text-center">
+                                <button
+                                  className="btn btn-sm btn-success me-2"
+                                  onClick={() => handleDownloadPDF(rec.id)}
+                                >
+                                  Download PDF Report
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-warning me-2"
+                                  onClick={() => handleDownloadGroupPDF(rec.dateIn, 'in')}
+                                >
+                                  {rec.dateIn} In
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-warning"
+                                  onClick={() => handleDownloadGroupPDF(rec.dateOut, 'out')}
+                                >
+                                  {rec.dateOut} Out
+                                </button>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))
                     ) : (
                       <tr><td colSpan="16" className="text-center text-muted">No stock tracking records yet</td></tr>
