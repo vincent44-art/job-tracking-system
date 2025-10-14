@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/api';
 import { fetchStockTracking, fetchStockTrackingAggregated } from '../api/stockTracking';
 
 const StockTrackerTab = () => {
@@ -27,11 +26,6 @@ const StockTrackerTab = () => {
 
   const handleTrackStock = (stockName) => {
     navigate('/stock-tracking-records', { state: { filterStock: stockName } });
-  };
-
-  const handleViewProfitLoss = (stock) => {
-    setSelectedStock(stock);
-    setShowProfitLossModal(true);
   };
 
   const handleDownloadPDF = async (recordId) => {
@@ -105,10 +99,10 @@ const StockTrackerTab = () => {
     setSelectedStock(null);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-      
+
       if (!token) {
         throw new Error('Authentication token not found');
       }
@@ -136,18 +130,18 @@ const StockTrackerTab = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   // Initial load
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   // Set up polling for real-time updates
   useEffect(() => {
     const interval = setInterval(loadData, 3000); // Poll every 3 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [loadData]);
 
   if (loading) {
     return (
@@ -197,19 +191,17 @@ const StockTrackerTab = () => {
                     <tr>
                       <th>Stock Name</th>
                       <th>Date In</th>
-                      <th>Quantity (Kg)</th>
+                      <th>Purchase Amount</th>
                       <th>Revenue</th>
                       <th>Date Out</th>
-                      <th>Sold Amount</th>
                       <th>Profit/Loss</th>
-                      <th>Actions</th>
-                      <th>Date PDFs</th>
+                      <th>PDF</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(() => {
-                      // Group stocks by dateIn and sort by date
-                      const groupedStocks = stockTrackingArr.slice(0, 5).reduce((groups, stock) => {
+                      // Group stocks by dateIn
+                      const groupedStocks = stockTrackingArr.slice(0, 10).reduce((groups, stock) => {
                         const dateKey = stock.dateIn;
                         if (!groups[dateKey]) {
                           groups[dateKey] = [];
@@ -218,89 +210,48 @@ const StockTrackerTab = () => {
                         return groups;
                       }, {});
 
-                      // Sort dates
+                      // Sort dates descending
                       const sortedDates = Object.keys(groupedStocks).sort((a, b) => new Date(b) - new Date(a));
 
-                      const rows = [];
-                      sortedDates.forEach((dateKey, dateIndex) => {
+                      return sortedDates.map((dateKey) => {
                         const stocksForDate = groupedStocks[dateKey];
-
-                        // Add separator row between different dates (except for the first group)
-                        if (dateIndex > 0) {
-                          rows.push(
-                            <tr key={`separator-${dateIndex}`} className="table-secondary">
-                              <td colSpan="10" className="text-center py-1" style={{ height: '10px', border: 'none' }}>
-                                {/* Empty separator row */}
-                              </td>
-                            </tr>
-                          );
-                        }
-
-                        // Add stocks for this date
-                        stocksForDate.forEach((stock) => {
+                        const stockNames = [...new Set(stocksForDate.map(stock => stock.stockName))].join(', ');
+                        const totalPurchaseAmount = stocksForDate.reduce((sum, stock) => sum + stock.totalAmount, 0);
+                        const totalSoldAmount = stocksForDate.reduce((sum, stock) => sum + (stock.quantityOut ? stock.quantityOut * stock.amountPerKg : 0), 0);
+                        const totalProfitLoss = stocksForDate.reduce((sum, stock) => {
                           const soldAmount = stock.quantityOut ? stock.quantityOut * stock.amountPerKg : 0;
                           const profitLoss = stock.dateOut ? soldAmount - (stock.totalStockCost || 0) : -(stock.totalStockCost || 0);
-                          const isProfit = profitLoss > 0;
-                          const isLoss = profitLoss < 0;
-                          const isSameDay = stock.dateIn === stock.dateOut;
+                          return sum + profitLoss;
+                        }, 0);
+                        const hasDateOut = stocksForDate.some(stock => stock.dateOut);
+                        const latestDateOut = stocksForDate.filter(stock => stock.dateOut).sort((a, b) => new Date(b.dateOut) - new Date(a.dateOut))[0]?.dateOut;
 
-                          rows.push(
-                            <tr key={stock.id} className={isSameDay ? 'table-warning' : ''}>
-                              <td>{stock.stockName}</td>
-                              <td>{new Date(stock.dateIn).toLocaleDateString()}</td>
-                              <td>{stock.quantityIn}</td>
-                              <td>{soldAmount > 0 ? `$${soldAmount.toFixed(2)}` : '$0.00'}</td>
-                              <td>{stock.dateOut ? new Date(stock.dateOut).toLocaleDateString() : '-'}</td>
-                              <td>{soldAmount > 0 ? `$${soldAmount.toFixed(2)}` : '-'}</td>
-                              <td>
-                                <span className={isProfit ? 'text-success fw-bold' : isLoss ? 'text-danger fw-bold' : ''}>
-                                  {profitLoss !== 0 ? `${isProfit ? '+' : ''}$${profitLoss.toFixed(2)}` : '$0.00'}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  className="btn btn-sm btn-info me-2"
-                                  onClick={() => handleTrackStock(stock.stockName)}
-                                >
-                                  Track
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-primary"
-                                  onClick={() => handleViewProfitLoss(stock)}
-                                >
-                                  P/L
-                                </button>
-                                {stock.dateOut && (
-                                  <button
-                                    className="btn btn-sm btn-success ms-2"
-                                    onClick={() => handleDownloadPDF(stock.id)}
-                                  >
-                                    PDF
-                                  </button>
-                                )}
-                              </td>
-                              <td>
-                                <button
-                                  className="btn btn-sm btn-warning me-1"
-                                  onClick={() => handleDownloadGroupPDF(stock.dateIn, 'in')}
-                                >
-                                  {stock.dateIn} In
-                                </button>
-                                {stock.dateOut && (
-                                  <button
-                                    className="btn btn-sm btn-warning"
-                                    onClick={() => handleDownloadGroupPDF(stock.dateOut, 'out')}
-                                  >
-                                    {stock.dateOut} Out
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        });
+                        const isProfit = totalProfitLoss > 0;
+                        const isLoss = totalProfitLoss < 0;
+
+                        return (
+                          <tr key={dateKey}>
+                            <td>{stockNames}</td>
+                            <td>{new Date(dateKey).toLocaleDateString()}</td>
+                            <td>KES {totalPurchaseAmount.toFixed(2)}</td>
+                            <td>{totalSoldAmount > 0 ? `KES ${totalSoldAmount.toFixed(2)}` : 'KES 0.00'}</td>
+                            <td>{latestDateOut ? new Date(latestDateOut).toLocaleDateString() : '-'}</td>
+                            <td>
+                              <span className={isProfit ? 'text-success fw-bold' : isLoss ? 'text-danger fw-bold' : ''}>
+                                {totalProfitLoss !== 0 ? `${isProfit ? '+' : ''}KES ${totalProfitLoss.toFixed(2)}` : 'KES 0.00'}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-warning"
+                                onClick={() => handleDownloadGroupPDF(dateKey, 'in')}
+                              >
+                                PDF
+                              </button>
+                            </td>
+                          </tr>
+                        );
                       });
-
-                      return rows;
                     })()}
                   </tbody>
                 </table>

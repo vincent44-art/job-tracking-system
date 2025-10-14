@@ -187,8 +187,8 @@ const ReportsTabAnalytics = () => {
   // Calculate key business metrics
   const calculateBusinessMetrics = () => {
     const allSales = Array.isArray(data.sales) && Array.isArray(data.sellerFruits) ? [...data.sales, ...data.sellerFruits] : [];
-    const totalRevenue = allSales.reduce((sum, sale) => sum + (parseFloat(sale.revenue) || 0), 0);
-    const totalQuantity = allSales.reduce((sum, sale) => sum + (parseFloat(sale.quantitySold || sale.quantity) || 0), 0);
+    const totalRevenue = allSales.reduce((sum, sale) => sum + (parseFloat(sale.amount || sale.revenue) || 0), 0);
+    const totalQuantity = allSales.reduce((sum, sale) => sum + (parseFloat(sale.qty || sale.quantitySold || sale.quantity) || 0), 0);
     const totalPurchases = Array.isArray(data.purchases) ? data.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.amount || purchase.totalAmount || 0) || 0), 0) : 0;
     const totalExpenses = Array.isArray(data.otherExpenses) ? data.otherExpenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0) : 0;
     const totalProfit = totalRevenue - totalPurchases - totalExpenses;
@@ -658,6 +658,7 @@ const ReportsTabAnalytics = () => {
                     outerRadius={80}
                     paddingAngle={5}
                     dataKey="totalProfit"
+                    nameKey="fruitType"
                   >
                     {fruitProfitability.slice(0, 8).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

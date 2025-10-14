@@ -487,13 +487,27 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
           </option>
         ))}
       </select>
-      <input
-        type="text"
+      <select
         className="form-control mb-2"
-        placeholder="Enter Customer Name"
         value={customerName}
         onChange={(e) => setCustomerName(e.target.value)}
-      />
+      >
+        <option value="">Select Customer</option>
+        <option value="Beyond">Beyond</option>
+        <option value="Carrefour Supermarket">Carrefour Supermarket</option>
+        <option value="Chebet">Chebet</option>
+        <option value="Cilantro">Cilantro</option>
+        <option value="Cornershop">Cornershop</option>
+        <option value="Edith">Edith</option>
+        <option value="Fresh and Juice">Fresh and Juice</option>
+        <option value="Fruity Fruit">Fruity Fruit</option>
+        <option value="Jam">Jam</option>
+        <option value="Jarine Investment">Jarine Investment</option>
+        <option value="Johanna">Johanna</option>
+        <option value="Kalimoni">Kalimoni</option>
+        <option value="Parakash Juice">Parakash Juice</option>
+        <option value="Zucchini supermarket">Zucchini supermarket</option>
+      </select>
       <button
         className="btn btn-primary btn-sm me-2"
         onClick={handleSaveToTable}

@@ -319,20 +319,20 @@ def generate_stock_pdf_group(records, date, type_):
     elements.append(Spacer(1, 6))
 
     # Table headers
-    headers = ['Stock Name', 'Fruit Type', 'Quantity', 'Amount per Kg', 'Total Amount', 'Other Charges']
+    headers = ['Fruit Name', 'Qty Brought', 'Qty Sold', 'Purchased Amount', 'Amount Sold']
     if type_ == 'out':
         headers.extend(['Gradient Used', 'Gradient Cost', 'Date Out', 'Spoilage'])
 
     table_data = [headers]
 
     for record in records:
+        sold_amount = record.quantity_out * record.amount_per_kg if record.quantity_out else 0
         row = [
-            record.stock_name,
             record.fruit_type,
-            f"{record.quantity_in if type_ == 'in' else (record.quantity_out or 0)}",
-            f"KES {record.amount_per_kg:.2f}",
+            f"{record.quantity_in}",
+            f"{record.quantity_out or 0}",
             f"KES {record.total_amount:.2f}",
-            f"KES {record.other_charges:.2f}",
+            f"KES {sold_amount:.2f}",
         ]
         if type_ == 'out':
             row.extend([
@@ -344,7 +344,157 @@ def generate_stock_pdf_group(records, date, type_):
         table_data.append(row)
 
     # Calculate column widths
-    col_widths = [1.5*inch] * len(headers)
+    col_widths = [1.2*inch] * len(headers)
+
+    records_table = Table(table_data, colWidths=col_widths)
+    records_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(records_table)
+
+    # Sales Section for Stock Out PDFs
+    if type_ == 'out':
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("Sales Records", section_style))
+        elements.append(Spacer(1, 6))
+
+        # Get all sales for the stock names in this group
+        stock_names = [r.stock_name for r in records]
+        sales_records = Sale.query.filter(Sale.stock_name.in_(stock_names)).order_by(Sale.date.desc()).all()
+
+        if sales_records:
+            sales_headers = ['Date', 'Fruit Name', 'Quantity', 'Amount', 'Customer Email']
+            sales_table_data = [sales_headers]
+
+            for sale in sales_records:
+                sales_table_data.append([
+                    sale.date.strftime('%Y-%m-%d') if sale.date else 'N/A',
+                    sale.fruit_name,
+                    f"{sale.qty}",
+                    f"KES {sale.amount:.2f}",
+                    sale.customer_email or 'N/A'
+                ])
+
+            sales_table = Table(sales_table_data, colWidths=[1.2*inch, 1.5*inch, 1*inch, 1.2*inch, 2*inch])
+            sales_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elements.append(sales_table)
+        else:
+            elements.append(Paragraph("No sales records found for this stock group.", styles['Italic']))
+
+    # Footer
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph("Generated on: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S'), styles['Italic']))
+
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+def generate_unmoved_stock_pdf(records):
+    """Generate PDF for all stock tracking records that have not moved out (date_out is None)"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1,  # Center alignment
+    )
+
+    section_style = ParagraphStyle(
+        'SectionHeader',
+        parent=styles['Heading2'],
+        fontSize=12,
+        spaceAfter=10,
+        textColor=colors.darkblue,
+    )
+
+    content_style = styles['Normal']
+
+    # Build PDF content
+    elements = []
+
+    # Title
+    elements.append(Paragraph("Stock Tracking Report - Unmoved Stocks", title_style))
+    elements.append(Spacer(1, 12))
+
+    # Summary Section
+    elements.append(Paragraph("Summary", section_style))
+    elements.append(Spacer(1, 6))
+
+    total_quantity = sum(r.quantity_in for r in records)
+    total_amount = sum(r.total_amount for r in records)
+    total_other_charges = sum(r.other_charges for r in records)
+    total_gradient_cost = sum(r.total_gradient_cost or 0 for r in records)
+
+    summary_data = [
+        ['Total Records', str(len(records))],
+        ['Total Quantity In', f"{total_quantity} units"],
+        ['Total Amount', f"KES {total_amount:.2f}"],
+        ['Total Other Charges', f"KES {total_other_charges:.2f}"],
+        ['Total Gradient Cost', f"KES {total_gradient_cost:.2f}"],
+    ]
+
+    summary_table = Table(summary_data, colWidths=[2*inch, 2.5*inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 20))
+
+    # Detailed Records Section
+    elements.append(Paragraph("Detailed Records", section_style))
+    elements.append(Spacer(1, 6))
+
+    # Table headers
+    headers = ['Stock Name', 'Fruit Type', 'Date In', 'Quantity In', 'Amount per Kg', 'Total Amount', 'Other Charges', 'Gradient Used', 'Gradient Cost']
+
+    table_data = [headers]
+
+    for record in records:
+        row = [
+            record.stock_name,
+            record.fruit_type,
+            record.date_in.strftime('%Y-%m-%d') if record.date_in else 'N/A',
+            f"{record.quantity_in}",
+            f"KES {record.amount_per_kg:.2f}",
+            f"KES {record.total_amount:.2f}",
+            f"KES {record.other_charges:.2f}",
+            record.gradient_used or 'N/A',
+            f"KES {record.total_gradient_cost or 0:.2f}",
+        ]
+        table_data.append(row)
+
+    # Calculate column widths
+    col_widths = [1.2*inch] * len(headers)
 
     records_table = Table(table_data, colWidths=col_widths)
     records_table.setStyle(TableStyle([
@@ -410,6 +560,26 @@ class StockTrackingGroupPDFResource(Resource):
             return response
         except Exception as e:
             return make_response_data(success=False, message=f"Error generating group PDF: {str(e)}", status_code=500)
+
+
+class StockTrackingUnmovedPDFResource(Resource):
+    @role_required('storekeeper', 'ceo', 'seller', 'purchaser', 'driver', 'admin', 'it')
+    def get(self):
+        try:
+            # Get all records where date_out is None
+            records = StockTracking.query.filter(StockTracking.date_out.is_(None)).all()
+
+            if not records:
+                return make_response_data(success=False, message="No unmoved stock records found", status_code=404)
+
+            pdf_buffer = generate_unmoved_stock_pdf(records)
+            response = make_response(pdf_buffer.getvalue())
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = 'attachment; filename=stock_report_unmoved.pdf'
+
+            return response
+        except Exception as e:
+            return make_response_data(success=False, message=f"Error generating unmoved stock PDF: {str(e)}", status_code=500)
 
 
 class StockTrackingAggregatedResource(Resource):

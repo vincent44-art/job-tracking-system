@@ -127,7 +127,7 @@ const StockTrackingRecordsPage = () => {
                   </thead>
                   <tbody>
                     {records.length > 0 ? (
-                      records.map((rec, idx) => (
+                      records.sort((a, b) => new Date(b.dateIn) - new Date(a.dateIn)).map((rec, idx) => (
                         <React.Fragment key={rec.id || idx}>
                           <tr>
                             <td>{rec.stockName}</td>

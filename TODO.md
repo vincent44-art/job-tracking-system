@@ -1,17 +1,7 @@
-# TODO: Add Daily PDF Generation for Stock Tracking
+# TODO: Implement PDF for Unmoved Stocks
 
-## Backend Changes
-- [ ] Add new resource classes in stock_tracking.py for daily stock in and stock out PDFs
-- [ ] Create endpoints to generate PDFs for all stock in on a date and all stock out on a date
-- [ ] Implement PDF generation logic for daily stock entries and exits
-
-## Frontend Changes
-- [ ] Update stockTracking.js API to include calls for the new endpoints
-- [ ] Update StoreKeeperDashboard.jsx to include buttons for generating daily PDFs
-- [ ] Add date picker for selecting the date for PDF generation
-
-## Testing
-- [ ] Test PDF downloads for stock in and stock out
-- [ ] Ensure date selection works properly
-- [ ] Verify PDF content includes all relevant stock data for the day
- 
+## Tasks
+- [x] Add generate_unmoved_stock_pdf function in backend/resources/stock_tracking.py
+- [x] Add StockTrackingUnmovedPDFResource class in backend/resources/stock_tracking.py
+- [x] Register the new resource in backend/app.py at /api/stock-tracking/pdf/unmoved
+- [ ] Test the new endpoint to ensure PDF generation works

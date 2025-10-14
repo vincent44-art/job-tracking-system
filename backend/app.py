@@ -140,7 +140,7 @@ def create_app(config_class=Config):
     api.add_resource(ClearSalesResource, '/api/sales/clear')
     api.add_resource(CustomerDebtResource, '/api/sales/debts')
     from backend.resources.seller_fruits_bulk import SellerFruitBulkResource
-    from backend.resources.stock_tracking import StockTrackingAggregatedResource, StockTrackingListResource, ClearStockTrackingResource, StockTrackingPDFResource, StockTrackingGroupPDFResource
+    from backend.resources.stock_tracking import StockTrackingAggregatedResource, StockTrackingListResource, ClearStockTrackingResource, StockTrackingPDFResource, StockTrackingGroupPDFResource, StockTrackingUnmovedPDFResource
     api.add_resource(DailySalesReportResource, '/api/sales/report/<string:date_str>')
     api.add_resource(CustomerDebtReportResource, '/api/sales/debts/<string:customer_email>/report')
     api.add_resource(DailyPurchasesReportResource, '/api/purchases/report/<string:date_str>')
@@ -154,6 +154,7 @@ def create_app(config_class=Config):
     api.add_resource(ClearStockTrackingResource, '/api/stock-tracking/clear')
     api.add_resource(StockTrackingPDFResource, '/api/stock-tracking/pdf/<int:record_id>')
     api.add_resource(StockTrackingGroupPDFResource, '/api/stock-tracking/pdf/group')
+    api.add_resource(StockTrackingUnmovedPDFResource, '/api/stock-tracking/pdf/unmoved')
 
     # Health Check
     @app.route('/api/health')
