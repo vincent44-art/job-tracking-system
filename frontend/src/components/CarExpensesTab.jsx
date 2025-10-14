@@ -238,6 +238,7 @@ const CarExpensesTab = (props) => {
               <thead>
                 <tr>
                   <th>Type</th>
+                  <th>Description</th>
                   <th>Car Name</th>
                   <th>Car Number Plate</th>
                   <th>Stock Name</th>
@@ -252,6 +253,7 @@ const CarExpensesTab = (props) => {
                   filteredExpenses.map(exp => (
                     <tr key={exp.id}>
                       <td>{exp.type}</td>
+                      <td>{exp.description || '-'}</td>
                       <td>{exp.car_name || exp.carType || '-'}</td>
                       <td>{exp.car_number_plate || '-'}</td>
                       <td>{exp.stock_name || '-'}</td>
@@ -267,7 +269,7 @@ const CarExpensesTab = (props) => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="text-center py-4">
+                    <td colSpan="9" className="text-center py-4">
                       {expenses.length === 0 ? 'No car expenses found' : 'No matching expenses found'}
                     </td>
                   </tr>

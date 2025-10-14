@@ -104,6 +104,16 @@ const OtherExpensesTab = ({ token }) => {
     (expense.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Group expenses by date
+  const expensesByDate = filteredExpenses.reduce((groups, expense) => {
+    const date = expense.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(expense);
+    return groups;
+  }, {});
+
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -222,48 +232,53 @@ const OtherExpensesTab = ({ token }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredExpenses.length > 0 ? (
-                      filteredExpenses.map(expense => (
-                        <React.Fragment key={expense.id}>
-                          <tr>
-                            <td>{new Date(expense.date).toLocaleDateString()}</td>
-                            <td>{expense.expense_type}</td>
-                            <td>{expense.description}</td>
-                            <td className="fw-bold">{formatCurrency(expense.amount)}</td>
-                            <td>{expense.user_id}</td>
-                            <td>
-                              {expense.id ? (
-                                <button
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => handleDelete(expense.id)}
-                                  title="Delete expense"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              ) : (
-                                <span className="text-muted">N/A</span>
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
+                    {Object.keys(expensesByDate).length > 0 ? (
+                      Object.entries(expensesByDate).map(([date, dateExpenses]) => (
+                        <React.Fragment key={date}>
+                          {/* PDF Download Row for the Date */}
+                          <tr className="table-info">
                             <td colSpan="6" className="text-center py-2">
+                              <strong>{new Date(date).toLocaleDateString()}</strong>
                               <a
-                                href={`/api/other-expenses/pdf?date=${encodeURIComponent(expense.date)}`}
+                                href={`/api/other-expenses/pdf?date=${encodeURIComponent(date)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn btn-sm btn-outline-primary"
+                                className="btn btn-sm btn-outline-primary ms-3"
                               >
-                                View PDF for {new Date(expense.date).toLocaleDateString()}
+                                Download PDF for {new Date(date).toLocaleDateString()}
                               </a>
                             </td>
                           </tr>
+                          {/* Individual Expense Rows */}
+                          {dateExpenses.map(expense => (
+                            <tr key={expense.id}>
+                              <td>{new Date(expense.date).toLocaleDateString()}</td>
+                              <td>{expense.expense_type}</td>
+                              <td>{expense.description}</td>
+                              <td className="fw-bold">{formatCurrency(expense.amount)}</td>
+                              <td>{expense.user_id}</td>
+                              <td>
+                                {expense.id ? (
+                                  <button
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => handleDelete(expense.id)}
+                                    title="Delete expense"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                ) : (
+                                  <span className="text-muted">N/A</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
                         </React.Fragment>
                       ))
                     ) : (
               <tr>
                 <td colSpan="6" className="text-center py-4">
-                  {expenses.length === 0 
-                    ? 'No expenses recorded yet' 
+                  {expenses.length === 0
+                    ? 'No expenses recorded yet'
                     : 'No matching expenses found'}
                 </td>
               </tr>
