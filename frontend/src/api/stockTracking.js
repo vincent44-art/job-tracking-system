@@ -98,3 +98,29 @@ export const fetchStockTrackingAggregated = async (token) => {
     throw error;
   }
 };
+
+export const fetchSales = async (token) => {
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+
+  try {
+    const response = await fetch('/api/sales', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch sales data');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Sales fetch error:', error);
+    throw error;
+  }
+};

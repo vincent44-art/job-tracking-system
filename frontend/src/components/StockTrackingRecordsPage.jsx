@@ -66,6 +66,34 @@ const StockTrackingRecordsPage = () => {
     }
   };
 
+  const handleDownloadCombinedPDF = async (date) => {
+    try {
+      const response = await fetch(`/api/stock-tracking/pdf/combined?date=${date}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download combined PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_combined_${date}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Combined PDF download error:', error);
+      alert('Failed to download combined PDF. Please try again.');
+    }
+  };
+
   useEffect(() => {
     fetchStockTracking(token)
       .then((data) => {
@@ -163,10 +191,16 @@ const StockTrackingRecordsPage = () => {
                                   {rec.dateIn} In
                                 </button>
                                 <button
-                                  className="btn btn-sm btn-warning"
+                                  className="btn btn-sm btn-warning me-2"
                                   onClick={() => handleDownloadGroupPDF(rec.dateOut, 'out')}
                                 >
                                   {rec.dateOut} Out
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-info"
+                                  onClick={() => handleDownloadCombinedPDF(rec.dateOut || rec.dateIn)}
+                                >
+                                  Combined PDF
                                 </button>
                               </td>
                             </tr>

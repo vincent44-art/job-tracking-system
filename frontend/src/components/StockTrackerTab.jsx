@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchStockTracking, fetchStockTrackingAggregated } from '../api/stockTracking';
+import api from '../api/api';
+import { fetchStockTracking, fetchStockTrackingAggregated, fetchSales } from '../api/stockTracking';
 
 const StockTrackerTab = () => {
   const [data, setData] = useState({
@@ -11,7 +12,8 @@ const StockTrackerTab = () => {
     otherExpenses: [],
     stockTracking: [],
     stockExpenses: [],
-    fruitProfitability: []
+    fruitProfitability: [],
+    salesData: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,70 +30,9 @@ const StockTrackerTab = () => {
     navigate('/stock-tracking-records', { state: { filterStock: stockName } });
   };
 
-  const handleDownloadPDF = async (recordId) => {
-    try {
-      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      const response = await fetch(`/api/stock-tracking/pdf/${recordId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to download PDF');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `stock_report_${recordId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('PDF download error:', error);
-      alert('Failed to download PDF. Please try again.');
-    }
-  };
-
-  const handleDownloadGroupPDF = async (date, type) => {
-    try {
-      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      const response = await fetch(`/api/stock-tracking/pdf/group?date=${date}&type=${type}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to download group PDF');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `stock_report_${type}_${date}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Group PDF download error:', error);
-      alert('Failed to download group PDF. Please try again.');
-    }
+  const handleViewProfitLoss = (stock) => {
+    setSelectedStock(stock);
+    setShowProfitLossModal(true);
   };
 
   const closeModal = () => {
@@ -99,26 +40,31 @@ const StockTrackerTab = () => {
     setSelectedStock(null);
   };
 
-  const loadData = useCallback(async () => {
+  const loadData = async () => {
     try {
       const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-
+      
       if (!token) {
         throw new Error('Authentication token not found');
       }
 
       const [
         stockTrackingRes,
-        aggregatedRes
+        aggregatedRes,
+        salesRes
       ] = await Promise.all([
         fetchStockTracking(token),
-        fetchStockTrackingAggregated(token)
+        fetchStockTrackingAggregated(token),
+        fetchSales(token)
       ]);
+
+      console.log('Fetched sales data:', salesRes.data);
 
       setData(prevData => ({
         ...prevData,
         stockTracking: stockTrackingRes.data || [],
-        stockExpenses: aggregatedRes.data || []
+        stockExpenses: aggregatedRes.data || [],
+        salesData: salesRes.data || []
       }));
     } catch (err) {
       console.error('Failed to load stock tracker data:', err);
@@ -130,18 +76,18 @@ const StockTrackerTab = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  };
 
   // Initial load
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, []);
 
   // Set up polling for real-time updates
   useEffect(() => {
     const interval = setInterval(loadData, 3000); // Poll every 3 seconds
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, []);
 
   if (loading) {
     return (
@@ -168,7 +114,76 @@ const StockTrackerTab = () => {
   }
 
   const stockTrackingArr = Array.isArray(data.stockTracking) ? data.stockTracking : [];
-  
+  const stockExpensesArr = Array.isArray(data.stockExpenses) ? data.stockExpenses : [];
+  const salesArr = Array.isArray(data.salesData) ? data.salesData : [];
+
+  // Create a map of stock_name to actual sales revenue
+  const salesRevenueMap = {};
+  salesArr.forEach(sale => {
+    if (sale.stock_name) {
+      if (!salesRevenueMap[sale.stock_name]) {
+
+      }
+      salesRevenueMap[sale.stock_name] += sale.amount || 0;
+    }
+  });
+
+  console.log('Sales revenue map:', salesRevenueMap);
+  // Group stocks by dateOut (only those with dateOut)
+  const groupedStocks = stockTrackingArr
+    .filter(stock => stock.dateOut) // Only stocks that have come out
+    .reduce((groups, stock) => {
+      const dateKey = stock.dateOut;
+      if (!groups[dateKey]) {
+        groups[dateKey] = {
+          dateOut: stock.dateOut,
+          stockNames: new Set(),
+          totalPurchased: 0,
+          totalSold: 0,
+          stocks: []
+        };
+      }
+      groups[dateKey].stockNames.add(stock.stockName);
+      groups[dateKey].totalPurchased += stock.totalAmount;
+      groups[dateKey].totalSold += salesRevenueMap[stock.stockName] || 0;
+      groups[dateKey].stocks.push(stock);
+      return groups;
+    }, {});
+
+  // Convert to array and sort by date descending, take first 5
+  const groupedStocksArray = Object.values(groupedStocks)
+    .sort((a, b) => new Date(b.dateOut) - new Date(a.dateOut))
+    .slice(0, 5);
+
+  const handleDownloadCombinedPDF = async (date) => {
+    try {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      const response = await fetch(`/api/stock-tracking/pdf/combined?date=${date}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download combined PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_combined_${date}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Combined PDF download error:', error);
+      alert('Failed to download combined PDF. Please try again.');
+    }
+  };
+
   return (
     <div className="container-fluid py-4">
       {/* Stock Tracking Overview */}
@@ -177,8 +192,8 @@ const StockTrackerTab = () => {
           <div className="card">
             <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Stock Tracking Overview</h5>
-              <button 
-                className="btn btn-light btn-sm" 
+              <button
+                className="btn btn-light btn-sm"
                 onClick={goToStockTrackingRecords}
               >
                 View All Records
@@ -189,70 +204,30 @@ const StockTrackerTab = () => {
                 <table className="table table-hover">
                   <thead>
                     <tr>
-                      <th>Stock Name</th>
-                      <th>Date In</th>
-                      <th>Purchase Amount</th>
-                      <th>Revenue</th>
+                      <th>Stock Names</th>
                       <th>Date Out</th>
-                      <th>Profit/Loss</th>
-                      <th>PDF</th>
+                      <th>Total Amount Purchased</th>
+                      <th>Total Amount Sold</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(() => {
-                      // Group stocks by dateIn
-                      const groupedStocks = stockTrackingArr.slice(0, 10).reduce((groups, stock) => {
-                        const dateKey = stock.dateIn;
-                        if (!groups[dateKey]) {
-                          groups[dateKey] = [];
-                        }
-                        groups[dateKey].push(stock);
-                        return groups;
-                      }, {});
-
-                      // Sort dates descending
-                      const sortedDates = Object.keys(groupedStocks).sort((a, b) => new Date(b) - new Date(a));
-
-                      return sortedDates.map((dateKey) => {
-                        const stocksForDate = groupedStocks[dateKey];
-                        const stockNames = [...new Set(stocksForDate.map(stock => stock.stockName))].join(', ');
-                        const totalPurchaseAmount = stocksForDate.reduce((sum, stock) => sum + stock.totalAmount, 0);
-                        const totalSoldAmount = stocksForDate.reduce((sum, stock) => sum + (stock.quantityOut ? stock.quantityOut * stock.amountPerKg : 0), 0);
-                        const totalProfitLoss = stocksForDate.reduce((sum, stock) => {
-                          const soldAmount = stock.quantityOut ? stock.quantityOut * stock.amountPerKg : 0;
-                          const profitLoss = stock.dateOut ? soldAmount - (stock.totalStockCost || 0) : -(stock.totalStockCost || 0);
-                          return sum + profitLoss;
-                        }, 0);
-                        const hasDateOut = stocksForDate.some(stock => stock.dateOut);
-                        const latestDateOut = stocksForDate.filter(stock => stock.dateOut).sort((a, b) => new Date(b.dateOut) - new Date(a.dateOut))[0]?.dateOut;
-
-                        const isProfit = totalProfitLoss > 0;
-                        const isLoss = totalProfitLoss < 0;
-
-                        return (
-                          <tr key={dateKey}>
-                            <td>{stockNames}</td>
-                            <td>{new Date(dateKey).toLocaleDateString()}</td>
-                            <td>KES {totalPurchaseAmount.toFixed(2)}</td>
-                            <td>{totalSoldAmount > 0 ? `KES ${totalSoldAmount.toFixed(2)}` : 'KES 0.00'}</td>
-                            <td>{latestDateOut ? new Date(latestDateOut).toLocaleDateString() : '-'}</td>
-                            <td>
-                              <span className={isProfit ? 'text-success fw-bold' : isLoss ? 'text-danger fw-bold' : ''}>
-                                {totalProfitLoss !== 0 ? `${isProfit ? '+' : ''}KES ${totalProfitLoss.toFixed(2)}` : 'KES 0.00'}
-                              </span>
-                            </td>
-                            <td>
-                              <button
-                                className="btn btn-sm btn-warning"
-                                onClick={() => handleDownloadGroupPDF(dateKey, 'in')}
-                              >
-                                PDF
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      });
-                    })()}
+                    {groupedStocksArray.map((group) => (
+                      <tr key={group.dateOut}>
+                        <td>{Array.from(group.stockNames).join(', ')}</td>
+                        <td>{new Date(group.dateOut).toLocaleDateString()}</td>
+                        <td>KES {group.totalPurchased.toFixed(2)}</td>
+                        <td>KES {group.totalSold.toFixed(2)}</td>
+                        <td>
+                          <button
+                            className="btn btn-sm btn-success"
+                            onClick={() => handleDownloadCombinedPDF(group.dateOut)}
+                          >
+                            Download PDF
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

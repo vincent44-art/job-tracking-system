@@ -370,7 +370,7 @@ def generate_stock_pdf_group(records, date, type_):
         sales_records = Sale.query.filter(Sale.stock_name.in_(stock_names)).order_by(Sale.date.desc()).all()
 
         if sales_records:
-            sales_headers = ['Date', 'Fruit Name', 'Quantity', 'Amount', 'Customer Email']
+            sales_headers = ['Date', 'Fruit Name', 'Quantity', 'Amount']
             sales_table_data = [sales_headers]
 
             for sale in sales_records:
@@ -378,11 +378,10 @@ def generate_stock_pdf_group(records, date, type_):
                     sale.date.strftime('%Y-%m-%d') if sale.date else 'N/A',
                     sale.fruit_name,
                     f"{sale.qty}",
-                    f"KES {sale.amount:.2f}",
-                    sale.customer_email or 'N/A'
+                    f"KES {sale.amount:.2f}"
                 ])
 
-            sales_table = Table(sales_table_data, colWidths=[1.2*inch, 1.5*inch, 1*inch, 1.2*inch, 2*inch])
+            sales_table = Table(sales_table_data, colWidths=[1.2*inch, 1.5*inch, 1*inch, 1.2*inch])
             sales_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
@@ -582,6 +581,215 @@ class StockTrackingUnmovedPDFResource(Resource):
             return make_response_data(success=False, message=f"Error generating unmoved stock PDF: {str(e)}", status_code=500)
 
 
+def generate_stock_pdf_combined(date):
+    """Generate PDF for both in and out stock tracking records for a specific date"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1,  # Center alignment
+    )
+
+    section_style = ParagraphStyle(
+        'SectionHeader',
+        parent=styles['Heading2'],
+        fontSize=12,
+        spaceAfter=10,
+        textColor=colors.darkblue,
+    )
+
+    content_style = styles['Normal']
+
+    # Build PDF content
+    elements = []
+
+    # Title
+    elements.append(Paragraph(f"Stock Tracking Report - Combined In/Out - {date}", title_style))
+    elements.append(Spacer(1, 12))
+
+    # Get stocks in and out for the date
+    stocks_in = StockTracking.query.filter(StockTracking.date_in == date, StockTracking.date_out.is_(None)).all()
+    stocks_out = StockTracking.query.filter(StockTracking.date_out == date).all()
+
+    # Overall Summary Section
+    elements.append(Paragraph("Overall Summary", section_style))
+    elements.append(Spacer(1, 6))
+
+    total_in_quantity = sum(r.quantity_in for r in stocks_in)
+    total_in_amount = sum(r.total_amount for r in stocks_in)
+    total_out_quantity = sum(r.quantity_out or 0 for r in stocks_out)
+    total_out_revenue = sum((r.quantity_out or 0) * r.amount_per_kg for r in stocks_out)
+
+    overall_data = [
+        ['Total Stocks In', str(len(stocks_in))],
+        ['Total Quantity In', f"{total_in_quantity} units"],
+        ['Total Amount In', f"KES {total_in_amount:.2f}"],
+        ['Total Stocks Out', str(len(stocks_out))],
+        ['Total Quantity Out', f"{total_out_quantity} units"],
+        ['Total Revenue Out', f"KES {total_out_revenue:.2f}"],
+    ]
+
+    overall_table = Table(overall_data, colWidths=[2*inch, 2.5*inch])
+    overall_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(overall_table)
+    elements.append(Spacer(1, 20))
+
+    # Stocks In Section
+    if stocks_in:
+        elements.append(Paragraph("Stocks In", section_style))
+        elements.append(Spacer(1, 6))
+
+        in_headers = ['Stock Name', 'Fruit Type', 'Quantity In', 'Amount per Kg', 'Total Amount', 'Other Charges']
+        in_table_data = [in_headers]
+
+        for record in stocks_in:
+            row = [
+                record.stock_name,
+                record.fruit_type,
+                f"{record.quantity_in}",
+                f"KES {record.amount_per_kg:.2f}",
+                f"KES {record.total_amount:.2f}",
+                f"KES {record.other_charges:.2f}",
+            ]
+            in_table_data.append(row)
+
+        in_table = Table(in_table_data, colWidths=[1.2*inch, 1.2*inch, 1*inch, 1.2*inch, 1.2*inch, 1.2*inch])
+        in_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(in_table)
+        elements.append(Spacer(1, 20))
+
+    # Stocks Out Section
+    if stocks_out:
+        elements.append(Paragraph("Stocks Out", section_style))
+        elements.append(Spacer(1, 6))
+
+        out_headers = ['Stock Name', 'Fruit Type', 'Quantity Out', 'Amount per Kg', 'Revenue', 'Gradient Used', 'Gradient Cost', 'Spoilage', 'Date Out']
+        out_table_data = [out_headers]
+
+        for record in stocks_out:
+            revenue = (record.quantity_out or 0) * record.amount_per_kg
+            row = [
+                record.stock_name,
+                record.fruit_type,
+                f"{record.quantity_out or 0}",
+                f"KES {record.amount_per_kg:.2f}",
+                f"KES {revenue:.2f}",
+                record.gradient_used or 'N/A',
+                f"KES {record.total_gradient_cost or 0:.2f}",
+                f"{record.spoilage or 0} units",
+                record.date_out.strftime('%Y-%m-%d') if record.date_out else 'N/A',
+            ]
+            out_table_data.append(row)
+
+        out_table = Table(out_table_data, colWidths=[1*inch, 1*inch, 0.8*inch, 1*inch, 1*inch, 1*inch, 1*inch, 0.8*inch, 1*inch])
+        out_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(out_table)
+        elements.append(Spacer(1, 20))
+
+        # Sales Records for Stocks Out
+        elements.append(Paragraph("Sales Records for Stocks Out", section_style))
+        elements.append(Spacer(1, 6))
+
+        # Get all sales for the stock names in the out stocks
+        stock_names = [r.stock_name for r in stocks_out]
+        sales_records = Sale.query.filter(Sale.stock_name.in_(stock_names)).order_by(Sale.date.desc()).all()
+
+        if sales_records:
+            sales_headers = ['Date', 'Fruit Name', 'Quantity', 'Amount']
+            sales_table_data = [sales_headers]
+
+            for sale in sales_records:
+                sales_table_data.append([
+                    sale.date.strftime('%Y-%m-%d') if sale.date else 'N/A',
+                    sale.fruit_name,
+                    f"{sale.qty}",
+                    f"KES {sale.amount:.2f}"
+                ])
+
+            sales_table = Table(sales_table_data, colWidths=[1.2*inch, 1.5*inch, 1*inch, 1.2*inch])
+            sales_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightyellow),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elements.append(sales_table)
+        else:
+            elements.append(Paragraph("No sales records found for the stocks out on this date.", styles['Italic']))
+
+    # Footer
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph("Generated on: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S'), styles['Italic']))
+
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+class StockTrackingCombinedPDFResource(Resource):
+    @role_required('storekeeper', 'ceo', 'seller', 'purchaser', 'driver', 'admin', 'it')
+    def get(self):
+        try:
+            date = request.args.get('date')
+
+            if not date:
+                return make_response_data(success=False, message="Date parameter is required", status_code=400)
+
+            # Check if there are any stocks in or out on this date
+            stocks_in = StockTracking.query.filter(StockTracking.date_in == date, StockTracking.date_out.is_(None)).all()
+            stocks_out = StockTracking.query.filter(StockTracking.date_out == date).all()
+
+            if not stocks_in and not stocks_out:
+                return make_response_data(success=False, message="No stock records found for the specified date", status_code=404)
+
+            pdf_buffer = generate_stock_pdf_combined(date)
+            response = make_response(pdf_buffer.getvalue())
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'attachment; filename=stock_report_combined_{date}.pdf'
+
+            return response
+        except Exception as e:
+            return make_response_data(success=False, message=f"Error generating combined PDF: {str(e)}", status_code=500)
+
+
 class StockTrackingAggregatedResource(Resource):
     @role_required('storekeeper', 'ceo', 'seller', 'purchaser', 'driver', 'admin', 'it')
     def get(self):
@@ -657,14 +865,14 @@ class StockTrackingAggregatedResource(Resource):
                         logger.warning(f"Error calculating other expenses for stock {stock_name}: {str(e)}")
                         other_expenses = 0
 
-                    # Calculate revenue and quantity sold from sales (sum for fruit_type from date_start to now)
+                    # Calculate revenue and quantity sold from sales (sum for stock_name from date_start to now)
                     revenue = 0
                     quantity_sold = 0
                     try:
                         date_start = earliest_date_in or datetime.now().date() - timedelta(days=365)
                         date_end = datetime.now().date()  # Include all sales up to current date
                         sales_query = Sale.query.filter(
-                            Sale.fruit_name == fruit_type,
+                            Sale.stock_name == stock_name,
                             Sale.date >= date_start,
                             Sale.date <= date_end
                         )

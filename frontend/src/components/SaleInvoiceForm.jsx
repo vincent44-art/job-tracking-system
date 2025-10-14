@@ -4,13 +4,16 @@ import { createSale } from './apiHelpers';
 import { fetchStockTracking } from '../api/stockTracking';
 
 function generateReceiptNumber() {
-  // TTL yyyyMMdd-NNNN random receipt num
+  // Generate unique receipt number: yyyyMMdd-HHMMSS-NNN
   const now = new Date();
-  const base = now.getFullYear().toString() +
+  const datePart = now.getFullYear().toString() +
     String(now.getMonth() + 1).padStart(2, '0') +
     String(now.getDate()).padStart(2, '0');
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `${base}-${random}`;
+  const timePart = String(now.getHours()).padStart(2, '0') +
+    String(now.getMinutes()).padStart(2, '0') +
+    String(now.getSeconds()).padStart(2, '0');
+  const random = Math.floor(100 + Math.random() * 900); // 3-digit random number
+  return `${datePart}-${timePart}-${random}`;
 }
 
 const initialItem = { fruit: '', description: '', quantity: '', unitPrice: '', total: 0 };
@@ -43,8 +46,12 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
         const token = localStorage.getItem('access_token');
         if (token) {
           const stockRes = await fetchStockTracking(token);
-          const outRecords = Array.isArray(stockRes.data) ? stockRes.data.filter(r => r.dateOut) : [];
-          setStockRecords(outRecords);
+          // Show all stocks that have been marked as out (sold), regardless of remaining quantity
+          // This allows associating invoices with stocks that have been sold
+          const availableRecords = Array.isArray(stockRes.data) ? stockRes.data.filter(r =>
+            r.dateOut // Include all stocks that have been sold (have dateOut)
+          ) : [];
+          setStockRecords(availableRecords);
         }
       } catch (err) {
         console.error('Error loading stock records:', err);

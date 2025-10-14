@@ -10,6 +10,8 @@ const initialStockIn = {
   dateIn: '',
   fruitType: '',
   quantityIn: '',
+  amountPerKg: '',
+  totalAmount: '',
 };
 
 const initialStockOut = {
@@ -112,6 +114,14 @@ const StoreKeeperDashboard = () => {
     setStockOut((prev) => ({ ...prev, totalGradientCost: totalGradientCost ? totalGradientCost.toFixed(2) : '' }));
   }, [stockOut.gradientAmountUsed, stockOut.gradientCostPerUnit]);
 
+  // Auto-calculate totalAmount for Stock In
+  useEffect(() => {
+    const quantity = parseFloat(stockIn.quantityIn || 0);
+    const amountPerKg = parseFloat(stockIn.amountPerKg || 0);
+    const total = quantity * amountPerKg;
+    setStockIn((prev) => ({ ...prev, totalAmount: total ? total.toFixed(2) : '' }));
+  }, [stockIn.quantityIn, stockIn.amountPerKg]);
+
   // Auto-calculate spoilage: spoilage = quantityIn - quantityOut
   useEffect(() => {
     if (stockOut.stockInId && stockOut.quantityOut !== '') {
@@ -164,7 +174,7 @@ const StoreKeeperDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('access_token');
-      const record = { ...stockIn, amountPerKg: 0, totalAmount: 0 };
+      const record = { ...stockIn };
       const res = await addStockTracking(record, token);
       setRecords((prev) => ([...(Array.isArray(prev) ? prev : []), res.data]));
       setStockIn(initialStockIn);
@@ -229,6 +239,14 @@ const StoreKeeperDashboard = () => {
                 <div className="mb-3">
                   <label className="form-label">Quantity In (Kg)</label>
                   <input type="number" className="form-control" name="quantityIn" value={stockIn.quantityIn} onChange={handleStockInChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Amount per Kg</label>
+                  <input type="number" className="form-control" name="amountPerKg" value={stockIn.amountPerKg} onChange={handleStockInChange} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Total Amount</label>
+                  <input type="number" className="form-control" name="totalAmount" value={stockIn.totalAmount} readOnly />
                 </div>
 
                 <button type="submit" className="btn btn-success w-100">Submit Stock In</button>
@@ -316,7 +334,8 @@ const StoreKeeperDashboard = () => {
                       <th>Date In</th>
                       <th>Fruit Type</th>
                       <th>Quantity In</th>
-
+                      <th>Amount per Kg</th>
+                      <th>Total Amount</th>
                       <th>Duration</th>
                       <th>Gradient Used</th>
                       <th>Gradient Amount Used</th>
@@ -336,7 +355,8 @@ const StoreKeeperDashboard = () => {
                         <td>{rec.dateIn}</td>
                         <td>{rec.fruitType}</td>
                         <td>{rec.quantityIn}</td>
-
+                        <td>{rec.amountPerKg}</td>
+                        <td>{rec.totalAmount}</td>
                         <td>{rec.duration}</td>
                         <td>{rec.gradientUsed}</td>
                         <td>{rec.gradientAmountUsed}</td>
@@ -349,7 +369,7 @@ const StoreKeeperDashboard = () => {
                       </tr>
                       {rec.dateOut && (
                         <tr>
-                          <td colSpan="13" className="text-center">
+                          <td colSpan="15" className="text-center">
                             <button
                               className="btn btn-sm btn-success me-2"
                               onClick={() => handleDownloadPDF(rec.id)}
@@ -374,7 +394,7 @@ const StoreKeeperDashboard = () => {
                     </React.Fragment>
                   ))}
                   {records.length === 0 && (
-                    <tr><td colSpan="13" className="text-center text-muted">No records yet</td></tr>
+                    <tr><td colSpan="15" className="text-center text-muted">No records yet</td></tr>
                   )}
                 </tbody>
               </table>

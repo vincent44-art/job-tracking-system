@@ -6,7 +6,7 @@ import { fetchOtherExpenses, createOtherExpense, deleteOtherExpense } from './ap
 
 
 const OtherExpensesTab = ({ token }) => {
-  const { token: authToken } = useAuth();
+  const { token: authToken, user } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,7 +21,7 @@ const OtherExpensesTab = ({ token }) => {
   // Fetch expenses on component mount
   useEffect(() => {
     const loadExpenses = async () => {
-      if (!authToken) {
+      if (!user) {
         setLoading(false);
         return;
       }
@@ -47,7 +47,7 @@ const OtherExpensesTab = ({ token }) => {
       }
     };
     loadExpenses();
-  }, [authToken]);
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,12 +61,8 @@ const OtherExpensesTab = ({ token }) => {
       
       const response = await createOtherExpense(newExpense, authToken);
       // Support both axios and fetch API response shapes for create
-      let createdExpense = response?.data;
-      if (!createdExpense && response?.data?.data) {
-        createdExpense = response.data.data;
-      }
-      // Defensive: filter out undefined/null
-      setExpenses([...expenses.filter(e => e), createdExpense].filter(e => e));
+      let createdExpense = response?.data?.data || response?.data;
+      setExpenses(prev => [...prev, createdExpense]);
       
       // Reset form
       setFormData({
