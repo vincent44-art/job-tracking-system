@@ -10,8 +10,8 @@ def clear_all_data():
         # Get all table names
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = [row[0] for row in cursor.fetchall()]
-        # Exclude sqlite internal tables
-        tables = [t for t in tables if not t.startswith('sqlite_')]
+        # Exclude sqlite internal tables and user table
+        tables = [t for t in tables if not t.startswith('sqlite_') and t != 'user']
         print(f"Tables found: {tables}")
         for table in tables:
             cursor.execute(f"DELETE FROM {table}")
