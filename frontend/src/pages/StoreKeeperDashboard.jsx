@@ -193,15 +193,22 @@ const StoreKeeperDashboard = () => {
       const totalStockCost = getTotalStockCost(
         stockOut.totalGradientCost
       );
-      // Merge Stock In and Stock Out data
+      // Prepare data for updating the existing record
       const record = {
-        ...stockInRecord,
-        ...stockOut,
+        stockInId: stockOut.stockInId, // Include stockInId to indicate update
+        dateOut: stockOut.dateOut,
         duration,
+        gradientUsed: stockOut.gradientUsed,
+        gradientAmountUsed: stockOut.gradientAmountUsed,
+        gradientCostPerUnit: stockOut.gradientCostPerUnit,
+        totalGradientCost: stockOut.totalGradientCost,
+        quantityOut: stockOut.quantityOut,
+        spoilage: stockOut.spoilage,
         totalStockCost,
       };
       const res = await addStockTracking(record, token);
-      setRecords((prev) => ([...(Array.isArray(prev) ? prev : []), res.data]));
+      // Update the records state with the updated record
+      setRecords((prev) => prev.map(r => r.id === res.data.id ? res.data : r));
       setStockOut(initialStockOut);
     } catch (e) {}
   };

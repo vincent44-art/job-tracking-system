@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import { createSale } from './apiHelpers';
-import { fetchStockTracking } from '../api/stockTracking';
+import { fetchStockTracking, fetchSales } from '../api/stockTracking';
 
 function generateReceiptNumber() {
   // Generate unique receipt number: yyyyMMdd-HHMMSS-NNN
@@ -46,11 +46,22 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
         const token = localStorage.getItem('access_token');
         if (token) {
           const stockRes = await fetchStockTracking(token);
-          // Show all stocks that have been marked as out (sold), regardless of remaining quantity
-          // This allows associating invoices with stocks that have been sold
-          const availableRecords = Array.isArray(stockRes.data) ? stockRes.data.filter(r =>
-            r.dateOut // Include all stocks that have been sold (have dateOut)
+          const salesRes = await fetchSales(token);
+
+          // Get stocks that have been sold (have dateOut) and are named "stock 1" or "stock 2"
+          const soldStocks = Array.isArray(stockRes.data) ? stockRes.data.filter(r =>
+            r.dateOut && (r.stockName === 'stock 1' || r.stockName === 'stock 2')
           ) : [];
+
+          // Get stock names that have already been used in sales
+          const usedStockNames = Array.isArray(salesRes.data) ?
+            [...new Set(salesRes.data.map(sale => sale.stock_name))] : [];
+
+          // Filter out stocks that have already been used in sales
+          const availableRecords = soldStocks.filter(stock =>
+            !usedStockNames.includes(stock.stockName)
+          );
+
           setStockRecords(availableRecords);
         }
       } catch (err) {
@@ -494,27 +505,30 @@ export default function SaleInvoiceForm({ onSellerFruitsAdded }) {
           </option>
         ))}
       </select>
-      <select
+      <input
+        type="text"
         className="form-control mb-2"
         value={customerName}
         onChange={(e) => setCustomerName(e.target.value)}
-      >
-        <option value="">Select Customer</option>
-        <option value="Beyond">Beyond</option>
-        <option value="Carrefour Supermarket">Carrefour Supermarket</option>
-        <option value="Chebet">Chebet</option>
-        <option value="Cilantro">Cilantro</option>
-        <option value="Cornershop">Cornershop</option>
-        <option value="Edith">Edith</option>
-        <option value="Fresh and Juice">Fresh and Juice</option>
-        <option value="Fruity Fruit">Fruity Fruit</option>
-        <option value="Jam">Jam</option>
-        <option value="Jarine Investment">Jarine Investment</option>
-        <option value="Johanna">Johanna</option>
-        <option value="Kalimoni">Kalimoni</option>
-        <option value="Parakash Juice">Parakash Juice</option>
-        <option value="Zucchini supermarket">Zucchini supermarket</option>
-      </select>
+        list="customer-options"
+        placeholder="Enter or select customer name"
+      />
+      <datalist id="customer-options">
+        <option value="Beyond" />
+        <option value="Carrefour Supermarket" />
+        <option value="Chebet" />
+        <option value="Cilantro" />
+        <option value="Cornershop" />
+        <option value="Edith" />
+        <option value="Fresh and Juice" />
+        <option value="Fruity Fruit" />
+        <option value="Jam" />
+        <option value="Jarine Investment" />
+        <option value="Johanna" />
+        <option value="Kalimoni" />
+        <option value="Parakash Juice" />
+        <option value="Zucchini supermarket" />
+      </datalist>
       <button
         className="btn btn-primary btn-sm me-2"
         onClick={handleSaveToTable}

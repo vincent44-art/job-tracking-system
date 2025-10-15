@@ -32,7 +32,16 @@ export const addStockTracking = async (data, token) => {
   }
 
   // Validate required fields based on backend model
-  const requiredFields = ['stockName', 'dateIn', 'fruitType', 'quantityIn'];
+  // For stock out (update), stockInId is required; for stock in (create), stockName, dateIn, fruitType, quantityIn are required
+  let requiredFields;
+  if (data.stockInId) {
+    // Stock out - updating existing record
+    requiredFields = ['stockInId', 'dateOut'];
+  } else {
+    // Stock in - creating new record
+    requiredFields = ['stockName', 'dateIn', 'fruitType', 'quantityIn'];
+  }
+
   const missingFields = requiredFields.filter(field => !data[field]);
 
   if (missingFields.length > 0) {
@@ -51,12 +60,12 @@ export const addStockTracking = async (data, token) => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to create stock tracking record');
+      throw new Error(error.message || 'Failed to create/update stock tracking record');
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Stock tracking creation error:', error);
+    console.error('Stock tracking creation/update error:', error);
     throw error;
   }
 };

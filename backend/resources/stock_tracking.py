@@ -20,12 +20,13 @@ import io
 import logging
 
 parser = reqparse.RequestParser()
-parser.add_argument('stockName', type=str, required=True)
-parser.add_argument('dateIn', type=str, required=True)
-parser.add_argument('fruitType', type=str, required=True)
-parser.add_argument('quantityIn', type=float, required=True)
-parser.add_argument('amountPerKg', type=float, required=False, default=0)
-parser.add_argument('totalAmount', type=float, required=False, default=0)
+parser.add_argument('stockInId', type=str)  # For stock out updates
+parser.add_argument('stockName', type=str)
+parser.add_argument('dateIn', type=str)
+parser.add_argument('fruitType', type=str)
+parser.add_argument('quantityIn', type=float)
+parser.add_argument('amountPerKg', type=float, default=0)
+parser.add_argument('totalAmount', type=float, default=0)
 parser.add_argument('otherCharges', type=float, default=0)
 parser.add_argument('dateOut', type=str)
 parser.add_argument('duration', type=int)
@@ -52,48 +53,78 @@ class StockTrackingListResource(Resource):
     def post(self):
         data = parser.parse_args()
         try:
-            # Automatically set date_in to today if not provided or invalid
-            if not data.get('dateIn'):
-                date_in = datetime.now().date()
-            else:
-                try:
-                    date_in = datetime.strptime(data['dateIn'], '%Y-%m-%d').date()
-                except ValueError:
-                    date_in = datetime.now().date()
+            # Check if this is an update (stock out) by presence of stockInId
+            if data.get('stockInId'):
+                # Update existing record for stock out
+                record_id = int(data['stockInId'])
+                record = StockTracking.query.get_or_404(record_id)
 
-            # Automatically set date_out to None if not provided or invalid
-            if not data.get('dateOut'):
-                date_out = None
+                # Automatically set date_out if not provided or invalid
+                if not data.get('dateOut'):
+                    date_out = datetime.now().date()
+                else:
+                    try:
+                        date_out = datetime.strptime(data['dateOut'], '%Y-%m-%d').date()
+                    except ValueError:
+                        date_out = datetime.now().date()
+
+                # Update the record with stock out data
+                record.date_out = date_out
+                record.duration = data.get('duration')
+                record.gradient_used = data.get('gradientUsed')
+                record.gradient_amount_used = data.get('gradientAmountUsed')
+                record.gradient_cost_per_unit = data.get('gradientCostPerUnit')
+                record.total_gradient_cost = data.get('totalGradientCost')
+                record.quantity_out = data.get('quantityOut')
+                record.spoilage = data.get('spoilage')
+                record.total_stock_cost = data.get('totalStockCost')
+
+                db.session.commit()
+                return make_response_data(data=record.to_dict(), message="Stock tracking record updated for stock out.", status_code=200)
             else:
-                try:
-                    date_out = datetime.strptime(data['dateOut'], '%Y-%m-%d').date()
-                except ValueError:
+                # Create new record for stock in
+                # Automatically set date_in to today if not provided or invalid
+                if not data.get('dateIn'):
+                    date_in = datetime.now().date()
+                else:
+                    try:
+                        date_in = datetime.strptime(data['dateIn'], '%Y-%m-%d').date()
+                    except ValueError:
+                        date_in = datetime.now().date()
+
+                # Automatically set date_out to None if not provided or invalid
+                if not data.get('dateOut'):
                     date_out = None
+                else:
+                    try:
+                        date_out = datetime.strptime(data['dateOut'], '%Y-%m-%d').date()
+                    except ValueError:
+                        date_out = None
+
+                record = StockTracking(
+                    stock_name=data['stockName'],
+                    date_in=date_in,
+                    fruit_type=data['fruitType'],
+                    quantity_in=data['quantityIn'],
+                    amount_per_kg=data['amountPerKg'],
+                    total_amount=data['totalAmount'],
+                    other_charges=data.get('otherCharges', 0),
+                    date_out=date_out,
+                    duration=data.get('duration'),
+                    gradient_used=data.get('gradientUsed'),
+                    gradient_amount_used=data.get('gradientAmountUsed'),
+                    gradient_cost_per_unit=data.get('gradientCostPerUnit'),
+                    total_gradient_cost=data.get('totalGradientCost'),
+                    quantity_out=data.get('quantityOut'),
+                    spoilage=data.get('spoilage'),
+                    total_stock_cost=data.get('totalStockCost'),
+                )
+                db.session.add(record)
+                db.session.commit()
+                return make_response_data(data=record.to_dict(), message="Stock tracking record created.", status_code=201)
 
         except Exception as e:
             return make_response_data(success=False, message=f"Invalid date format or error: {str(e)}", status_code=400)
-
-        record = StockTracking(
-            stock_name=data['stockName'],
-            date_in=date_in,
-            fruit_type=data['fruitType'],
-            quantity_in=data['quantityIn'],
-            amount_per_kg=data['amountPerKg'],
-            total_amount=data['totalAmount'],
-            other_charges=data.get('otherCharges', 0),
-            date_out=date_out,
-            duration=data.get('duration'),
-            gradient_used=data.get('gradientUsed'),
-            gradient_amount_used=data.get('gradientAmountUsed'),
-            gradient_cost_per_unit=data.get('gradientCostPerUnit'),
-            total_gradient_cost=data.get('totalGradientCost'),
-            quantity_out=data.get('quantityOut'),
-            spoilage=data.get('spoilage'),
-            total_stock_cost=data.get('totalStockCost'),
-        )
-        db.session.add(record)
-        db.session.commit()
-        return make_response_data(data=record.to_dict(), message="Stock tracking record created.", status_code=201)
 
 class ClearStockTrackingResource(Resource):
     @role_required('ceo')
