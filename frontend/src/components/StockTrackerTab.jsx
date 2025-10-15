@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/api';
 import { fetchStockTracking, fetchStockTrackingAggregated, fetchSales } from '../api/stockTracking';
 
 const StockTrackerTab = () => {
@@ -22,7 +21,7 @@ const StockTrackerTab = () => {
 
   const navigate = useNavigate();
   
-  const goToStockTrackingRecords = () => {
+  const goToStockTrackingOverview = () => {
     navigate('/stock-tracking-records');
   };
 
@@ -155,6 +154,64 @@ const StockTrackerTab = () => {
     .sort((a, b) => new Date(b.dateOut) - new Date(a.dateOut))
     .slice(0, 5);
 
+  const handleDownloadPDF = async (recordId) => {
+    try {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      const response = await fetch(`/api/stock-tracking/pdf/${recordId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_${recordId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('PDF download error:', error);
+      alert('Failed to download PDF. Please try again.');
+    }
+  };
+
+  const handleDownloadGroupPDF = async (date, type) => {
+    try {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      const response = await fetch(`/api/stock-tracking/pdf/group?date=${date}&type=${type}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download group PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_report_${type}_${date}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Group PDF download error:', error);
+      alert('Failed to download group PDF. Please try again.');
+    }
+  };
+
   const handleDownloadCombinedPDF = async (date) => {
     try {
       const token = localStorage.getItem('access_token') || localStorage.getItem('token');
@@ -186,48 +243,99 @@ const StockTrackerTab = () => {
 
   return (
     <div className="container-fluid py-4">
-      {/* Stock Tracking Overview */}
+      {/* Stock Tracking Records */}
       <div className="row mb-4">
         <div className="col">
           <div className="card">
             <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Stock Tracking Overview</h5>
+              <h5 className="mb-0">Stock Tracking Records</h5>
               <button
                 className="btn btn-light btn-sm"
-                onClick={goToStockTrackingRecords}
+                onClick={goToStockTrackingOverview}
               >
-                View All Records
+                View Overview
               </button>
             </div>
             <div className="card-body">
               <div className="table-responsive">
-                <table className="table table-hover">
+                <table className="table table-bordered table-striped">
                   <thead>
                     <tr>
-                      <th>Stock Names</th>
+                      <th>Stock Name</th>
+                      <th>Date In</th>
+                      <th>Fruit Type</th>
+                      <th>Quantity In</th>
+                      <th>Amount per Kg</th>
+                      <th>Total Amount</th>
+                      <th>Other Charges</th>
+                      <th>Duration</th>
+                      <th>Gradient Used</th>
+                      <th>Gradient Amount Used</th>
+                      <th>Gradient Cost per Unit</th>
+                      <th>Total Gradient Cost</th>
                       <th>Date Out</th>
-                      <th>Total Amount Purchased</th>
-                      <th>Total Amount Sold</th>
-                      <th>Actions</th>
+                      <th>Quantity Out</th>
+                      <th>Spoilage</th>
+                      <th>Total Stock Cost</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {groupedStocksArray.map((group) => (
-                      <tr key={group.dateOut}>
-                        <td>{Array.from(group.stockNames).join(', ')}</td>
-                        <td>{new Date(group.dateOut).toLocaleDateString()}</td>
-                        <td>KES {group.totalPurchased.toFixed(2)}</td>
-                        <td>KES {group.totalSold.toFixed(2)}</td>
-                        <td>
-                          <button
-                            className="btn btn-sm btn-success"
-                            onClick={() => handleDownloadCombinedPDF(group.dateOut)}
-                          >
-                            Download PDF
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {stockTrackingArr.length > 0 ? (
+                      stockTrackingArr.sort((a, b) => new Date(b.dateIn) - new Date(a.dateIn)).map((rec, idx) => (
+                        <React.Fragment key={rec.id || idx}>
+                          <tr>
+                            <td>{rec.stockName}</td>
+                            <td>{rec.dateIn}</td>
+                            <td>{rec.fruitType}</td>
+                            <td>{rec.quantityIn}</td>
+                            <td>{rec.amountPerKg}</td>
+                            <td>{rec.totalAmount}</td>
+                            <td>{rec.otherCharges}</td>
+                            <td>{rec.duration}</td>
+                            <td>{rec.gradientUsed}</td>
+                            <td>{rec.gradientAmountUsed}</td>
+                            <td>{rec.gradientCostPerUnit}</td>
+                            <td>{rec.totalGradientCost}</td>
+                            <td>{rec.dateOut}</td>
+                            <td>{rec.quantityOut}</td>
+                            <td>{rec.spoilage}</td>
+                            <td>{rec.totalStockCost}</td>
+                          </tr>
+                          {rec.dateOut && (
+                            <tr>
+                              <td colSpan="16" className="text-center">
+                                <button
+                                  className="btn btn-sm btn-success me-2"
+                                  onClick={() => handleDownloadPDF(rec.id)}
+                                >
+                                  Download PDF Report
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-warning me-2"
+                                  onClick={() => handleDownloadGroupPDF(rec.dateIn, 'in')}
+                                >
+                                  {rec.dateIn} In
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-warning me-2"
+                                  onClick={() => handleDownloadGroupPDF(rec.dateOut, 'out')}
+                                >
+                                  {rec.dateOut} Out
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-info"
+                                  onClick={() => handleDownloadCombinedPDF(rec.dateOut || rec.dateIn)}
+                                >
+                                  Combined PDF
+                                </button>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      <tr><td colSpan="16" className="text-center text-muted">No stock tracking records yet</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
