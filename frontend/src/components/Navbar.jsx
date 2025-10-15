@@ -50,7 +50,7 @@ const Navbar = () => {
             }}
           >
             <span className="me-2">🍊</span>
-            <span className="fw-bold">FruitTrack Pro</span>
+            <span className="fw-bold">Ryanmartfruit company</span>
           </a>
           <div className="d-flex align-items-center">
             <button
