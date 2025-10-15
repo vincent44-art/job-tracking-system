@@ -195,7 +195,7 @@ const AccountTab = () => {
                             <td className="border border-gray-200 px-1 py-0.5">
                               <input
                                 type="number"
-                                value={sale.paid_amount}
+                                value={sale.paid_amount || ''}
                                 onChange={(e) => handlePaidAmountChange(salesData.findIndex(s => s.id === sale.id), e.target.value)}
                                 onBlur={() => handleSavePaidAmount(sale.id)}
                                 className="w-full border border-gray-300 rounded px-1 py-0.5"
