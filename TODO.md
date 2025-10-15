@@ -22,5 +22,6 @@
 - `frontend/src/components/StockTrackingRecordsPage.jsx`
 
 ### Followup steps:
-- [] Test the changes by running the app and navigating to the stock tracking tab and records page.
-- [] Ensure data loads correctly and download buttons work.
+- [x] Test the changes by running the app and navigating to the stock tracking tab and records page.
+- [x] Ensure data loads correctly and download buttons work.
+- [x] Replace the Stock Tracking Overview table with "Coming Soon" message in the overview page.
