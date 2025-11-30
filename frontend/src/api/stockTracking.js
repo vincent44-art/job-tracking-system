@@ -1,4 +1,5 @@
-const BASE_URL = 'http://127.0.0.1:5000/api';
+// BASE_URL will come from REACT_APP_API_BASE_URL env var via fetch relative path
+// No need to hardcode localhost anymore
 
 export const fetchStockTracking = async (token) => {
   if (!token) {
@@ -71,7 +72,7 @@ export const addStockTracking = async (data, token) => {
 };
 
 export async function clearStockTracking(token) {
-  const res = await fetch(`${BASE_URL}/stock-tracking/clear`, {
+  const res = await fetch('/api/stock-tracking/clear', {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',

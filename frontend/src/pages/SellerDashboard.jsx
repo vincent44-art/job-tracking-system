@@ -12,8 +12,8 @@ import { fetchSales } from '../components/apiHelpers';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-
-const BASE_URL = 'http://127.0.0.1:5000/api';
+// Use relative paths for all API calls — backend determined by REACT_APP_API_BASE_URL env var
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
 
 // Helpers for matching sales to stock records and formatting
 const parseDate = (value) => {
@@ -42,7 +42,7 @@ const formatDateCell = (d) => (d ? new Date(d).toLocaleDateString() : '');
 
 const fetchSellerAssignments = async (emailOrName) => {
   const token = localStorage.getItem('access_token');
-  const res = await fetch(`${BASE_URL}/assignments?seller=${emailOrName}`,
+  const res = await fetch(`/api/assignments?seller=${emailOrName}`,
     {
       method: 'GET',
       headers: {
@@ -56,7 +56,7 @@ const fetchSellerAssignments = async (emailOrName) => {
 };
 
 const clearSellerSales = async (emailOrName) => {
-  const res = await fetch(`${BASE_URL}/sales/clear?seller=${emailOrName}`, {
+  const res = await fetch(`/api/sales/clear?seller=${emailOrName}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to clear sales');
@@ -80,7 +80,7 @@ const SellerDashboard = () => {
   const fetchSellerExpenses = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://localhost:5000/api/other_expenses', {
+      const res = await fetch('/api/other_expenses', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();

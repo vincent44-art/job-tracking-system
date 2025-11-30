@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus } from 'lucide-react';
 
-// ✅ Define API base
-const BASE_URL = 'http://127.0.0.1:5000/api/car-expenses';
+// Use relative API paths — backend determined by REACT_APP_API_BASE_URL env var
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const API_ENDPOINT = '/api/car-expenses';
 
 // ✅ Define API functions
 const fetchCarExpenses = async () => {
   const token = localStorage.getItem('access_token');
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(API_ENDPOINT, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -19,7 +20,7 @@ const fetchCarExpenses = async () => {
 
 const createCarExpense = async (expense) => {
   const token = localStorage.getItem('access_token');
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(`${BASE_URL}/car-expenses`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +34,7 @@ const createCarExpense = async (expense) => {
 
 const deleteCarExpense = async (id) => {
   const token = localStorage.getItem('access_token');
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await fetch(`${API_ENDPOINT}/${id}`, {
     method: 'DELETE',
     headers: {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})

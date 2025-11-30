@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, AlertTriangle, DollarSign } from 'lucide-react';
 
-// API functions for car expenses
-const BASE_URL = 'http://127.0.0.1:5000/api/car-expenses';
+// Use relative API paths — backend determined by REACT_APP_API_BASE_URL env var
+const API_ENDPOINT = '/api/car-expenses';
 
 const fetchCarExpenses = async () => {
   const token = localStorage.getItem('access_token');
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(API_ENDPOINT, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 
-const BASE_URL = 'http://127.0.0.1:5000/api';
+// Use relative paths for all API calls — backend determined by REACT_APP_API_BASE_URL env var
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
 const formatKenyanCurrency = (amount) =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount || 0);
@@ -51,7 +52,7 @@ const SalesTab = () => {
   const downloadDailySalesReport = async (dateStr) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://127.0.0.1:5000/api/sales/report/${dateStr}`, {
+      const response = await fetch(`/api/sales/report/${dateStr}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`

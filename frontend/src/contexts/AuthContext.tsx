@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import toast from 'react-hot-toast';
+import api from '../api/api';
 
 export interface User {
   id: string;
@@ -69,20 +70,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await api.post('/auth/login', { email, password });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        const user = data.data.user;
-        const token = data.data.access_token;
-        const refreshToken = data.data.refresh_token;
+      if (response.data.success) {
+        const user = response.data.data.user;
+        const token = response.data.data.access_token;
+        const refreshToken = response.data.data.refresh_token;
 
         setUser(user);
         setToken(token);
@@ -93,7 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toast.success(`Welcome back, ${user.name}!`);
         return true;
       } else {
-        toast.error(data.message || 'Login failed');
+        toast.error(response.data.message || 'Login failed');
         return false;
       }
     } catch (error) {
