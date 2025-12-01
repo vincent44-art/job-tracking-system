@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -75,18 +76,29 @@ const Login = () => {
             
             <div className="mb-4">
               <label htmlFor="password" className="form-label">Password</label>
-              <input
-                type="password"
-                className="form-control"
-                id="password"
-                name="current-password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Enter your password"
-                disabled={loading}
-              />
+              <div className="input-group">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="form-control"
+                  id="password"
+                  name="current-password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Enter your password"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                  style={{ borderLeft: 'none' }}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             
             <button 
@@ -104,19 +116,6 @@ const Login = () => {
               )}
             </button>
           </form>
-          
-          <div className="mt-4 p-3 bg-light rounded">
-            <small className="text-muted">
-              <strong>Demo Credentials:</strong><br />
-              CEO: ceo@fruittrack.com<br />
-              Password: password123<br />
-              <br />
-              <strong>Alternative:</strong><br />
-              CEO: ceo@company.com<br />
-              Password: password<br />
-              <em>Note: New users must be added by CEO</em>
-            </small>
-          </div>
         </div>
       </div>
     </div>
