@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const BASE_URL = 'http://127.0.0.1:5000/api';
+// Use relative API paths — backend determined by REACT_APP_API_BASE_URL env var
 
 const formatKenyanCurrency = (amount) =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount || 0);
@@ -13,7 +13,7 @@ const EnhancedSellerFruitsTable = () => {
     const loadSales = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await fetch(`${BASE_URL}/sales`, {
+        const res = await fetch('/api/sales', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
         });

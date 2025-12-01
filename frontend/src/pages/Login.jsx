@@ -8,6 +8,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
   const navigate = useNavigate();
@@ -90,6 +91,7 @@ const Login = () => {
                   disabled={loading}
                 />
                 <button
+<<<<<<< HEAD
                   type="button"
                   className="btn btn-outline-secondary"
                   onClick={() => setShowPassword(!showPassword)}
@@ -97,6 +99,14 @@ const Login = () => {
                   style={{ borderLeft: 'none' }}
                 >
                   {showPassword ? '🙈' : '👁️'}
+=======
+                  className="btn btn-outline-secondary"
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                >
+                  {showPassword ? "Hide" : "Show"}
+>>>>>>> 29f55646acc8cae60f7bd1980eedfd0fa0fbd9a4
                 </button>
               </div>
             </div>

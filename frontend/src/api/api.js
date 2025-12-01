@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 
 // Create axios instance with default configuration
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api',
+  baseURL: process.env.REACT_APP_API_BASE_URL || '/api',
   withCredentials: true,
   timeout: 10000,
   headers: {

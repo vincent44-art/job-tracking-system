@@ -139,7 +139,7 @@ const SalesTab = () => {
 
   const downloadDailyReport = async (dateStr) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/sales/report/${dateStr}`, {
+      const response = await fetch(`/api/sales/report/${dateStr}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

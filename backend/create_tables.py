@@ -1,5 +1,5 @@
-from backend.app import app
-from backend.extensions import db
+from .app import app
+from .extensions import db
 
 if __name__ == "__main__":
     with app.app_context():

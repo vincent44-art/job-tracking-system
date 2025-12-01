@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Use relative paths — the proxy/backend will be set via REACT_APP_API_BASE_URL env var
+const API_BASE_URL = '/api';
 
 export const fetchOtherExpenses = async () => {
   const token = localStorage.getItem('access_token');

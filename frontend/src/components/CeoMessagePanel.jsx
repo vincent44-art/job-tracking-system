@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 // ✅ Inline definition of the API function
 const sendCeoMessage = async (messageData) => {
-  const res = await fetch('http://127.0.0.1:5000/api/ceo-messages', {
+  const res = await fetch('/api/ceo-messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

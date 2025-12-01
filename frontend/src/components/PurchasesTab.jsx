@@ -64,7 +64,7 @@ const PurchasesTab = (props) => {
     try {
       // Use the correct token key and backend URL
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://127.0.0.1:5000/api/purchases/report/${dateStr}`, {
+      const response = await fetch(`/api/purchases/report/${dateStr}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
