@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: job-tracking-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: PYTHONPATH=/opt/render/project/src gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 3 --log-level info
+    plan: free
