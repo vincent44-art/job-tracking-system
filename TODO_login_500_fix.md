@@ -14,8 +14,8 @@
 - Added command to create CEO user after migrations
 
 ## Changes Made
-- [x] Updated render.yaml: Changed "cd backend && PYTHONPATH=/opt/render/project/src flask db upgrade" to "PYTHONPATH=/opt/render/project/src flask --app backend.app db upgrade"
-- [x] Added "PYTHONPATH=/opt/render/project/src python backend/create_ceo_user.py" to buildCommand
+- [x] Updated render.yaml: Changed migration command from "flask --app backend.app db upgrade" to "python backend/create_tables.py" to use db.create_all() instead of migrations
+- [x] This avoids migration conflicts where some tables exist and others don't
 
 ## Next Steps
 - [ ] Redeploy backend on Render to apply changes
