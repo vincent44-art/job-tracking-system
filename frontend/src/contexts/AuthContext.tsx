@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import api from '../api/api';
+import api from '../services/api';
 
 export interface User {
   id: string;
