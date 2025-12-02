@@ -45,7 +45,8 @@ def create_app(config_class=Config):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:5000",
-        "http://127.0.0.1:5000"
+        "http://127.0.0.1:5000",
+        "https://job-tracking-system-frontend.onrender.com"
     ]
 
     # JWT Expiry
@@ -66,7 +67,8 @@ def create_app(config_class=Config):
         resources={r"/*": {
             "origins": [
                 "http://localhost:3000",
-                "http://127.0.0.1:3000"
+                "http://127.0.0.1:3000",
+                "https://job-tracking-system-frontend.onrender.com"
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
@@ -77,7 +79,8 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     socketio.init_app(app, cors_allowed_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        "https://job-tracking-system-frontend.onrender.com"
     ])
 
     # JWT error handlers
