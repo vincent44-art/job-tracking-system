@@ -15,7 +15,7 @@ def log_event(event_type, severity=Severity.INFO, user_email=None, user_id=None,
               ip=None, device=None, resource=None, summary=None, payload=None,
               server_logs=None, stack_trace=None, related_event_ids=None):
     """
-    Log an IT event to the database.
+    Log an IT event to the console instead of database.
     """
     if not ip:
         ip = request.remote_addr if request else None
@@ -26,7 +26,16 @@ def log_event(event_type, severity=Severity.INFO, user_email=None, user_id=None,
 
     event_id = f"evt_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}"
 
-    event = ITEvent(
+    # Print event details instead of writing to database
+    print(f"IT Event: {event_type} - {summary} - User: {user_email} - IP: {ip} - Resource: {resource}")
+
+    # Return a mock event object for compatibility
+    class MockEvent:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    event = MockEvent(
         id=event_id,
         user_email=user_email,
         user_id=user_id,
@@ -42,11 +51,8 @@ def log_event(event_type, severity=Severity.INFO, user_email=None, user_id=None,
         related_event_ids=related_event_ids
     )
 
-    db.session.add(event)
-    db.session.commit()
-
-    # Check for alerts based on rules
-    check_alert_rules(event)
+    # Disabled: Check for alerts based on rules
+    # check_alert_rules(event)
 
     return event
 
