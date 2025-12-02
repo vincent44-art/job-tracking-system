@@ -1,23 +1,23 @@
-# TODO: Fix 500 Internal Server Error on /api/auth/login
+# Fix Login 500 Error: Database Tables Not Created
 
-## Information Gathered
-- LoginResource in `backend/resources/auth.py` handles login but doesn't validate if email/password are present after extracting from JSON.
-- `user_lookup_callback` in `backend/app.py` directly accesses `jwt_data["sub"]` without checking if it exists, causing KeyError if missing.
-- No full error logging enabled in production for debugging.
+## Problem
+- Login fails with 500 error: "relation 'user' does not exist"
+- Database tables not created on Render deployment
+- Migrations not running properly during build
 
-## Plan
-- [ ] Fix `user_lookup_callback` in `backend/app.py` to safely access `jwt_data.get("sub")` and return None if missing.
-- [ ] Add validation in LoginResource to ensure email and password are provided.
-- [ ] Add `logging.basicConfig(level=logging.DEBUG)` in `create_app` for temporary debugging.
-- [ ] Redeploy backend and test login.
-- [ ] Check Render logs for exact error if still failing.
+## Root Cause
+- Flask-Migrate command in render.yaml was incorrect: "cd backend && PYTHONPATH=/opt/render/project/src flask db upgrade"
+- This changed directory to backend, but Flask couldn't find the app module
 
-## Dependent Files
-- `backend/app.py`
-- `backend/resources/auth.py`
+## Solution
+- Updated render.yaml buildCommand to run migrations from project root with correct app reference
+- Added command to create CEO user after migrations
 
-## Followup Steps
-- Redeploy backend.
-- Test login endpoint.
-- If still 500, check Render logs for traceback.
-- Remove debug logging after fixing.
+## Changes Made
+- [x] Updated render.yaml: Changed "cd backend && PYTHONPATH=/opt/render/project/src flask db upgrade" to "PYTHONPATH=/opt/render/project/src flask --app backend.app db upgrade"
+- [x] Added "PYTHONPATH=/opt/render/project/src python backend/create_ceo_user.py" to buildCommand
+
+## Next Steps
+- [ ] Redeploy backend on Render to apply changes
+- [ ] Test login with ceo@ryanmart.com / password123
+- [ ] Verify tables are created and user exists
