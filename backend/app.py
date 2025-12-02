@@ -50,7 +50,9 @@ def create_app(config_class=Config):
         "http://127.0.0.1:3000",
         "http://localhost:5000",
         "http://127.0.0.1:5000",
-        "https://job-tracking-system-frontend.onrender.com"
+        "https://job-tracking-system-frontend.onrender.com",
+        "https://job-tracking-system-pdnz.onrender.com",
+        "https://ryanmart.store"
     ]
 
     # JWT Expiry
@@ -74,7 +76,9 @@ def create_app(config_class=Config):
             "origins": [
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "https://job-tracking-system-frontend.onrender.com"
+                "https://job-tracking-system-frontend.onrender.com",
+                "https://job-tracking-system-pdnz.onrender.com",
+                "https://ryanmart.store"
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
@@ -200,23 +204,24 @@ def create_app(config_class=Config):
     @app.errorhandler(404)
     def not_found_error(error):
         log_api_error(request.path, "Resource not found", 404)
-        return make_response_data(False, 404, "Resource not found.", [str(error)])
+        # use named args to match make_response_data signature
+        return make_response_data(success=False, message="Resource not found.", errors=[str(error)], status_code=404)
 
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
         log_api_error(request.path, "Internal server error", 500)
-        return make_response_data(False, 500, "An internal server error occurred.", [str(error)])
+        return make_response_data(success=False, message="An internal server error occurred.", errors=[str(error)], status_code=500)
 
     @app.errorhandler(401)
     def unauthorized_error(error):
         log_api_error(request.path, "Unauthorized access", 401)
-        return make_response_data(False, 401, "Unauthorized.", [str(error)])
+        return make_response_data(success=False, message="Unauthorized.", errors=[str(error)], status_code=401)
 
     @app.errorhandler(403)
     def forbidden_error(error):
         log_api_error(request.path, "Forbidden access", 403)
-        return make_response_data(False, 403, "Forbidden.", [str(error)])
+        return make_response_data(success=False, message="Forbidden.", errors=[str(error)], status_code=403)
 
     return app
 

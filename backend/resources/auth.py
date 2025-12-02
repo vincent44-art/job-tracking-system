@@ -77,7 +77,10 @@ class LoginResource(Resource):
             )
 
         except Exception as e:
-            # Catch ANY unhandled error → prevents 500
+            # Log full exception to stdout (so Render shows stack trace) and return a 500
+            import traceback, logging
+            logging.exception("Unhandled exception during login")
+            traceback.print_exc()
             return make_response_data(
                 success=False,
                 message=f"Server error during login: {str(e)}",
