@@ -23,7 +23,7 @@ from flask_restful import Api
 load_dotenv()
 
 # Path to your React build folder
-FRONTEND_BUILD_DIR = os.path.join(os.getcwd(), 'Frontend', 'build')
+FRONTEND_BUILD_DIR = os.path.join(os.getcwd(), 'frontend', 'build')
 
 # Initialize extensions
 jwt = JWTManager()

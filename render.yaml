@@ -3,7 +3,9 @@ services:
     name: job-tracking-backend
     env: python
     buildCommand: |
-      apt-get update && apt-get install -y libpq-dev
+      apt-get update && apt-get install -y libpq-dev nodejs npm
+      cd frontend && npm install && npm run build
+      cd ..
       pip install -r backend/requirements.txt
     startCommand: PYTHONPATH=/opt/render/project/src gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 3 --log-level info
     plan: free
