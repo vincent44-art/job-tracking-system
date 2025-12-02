@@ -47,8 +47,7 @@ api_bp = Blueprint('api', __name__)
 api = Api(api_bp)
 
 # ----------- AUTHENTICATION ROUTES -----------
-api.add_resource(LoginResource, '/auth/login')
-api.add_resource(MeResource, '/auth/me')
+# Auth routes are now handled directly in app.py with /api prefix
 
 # ----------- USER MANAGEMENT -----------
 api.add_resource(UserListResource, '/users')
@@ -120,14 +119,5 @@ api.add_resource(SaleSummaryResource, '/sales/summary')
 # This ensures /api/purchases/<email> and /api/ceo/messages work
 api_bp.register_blueprint(purchases_bp, url_prefix='')
 
-# ----------- CATCH-ALL (MUST BE LAST) -----------
-# Move this to the very end of the file, after all resource registrations
-@api_bp.route('/', defaults={'path': ''})
-@api_bp.route('/<path:path>')
-def catch_all(path):
-    return jsonify({
-        'success': False,
-        'message': 'API endpoint not found',
-        'error': 'not_found',
-        'status_code': 404
-    }), 404
+# ----------- CATCH-ALL REMOVED -----------
+# Catch-all is handled in app.py to avoid conflicts with direct API resources

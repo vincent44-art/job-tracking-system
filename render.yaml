@@ -7,5 +7,6 @@ services:
       cd frontend && npm install && npm run build
       cd ..
       pip install -r backend/requirements.txt
+      cd backend && PYTHONPATH=/opt/render/project/src flask db upgrade
     startCommand: PYTHONPATH=/opt/render/project/src gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 3 --log-level info
     plan: free

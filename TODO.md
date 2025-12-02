@@ -1,11 +1,21 @@
-# TODO: Fix psycopg2 ModuleNotFoundError
+# Login Fixes TODO
 
-## Completed Tasks
-- [x] Analyzed the error: ModuleNotFoundError: No module named 'psycopg2'
-- [x] Verified requirements.txt includes psycopg2-binary
-- [x] Identified issue: Missing system dependencies for psycopg2 on Render
-- [x] Updated render.yaml to install libpq-dev before pip install
+## Backend Fixes
+- [x] Fix LoginResource to handle invalid JSON requests
+- [x] Ensure proper error responses for missing JSON data
 
-## Next Steps
-- [ ] Deploy the updated render.yaml to Render
-- [ ] Test the deployment to confirm psycopg2 error is resolved
+## Frontend Fixes
+- [x] Verify JSON headers are sent correctly (already implemented)
+- [ ] Test login flow after backend fixes
+
+## Route Registration
+- [x] Confirm routes are registered correctly (already verified)
+
+## Testing
+- [ ] Test manual curl request to /api/auth/login
+- [ ] Test frontend login functionality
+- [ ] Verify /api/auth/me endpoint works with JWT
+
+## Deployment
+- [ ] Redeploy application to Render for changes to take effect
+- [ ] Test login after redeployment

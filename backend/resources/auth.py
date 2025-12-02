@@ -19,6 +19,8 @@ class LoginResource(Resource):
         # Accept both JSON and form data
         if request.is_json:
             data = request.get_json()
+            if not data:
+                return make_response_data(success=False, message="Invalid JSON", status_code=400)
             email = data.get('email')
             password = data.get('password')
         else:

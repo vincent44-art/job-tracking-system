@@ -115,7 +115,7 @@ def create_app(config_class=Config):
     api.add_resource(OtherExpensesResource, '/api/other_expenses', '/api/expenses/other')
     api.add_resource(OtherExpenseResource, '/api/other_expenses/<int:expense_id>')
     api.add_resource(OtherExpensesPDFResource, '/api/other-expenses/pdf')
-    api.add_resource(CEODashboardResource, '/ceo/dashboard')
+    api.add_resource(CEODashboardResource, '/api/ceo/dashboard')
     api.add_resource(SalariesResource, '/api/salaries')
     api.add_resource(SalaryResource, '/api/salaries/<int:salary_id>')
     api.add_resource(SalaryPaymentsResource, '/api/salary-payments')
@@ -184,9 +184,7 @@ def create_app(config_class=Config):
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
-        # If the path starts with 'api/', return 404 so Flask API routes work
-        if path.startswith('api/'):
-            return make_response_data(False, 404, "API endpoint not found.", [path])
+        # Allow API routes to be handled by Flask-Restful
         full_path = os.path.join(FRONTEND_BUILD_DIR, path)
         if path != "" and os.path.exists(full_path):
             return send_from_directory(FRONTEND_BUILD_DIR, path)
