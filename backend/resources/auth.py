@@ -20,7 +20,7 @@ class LoginResource(Resource):
         if request.is_json:
             data = request.get_json()
             if not data:
-                return make_response_data(success=False, message="Invalid JSON", status_code=400)
+                return make_response_data(success=False, message="Missing JSON body", status_code=400)
             email = data.get('email')
             password = data.get('password')
         else:
@@ -30,6 +30,9 @@ class LoginResource(Resource):
             args = parser.parse_args()
             email = args['email']
             password = args['password']
+
+        if not email or not password:
+            return make_response_data(success=False, message="Email and password required", status_code=400)
 
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):

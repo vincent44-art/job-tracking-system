@@ -114,7 +114,7 @@ export const fetchSales = async (token) => {
   }
 
   try {
-    const response = await fetch('/api/sales', {
+    const response = await fetch(`${BASE_URL}/sales`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

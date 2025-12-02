@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask, jsonify, send_from_directory, request
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -38,6 +39,9 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     app.config['DEBUG'] = False  # Always run in production mode for speed
 
+    # Enable full error logging for debugging
+    logging.basicConfig(level=logging.DEBUG)
+
     # CORS setup
     app.config['CORS_HEADERS'] = 'Content-Type'
     app.config['CORS_SUPPORTS_CREDENTIALS'] = True
@@ -59,7 +63,9 @@ def create_app(config_class=Config):
     # JWT user lookup loader
     @jwt.user_lookup_loader
     def user_lookup_callback(_jwt_header, jwt_data):
-        identity = jwt_data["sub"]
+        identity = jwt_data.get("sub")
+        if not identity:
+            return None
         return User.query.get(identity)
 
     cors.init_app(
