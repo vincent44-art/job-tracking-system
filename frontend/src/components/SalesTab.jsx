@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 
 // Use relative paths for all API calls — backend determined by REACT_APP_API_BASE_URL env var
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://job-tracking-system-pdnz.onrender.com/api';
 
 const formatKenyanCurrency = (amount) =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount || 0);

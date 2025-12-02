@@ -1,5 +1,4 @@
-// BASE_URL will come from REACT_APP_API_BASE_URL env var via fetch relative path
-// No need to hardcode localhost anymore
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://job-tracking-system-pdnz.onrender.com/api';
 
 export const fetchStockTracking = async (token) => {
   if (!token) {
@@ -7,7 +6,7 @@ export const fetchStockTracking = async (token) => {
   }
 
   try {
-    const response = await fetch('/api/stock-tracking', {
+    const response = await fetch(`${BASE_URL}/stock-tracking`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -50,7 +49,7 @@ export const addStockTracking = async (data, token) => {
   }
 
   try {
-    const response = await fetch('/api/stock-tracking', {
+    const response = await fetch(`${BASE_URL}/stock-tracking`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -72,7 +71,7 @@ export const addStockTracking = async (data, token) => {
 };
 
 export async function clearStockTracking(token) {
-  const res = await fetch('/api/stock-tracking/clear', {
+  const res = await fetch(`${BASE_URL}/stock-tracking/clear`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -89,7 +88,7 @@ export const fetchStockTrackingAggregated = async (token) => {
   }
 
   try {
-    const response = await fetch('/api/stock-tracking/aggregated', {
+    const response = await fetch(`${BASE_URL}/stock-tracking/aggregated`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
