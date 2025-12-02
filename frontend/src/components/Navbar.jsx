@@ -79,7 +79,7 @@ const Navbar = () => {
                   aria-expanded="false"
                 >
                   <img
-                    src={user.profile_image || '/default-profile.png'}
+                    src={user.profile_image || '/default-profile.svg'}
                     alt="Profile"
                     style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', marginRight: 8 }}
                   />
