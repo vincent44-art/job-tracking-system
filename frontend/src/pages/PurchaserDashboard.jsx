@@ -165,8 +165,8 @@ const PurchaserDashboard = () => {
   }, {});
   const filteredGroupedPurchases = Object.entries(groupedPurchases).filter(([date, items]) =>
     items.some(purchase =>
-      (purchase.fruitType ? purchase.fruitType.toLowerCase() : '').includes(search.toLowerCase()) ||
-      (purchase.buyerName ? purchase.buyerName.toLowerCase() : '').includes(search.toLowerCase())
+      (purchase.fruitType ? purchase.fruitType.toLowerCase() : '').includes(search?.toLowerCase() || '') ||
+      (purchase.buyerName ? purchase.buyerName.toLowerCase() : '').includes(search?.toLowerCase() || '')
     )
   );
 

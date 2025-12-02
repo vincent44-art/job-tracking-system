@@ -110,13 +110,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const users: User[] = JSON.parse(localStorage.getItem('fruittrack_users') || '[]');
 
     // Check if user already exists
-    if (users.find(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
+    if (users.find(u => u.email?.toLowerCase() === userData.email?.toLowerCase())) {
       toast.error('User with this email already exists');
       return false;
     }
 
     // Validate email contains role
-    const emailLower = userData.email.toLowerCase();
+    const emailLower = userData.email?.toLowerCase() || '';
     if (userData.role !== 'ceo' && !emailLower.includes(userData.role)) {
       toast.error(`Email must contain "${userData.role}" for this role`);
       return false;
