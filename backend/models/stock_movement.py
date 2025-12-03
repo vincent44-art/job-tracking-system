@@ -11,7 +11,7 @@ class StockMovement(db.Model):
     date = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text)
     selling_price = db.Column(db.Float, nullable=True)
-    added_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    added_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):

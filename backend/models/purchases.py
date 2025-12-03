@@ -3,7 +3,7 @@ from .user import db
 
 class Purchase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    purchaser_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    purchaser_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     employee_name = db.Column(db.String(100), nullable=False)
     fruit_type = db.Column(db.String(50), nullable=False)
     quantity = db.Column(db.String(50), nullable=False)

@@ -4,7 +4,7 @@ from .user import db
 class Assignment(db.Model):
     __tablename__ = 'assignments'
     id = db.Column(db.Integer, primary_key=True)
-    seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     seller_email = db.Column(db.String(120), nullable=False)
     fruit_type = db.Column(db.String(80), nullable=False)
     assignment_id = db.Column(db.String(80), nullable=True)

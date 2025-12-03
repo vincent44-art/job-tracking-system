@@ -24,7 +24,7 @@ class ITEvent(db.Model):
     id = db.Column(db.String(50), primary_key=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     user_email = db.Column(db.String(120), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     event_type = db.Column(db.Enum(EventType), nullable=False)
     severity = db.Column(db.Enum(Severity), nullable=False)
     ip = db.Column(db.String(45), nullable=True)  # IPv4/IPv6

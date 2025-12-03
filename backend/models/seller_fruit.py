@@ -12,7 +12,7 @@ class SellerFruit(db.Model):
     amount = db.Column(db.Float, nullable=False)
     customer_name = db.Column(db.String(100), nullable=True)  # New field for customer name
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     # Relationships
     creator = db.relationship('User', backref='seller_fruits', lazy=True)

@@ -12,7 +12,7 @@ class Inventory(db.Model):
     expiry_date = db.Column(db.Date)
     purchase_price = db.Column(db.Float, nullable=True)
     purchase_date = db.Column(db.Date, nullable=True)
-    added_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    added_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships

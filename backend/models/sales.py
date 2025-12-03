@@ -6,7 +6,7 @@ class Sale(db.Model):
     __tablename__ = 'sale'
 
     id = db.Column(db.Integer, primary_key=True)
-    seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     seller_fruit_id = db.Column(db.Integer, db.ForeignKey('seller_fruits.id'), nullable=True)
     stock_name = db.Column(db.String(100), nullable=False)
     fruit_name = db.Column(db.String(50), nullable=False)

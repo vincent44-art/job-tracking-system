@@ -3,9 +3,9 @@ from .user import db, UserRole
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     recipient_role = db.Column(db.Enum(UserRole))
-    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # Optional for specific user
+    recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # Optional for specific user
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
