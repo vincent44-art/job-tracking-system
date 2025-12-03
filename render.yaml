@@ -8,7 +8,8 @@ services:
       cd ..
       pip install -r backend/requirements.txt
     releaseCommand: |
-      PYTHONPATH=/opt/render/project/src python -m flask db upgrade
+      cd /opt/render/project/src
+      PYTHONPATH=/opt/render/project/src python backend/run_migrations.py
       PYTHONPATH=/opt/render/project/src python backend/create_ceo_user.py
     startCommand: PYTHONPATH=/opt/render/project/src gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 3 --log-level info
     plan: free
