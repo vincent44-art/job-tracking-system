@@ -96,7 +96,7 @@ def upgrade():
     sa.Column('total_stock_cost', sa.Float(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('user',
+    op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=120), nullable=False),
     sa.Column('password_hash', sa.String(length=256), nullable=True),
@@ -117,7 +117,7 @@ def upgrade():
     sa.Column('fruit_type', sa.String(length=80), nullable=False),
     sa.Column('assignment_id', sa.String(length=80), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['seller_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['seller_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('inventory',
@@ -132,7 +132,7 @@ def upgrade():
     sa.Column('purchase_date', sa.Date(), nullable=True),
     sa.Column('added_by', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['added_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['added_by'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('it_event',
@@ -150,7 +150,7 @@ def upgrade():
     sa.Column('related_event_ids', sa.JSON(), nullable=True),
     sa.Column('server_logs', sa.Text(), nullable=True),
     sa.Column('stack_trace', sa.Text(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('message',
@@ -161,8 +161,8 @@ def upgrade():
     sa.Column('message', sa.Text(), nullable=False),
     sa.Column('is_read', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['recipient_id'], ['user.id'], ),
-    sa.ForeignKeyConstraint(['sender_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['recipient_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['sender_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('other_expenses',
@@ -174,7 +174,7 @@ def upgrade():
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('purchase',
@@ -189,7 +189,7 @@ def upgrade():
     sa.Column('purchase_date', sa.Date(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('amount_per_kg', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['purchaser_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['purchaser_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('salaries',
@@ -199,7 +199,7 @@ def upgrade():
     sa.Column('description', sa.String(length=255), nullable=True),
     sa.Column('date', sa.Date(), nullable=True),
     sa.Column('is_paid', sa.Boolean(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('seller_fruits',
@@ -213,7 +213,7 @@ def upgrade():
     sa.Column('customer_name', sa.String(length=100), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('sale',
@@ -230,7 +230,7 @@ def upgrade():
     sa.Column('customer_name', sa.String(length=100), nullable=True),
     sa.Column('date', sa.Date(), nullable=True),
     sa.ForeignKeyConstraint(['seller_fruit_id'], ['seller_fruits.id'], ),
-    sa.ForeignKeyConstraint(['seller_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['seller_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('stock_movement',
@@ -245,7 +245,7 @@ def upgrade():
     sa.Column('selling_price', sa.Float(), nullable=True),
     sa.Column('added_by', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['added_by'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['added_by'], ['users.id'], ),
     sa.ForeignKeyConstraint(['inventory_id'], ['inventory.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -264,7 +264,7 @@ def downgrade():
     op.drop_table('it_event')
     op.drop_table('inventory')
     op.drop_table('assignments')
-    op.drop_table('user')
+    op.drop_table('users')
     op.drop_table('stock_tracking')
     op.drop_table('receipts')
     op.drop_table('it_alert')
