@@ -28,7 +28,8 @@ FRONTEND_BUILD_DIR = os.path.join(os.getcwd(), 'frontend', 'build')
 
 # Initialize extensions
 jwt = JWTManager()
-cors = CORS()
+# cors = CORS()
+cors = CORS(supports_credentials=True)
 migrate = Migrate()
 socketio = SocketIO()
 
@@ -71,22 +72,37 @@ def create_app(config_class=Config):
             return None
         return User.query.get(identity)
 
+    # cors.init_app(
+    #     app,
+    #     resources={r"/*": {
+    #         "origins": [
+    #             "http://localhost:3000",
+    #             "http://127.0.0.1:3000",
+    #             "https://job-tracking-system-frontend.onrender.com",
+    #             "https://job-tracking-system-pdnz.onrender.com",
+    #             "https://ryanmart-frontend.onrender.com",
+    #             "https://ryanmart.store"
+    #         ],
+    #         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    #         "allow_headers": ["Content-Type", "Authorization"],
+    #         "supports_credentials": True
+    #     }}
+    # )
     cors.init_app(
-        app,
-        resources={r"/*": {
-            "origins": [
-                "http://localhost:3000",
-                "http://127.0.0.1:3000",
-                "https://job-tracking-system-frontend.onrender.com",
-                "https://job-tracking-system-pdnz.onrender.com",
-                "https://ryanmart-frontend.onrender.com",
-                "https://ryanmart.store"
-            ],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
-        }}
-    )
+    app,
+    origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://job-tracking-system-frontend.onrender.com",
+        "https://job-tracking-system-pdnz.onrender.com",
+        "https://ryanmart-frontend.onrender.com",
+        "https://ryanmart.store"
+    ],
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    supports_credentials=True
+)
+
 
     migrate.init_app(app, db)
     socketio.init_app(app, cors_allowed_origins=[
@@ -203,11 +219,11 @@ def create_app(config_class=Config):
         return send_from_directory(FRONTEND_BUILD_DIR, 'index.html')
 
     # Error Handlers
-    @app.errorhandler(404)
-    def not_found_error(error):
-        log_api_error(request.path, "Resource not found", 404)
-        # use named args to match make_response_data signature
-        return make_response_data(success=False, message="Resource not found.", errors=[str(error)], status_code=404)
+    # @app.errorhandler(404)
+    # def not_found_error(error):
+    #     log_api_error(request.path, "Resource not found", 404)
+    #     # use named args to match make_response_data signature
+    #     return make_response_data(success=False, message="Resource not found.", errors=[str(error)], status_code=404)
 
     @app.errorhandler(500)
     def internal_error(error):
