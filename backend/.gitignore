@@ -1,4 +1,7 @@
+<<<<<<< HEAD:.gitignore
 
+=======
+>>>>>>> 8d5ccbc8a1a1427b099530cb5f78c3a55e122cf7:backend/.gitignore
 # Environment variables
 .env
 
@@ -158,4 +161,3 @@ __pycache__/
 instance/profile_images/
 frontend/node_modules/
 frontend/dist/
->>>>>>> 29f55646acc8cae60f7bd1980eedfd0fa0fbd9a4
