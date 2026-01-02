@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 from flask import Flask, jsonify, send_from_directory, request
 from flask_migrate import Migrate
@@ -7,6 +8,16 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from dotenv import load_dotenv
 from datetime import timedelta
+
+# Ensure the project root (parent directory of this backend package) is
+# on sys.path. Some deployment platforms run Gunicorn from inside the
+# `backend/` directory or load this file as a top-level `app` module,
+# which prevents Python from finding the `backend` package unless the
+# parent folder is on sys.path. Adding the parent directory here makes
+# `import backend.*` robust regardless of how the module is loaded.
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from backend.config import Config
 from backend.extensions import db
