@@ -1,13 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// import { 
-//   fetchInventory,
-//   fetchStockMovements,
-//   fetchGradients,
-//   clearInventoryAPI,
-//   clearStockMovementsAPI,
-//   clearGradientsAPI
-// } from 'http://127.0.0.1:5000/api';
-
 import { 
   fetchInventory,
   fetchStockMovements,

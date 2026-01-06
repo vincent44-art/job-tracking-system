@@ -1,16 +1,5 @@
 import React, { useState } from 'react';
-// import { 
-//   clearAllDataAPI,
-//   clearPurchasesDataAPI,
-//   clearSalesDataAPI,
-//   clearCarExpensesDataAPI,
-//   clearOtherExpensesDataAPI,
-//   clearSalariesDataAPI,
-//   clearInventoryDataAPI
-// } from 'http://127.0.0.1:5000/api';
-
-
-import { 
+import {
   clearAllDataAPI,
   clearPurchasesDataAPI,
   clearSalesDataAPI,

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus, Download } from 'lucide-react';
-//import { fetchSales, createSale, deleteSale } from 'http://127.0.0.1:5000'; // Import your API functions
 import { fetchSales, createAssignment, createSaleForAssignment, deleteSale } from './apiHelpers';
 
 

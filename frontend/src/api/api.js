@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-// Use CRA env vars (REACT_APP_API_BASE_URL) or fallback to localhost dev URL
+// Use CRA env vars (REACT_APP_API_BASE_URL) or fallback to Render backend URL
 // Many files expect REACT_APP_API_BASE_URL to already include the `/api` suffix.
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://job-tracking-system-backend-h0yj.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE,
