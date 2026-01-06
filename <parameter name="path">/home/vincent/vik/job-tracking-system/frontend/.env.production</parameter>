@@ -1,0 +1,3 @@
+<parameter name="content"># Disable source map generation to eliminate chart.js warnings
+GENERATE_SOURCEMAP=false
+</parameter>

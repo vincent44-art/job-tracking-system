@@ -1,15 +1,18 @@
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-// Create axios instance with default configuration
+// Use CRA env vars (REACT_APP_API_BASE_URL) or fallback to localhost dev URL
+// Many files expect REACT_APP_API_BASE_URL to already include the `/api` suffix.
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || '/api',
+  baseURL: API_BASE,
   withCredentials: true,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+  },
 });
 
 // Add a request interceptor to attach the access token and cache-buster

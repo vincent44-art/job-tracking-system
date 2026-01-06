@@ -2,6 +2,9 @@ services:
   - type: web
     name: job-tracking-backend
     env: python
+    envVars:
+      - key: FORCE_LOCAL_SQLITE
+        value: "true"
     buildCommand: |
       apt-get update && apt-get install -y libpq-dev nodejs npm
       cd frontend && npm install && npm run build

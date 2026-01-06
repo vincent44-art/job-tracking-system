@@ -240,11 +240,13 @@
 // export default api;
 import axios from 'axios';
 
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://job-tracking-system-pdnz.onrender.com/api';
+// Create axios instance using CRA env vars (REACT_APP_*) or sensible defaults
+// Note: `.env` defines REACT_APP_API_BASE_URL and many files expect that value
+// to already include the `/api` suffix. We fall back to localhost for dev.
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });

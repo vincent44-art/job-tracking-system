@@ -1,3 +1,17 @@
 {
-    "codium.codeCompletion.enable": false
+    "codium.codeCompletion.enable": false,
+    "eslint.workingDirectories": [
+        {
+            "directory": "./frontend",
+            "changeProcessCWD": true
+        }
+    ],
+    "eslint.nodePath": "./frontend/node_modules",
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact"
+    ],
+    "eslint.options": {
+        "resolvePluginsRelativeTo": "./frontend/node_modules"
+    }
 }
